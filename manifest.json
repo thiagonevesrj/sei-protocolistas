@@ -3,7 +3,7 @@
   "name": "SEI++",
   "short_name": "SEI++",
   "description": "SEI++: Adiciona novas funcionalidades ao Sistema Eletrônico de Informações - SEI (Requer uma versão do SEI maior ou igual a 4.1).",
-  "version": "6.0",
+  "version": "6.0.1",
   "author": "Jonatas Evaristo",
   "homepage_url": "https://jonatasrs.github.io/sei/",
   "icons": {"48": "icons/seipp-new.png"},
@@ -72,7 +72,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=*", "*://*.br/*/controlador_externo.php?acao=*"],
+      "matches": ["*://*.br/*controlador.php?acao=*", "*://*.br/*controlador_externo.php?acao=*"],
       "run_at": "document_idle",
       "all_frames": false,
       "js": [
@@ -87,7 +87,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=documento_receber*"],
+      "matches": ["*://*.br/*controlador.php?acao=documento_receber*"],
       "all_frames": true,
       "js": [
         "cs_modules/documento_receber/forcarReaberturaProcesso.js",
@@ -96,7 +96,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=procedimento_controlar*"],
+      "matches": ["*://*.br/*controlador.php?acao=procedimento_controlar*"],
       "js": [
         "cs_modules/lib/pontoControleCores.js",
         "cs_modules/procedimento_controlar/mostrarEspecificacao.js",
@@ -114,7 +114,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=rel_bloco_protocolo_listar*"],
+      "matches": ["*://*.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
       "js": [
         "cs_modules/lib/filtra_processos/index.js",
         "cs_modules/lib/filtra_processos/pesquisarInformacoes.js",
@@ -125,7 +125,7 @@
       ]
     },
         {
-      "matches": ["*://*.br/*/controlador.php?acao=controle_unidade_gerar*"],
+      "matches": ["*://*.br/*controlador.php?acao=controle_unidade_gerar*"],
       "js": [
         "cs_modules/lib/selecionarMultiplosProcessos.js",
         "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js",
@@ -133,7 +133,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=procedimento_visualizar*"],
+      "matches": ["*://*.br/*controlador.php?acao=procedimento_visualizar*"],
       "all_frames": true,
       "css": ["cs_modules/procedimento_visualizar/styles.css"],
       "js": [
@@ -152,7 +152,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=documento_escolher_tipo*"],
+      "matches": ["*://*.br/*controlador.php?acao=documento_escolher_tipo*"],
       "all_frames": true,
       "css": ["cs_modules/documento_escolher_tipo/styles.css"],
       "js": [
@@ -161,7 +161,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=anotacao_registrar*"],
+      "matches": ["*://*.br/*controlador.php?acao=anotacao_registrar*"],
       "all_frames": true,
       "js": [
         "cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js",
@@ -169,7 +169,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=infra_configurar*"],
+      "matches": ["*://*.br/*controlador.php?acao=infra_configurar*"],
       "css": ["cs_modules/infra_configurar/options_ui/styles.css"],
       "js": [
         "cs_modules/lib/colorToFilter.js",
@@ -178,7 +178,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=documento_gerar*"],
+      "matches": ["*://*.br/*controlador.php?acao=documento_gerar*"],
       "all_frames": true,
       "js": [
         "cs_modules/documento_gerar/gerarDocumentoComModelo.js",
@@ -186,7 +186,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*/controlador.php?acao=procedimento_atribuicao_cadastrar*"],
+      "matches": ["*://*.br/*controlador.php?acao=procedimento_atribuicao_cadastrar*"],
       "all_frames": true,
       "js": [
         "cs_modules/procedimento_atribuicao_cadastrar/ordenarSelect.js",
