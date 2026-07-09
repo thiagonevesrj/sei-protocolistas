@@ -1,14 +1,17 @@
-/* global seiVersion, CompName */
+/* global seiVersion */
 
 /** Pega a versão atual do SEI */
+// eslint-disable-next-line no-unused-vars
 function getSeiVersion (baseName) {
   const script = document.querySelectorAll('script[src^="js/sei.js?"]')[0]
-  if (!script) {
+  const versionText = document.querySelector('#spnInfraIdentificacaoSistema span.infraTituloLogoSistema').innerText
+  if (!script && !versionText) {
     return '0.0.0.0'
   }
-  const version = script.getAttribute('src').match(/(?<=\?)([^=-]+)/g)[0]
+  const version = script
+    ? script.getAttribute('src').match(/(?<=\?)([^=-]+)/g)[0]
+    : versionText
   const fixedVersion = fixVersionNumber(version)
-  console.log(`[${CompName} ${Date.now()}]${baseName}.getSeiVersion: ${fixedVersion}`)
   return fixedVersion
 }
 
@@ -34,6 +37,7 @@ function fixVersionNumber (version) {
  * @param {string} version Versão a ser comparada. Ex.: '4.0.0.0'.
  * @returns Retorna true ou false.
  */
+// eslint-disable-next-line no-unused-vars
 function seiVersionCompare (operator, version) {
   const { compare } = new Intl.Collator('pt-BR', { numeric: true })
   const result = compare(fixVersionNumber(version), seiVersion)

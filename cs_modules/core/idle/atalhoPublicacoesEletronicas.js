@@ -1,5 +1,8 @@
+/* global GetBaseUrl, __mconsole */
+
 // atalhoPublicacoesEletronicas
-function atalhoPublicacoesEletronicas(BaseName) {
+// eslint-disable-next-line no-unused-vars
+function atalhoPublicacoesEletronicas (BaseName) {
   const mconsole = new __mconsole(BaseName + '.atalhoPublicacoesEletronicas')
 
   // Verifica se o link existe.
@@ -9,10 +12,12 @@ function atalhoPublicacoesEletronicas(BaseName) {
 
   fetch(GetBaseUrl() + url).then(response => {
     if (!response.ok) {
-      throw new Error('Página de publicações não existe')
+      mconsole.log('Página de publicações não existe')
+      return null
+    } else {
+      mconsole.log('Página de publicações existe')
+      AdicionarAtalho()
     }
-  }).then(() => {
-    AdicionarAtalho()
   }).catch(e => mconsole.log(e.message))
 
   function AdicionarAtalho () {
