@@ -1,5 +1,5 @@
 /* eslint-disable no-global-assign */
-/* global seiVersionCompare, CompName, SavedOptions */
+/* global seiVersionCompare, CompName, SavedOptions, ProtocolistasCheckTypes */
 
 // eslint-disable-next-line no-unused-vars
 async function ModuleInit (BaseName, PageReload = false) {
@@ -32,6 +32,9 @@ async function ModuleInit (BaseName, PageReload = false) {
 
 async function loadDefaultOptions (storageData) {
   SavedOptions = { ...SavedOptions, ...storageData }
+  SavedOptions.CheckTypes = SavedOptions.CheckTypes.filter(
+    option => ProtocolistasCheckTypes.includes(option)
+  )
   return SavedOptions
 }
 

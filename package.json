@@ -1,10 +1,10 @@
 {
-  "name": "seipp",
-  "version": "1.0.0",
-  "description": "Extensão que adiciona novas funcionalidades ao Sistema Eletrônico de Informações - SEI",
+  "name": "sei-protocolistas",
+  "version": "0.1.0",
+  "description": "Extensão de produtividade para protocolistas no Sistema Eletrônico de Informações - SEI",
   "main": "index.js",
-  "repository": "git@github.com:jonatasrs/sei.git",
-  "author": "Jonatas Evaristo <jonatas.eletrica@gmail.com>",
+  "repository": "https://github.com/thiagonevesrj/sei-protocolistas.git",
+  "author": "Thiago Neves e colaboradores do SEI++",
   "license": "GPL-3.0-only",
   "devDependencies": {
     "eslint": "^8.57.1",

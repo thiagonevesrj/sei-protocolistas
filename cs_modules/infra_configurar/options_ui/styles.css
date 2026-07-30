@@ -2,6 +2,35 @@
   font-weight: bold;
 }
 
+.protocolistas-intro {
+  width: 40%;
+  min-width: 430px;
+  box-sizing: border-box;
+  margin: 14px auto 24px;
+  padding: 14px 16px;
+  border-left: 5px solid #1351b4;
+  background: rgba(19, 81, 180, 0.08);
+  font-family: arial, verdana, helvetica, sans-serif;
+  line-height: 1.5;
+}
+
+.protocolistas-intro strong {
+  display: block;
+  font-size: 1.15em;
+}
+
+.protocolistas-management-card > .container {
+  display: none;
+}
+
+.protocolistas-management-card > .protocolistas-search {
+  display: flex;
+}
+
+.protocolistas-legacy-option {
+  display: none !important;
+}
+
 .seipp-options input{
   margin-left: 20px;
   margin-right: 10px;

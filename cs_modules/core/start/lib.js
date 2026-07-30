@@ -4,21 +4,13 @@
 const DefaultOptions = {
   theme: 'white',
   CheckTypes: [
-    'prazo',
-    'qtddias',
-    'chkbloco',
     'exibeinfointeressado',
-    'filtraporatribuicao',
-    'carregainformacaoblocos',
     'pesquisarinformacoes',
     'copiarnumeroprocessodocumento',
     'copiarlinkinterno',
-    'retirarsobrestamentoreabrirembloco',
     'mostraranotacao',
-    'atalhopublicacoeseletronicas',
-    'incluirdocaoarrastar',
-    'move_link_menu',
-    'ponto_controle_cores'
+    'cliquemenos',
+    'incluirdocaoarrastar'
   ],
   InstallOrUpdate: true,
   ConfiguracoesCores: [
@@ -36,7 +28,18 @@ const DefaultOptions = {
   pontoControleCores: [] // Cores dos pontos de controle. Ex.: {nome: 'analise', cor: '#0000FF'}
 }
 
-const CompName = 'Seipp'
+const ProtocolistasCheckTypes = [
+  'exibeinfointeressado',
+  'mostrardetalhesinteressados',
+  'pesquisarinformacoes',
+  'copiarnumeroprocessodocumento',
+  'copiarlinkinterno',
+  'mostraranotacao',
+  'cliquemenos',
+  'incluirdocaoarrastar'
+]
+
+const CompName = 'SeiProtocolistas'
 
 /** Options salvas */
 var SavedOptions = DefaultOptions // eslint-disable-line no-unused-vars, no-var

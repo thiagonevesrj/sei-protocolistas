@@ -1,23 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "SEI++",
-  "short_name": "SEI++",
-  "description": "SEI++: Adiciona novas funcionalidades ao Sistema Eletrônico de Informações - SEI (Requer uma versão do SEI maior ou igual a 4.1).",
-  "version": "6.0.2",
-  "author": "Jonatas Evaristo",
-  "homepage_url": "https://jonatasrs.github.io/sei/",
+  "name": "SEI Protocolistas",
+  "short_name": "SEI Protocolistas",
+  "description": "Ferramentas de produtividade para protocolistas no Sistema Eletrônico de Informações (SEI), com base no projeto SEI++.",
+  "version": "0.1.0",
+  "author": "Thiago Neves e colaboradores do SEI++",
+  "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
   "icons": {"48": "icons/seipp-new.png"},
-  "permissions": [
-    "storage",
-    "notifications",
-    "alarms"
-  ],
+  "permissions": ["storage"],
   "host_permissions": [
     "*://*.br/*controlador.php?acao=*"
   ],
   "action": {
     "default_icon": "icons/seipp-new.png",
-    "default_title": "Controle de Processos",
+    "default_title": "SEI Protocolistas",
     "default_popup": "browser_action/index.html"
   },
   "browser_specific_settings": {
@@ -25,14 +21,6 @@
       "id": "jonatas@gov",
       "strict_min_version": "128.0"
     }
-  },
-
-  "background": {
-    "service_worker": "background/background.js",
-    "scripts": [
-      "background/background.js"
-    ],
-    "type": "module"
   },
 
   "content_scripts": [

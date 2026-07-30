@@ -1,12 +1,17 @@
 <div class="flex-container">
-  <h1 class="seipp-options-title">Configurações do complemento SEI++</h1>
+  <h1 class="seipp-options-title">Configurações do SEI Protocolistas</h1>
 </div>
 <hr>
+<div class="protocolistas-intro">
+  <strong>Produtividade para quem protocola.</strong>
+  Esta primeira versão mantém as ferramentas essenciais do SEI++ e prepara o caminho para os fluxos rápidos
+  de abertura de processos e triagem de e-mails.
+</div>
 
 <!-- *** Html das opções configuráveis ************************************* -->
 <!-- *********************************************************************** -->
-<h2 class="card_label">Gestão e controle de processos</h2>
-<div class="card">
+<h2 class="card_label">Pesquisa rápida</h2>
+<div class="card protocolistas-management-card">
   <div class="container">
     <div class="flex-container">
       <label class="toggle-label">
@@ -85,7 +90,7 @@
     </label>
     <input class="toggle" type="checkbox" data-type="carregainformacaoblocos" />
   </div>
-  <div class="container flex-container">
+  <div class="container flex-container protocolistas-search">
     <label class="toggle-label">
       Filtrar processos pela pesquisa de informações
       <div class="seipp-tooltip">?<span class="tooltiptext">
@@ -240,7 +245,7 @@
 </div>
 
 <!-- *********************************************************************** -->
-<h2 class="card_label">Produtividade em processos e documentos</h2>
+<h2 class="card_label">Produtividade do protocolista</h2>
 <div class="card">
   <div class="container flex-container">
     <label class="toggle-label">
@@ -415,7 +420,7 @@
     <input class="toggle" type="checkbox" name="usardocumentocomomodelo" data-type="usardocumentocomomodelo" />
   </div>
 
-  <div class="container flex-container">
+  <div class="container flex-container protocolistas-legacy-option">
     <label class="toggle-label">
       Ordenar alfabeticamente a lista de atribuição de processo
       <div class="seipp-tooltip">
@@ -428,7 +433,7 @@
     <input class="toggle" type="checkbox" data-type="ordenaratribuirprocesso" />
   </div>
 
-  <div class="container flex-container">
+  <div class="container flex-container protocolistas-legacy-option">
     <label class="toggle-label">
       Link neutro no icone de controle de processos
       <div class="seipp-tooltip">?<span class="tooltiptext">
@@ -439,7 +444,7 @@
     <input class="toggle" type="checkbox" data-type="link_neutro_controle_processos" />
   </div>
 
-  <div class="container flex-container">
+  <div class="container flex-container protocolistas-legacy-option">
     <label class="toggle-label">
       Alterar título da aba
       <div class="seipp-tooltip">?<span class="tooltiptext">
@@ -467,7 +472,7 @@
       <option value="super-black">SUPER Black (Experimental)</option>
     </select>
   </div>
-  <div id='move_link_menu' class="container flex-container">
+  <div id='move_link_menu' class="container flex-container protocolistas-legacy-option">
     <label class="toggle-label">
       Move link do menu para esquerda
       <div class="seipp-tooltip">?<span class="tooltiptext">
@@ -479,8 +484,8 @@
 </div>
 
 <!-- *********************************************************************** -->
-<h2 class="card_label">Outros...</h2>
-<div class="card">
+<h2 class="card_label protocolistas-legacy-option">Outros...</h2>
+<div class="card protocolistas-legacy-option">
   <div class="container flex-container">
     <label class="toggle-label">
       Desabilitar notificação de atualização
@@ -503,6 +508,6 @@
 <!-- *** FIM da opções ***************************************************** -->
 
 <div class="option-save">
-  <input type="button" value="Salvar configurações" id="save-button" class="infraButton" />
+  <input type="button" value="Salvar SEI Protocolistas" id="save-button" class="infraButton" />
   <div id="save-msg"></div>
 </div>
