@@ -308,10 +308,52 @@ dropzone.Http.prototype.passos = {
   2: {
 
     obterUrl: function (resposta) {
-      const regex = /<a\s+(?:[^>]*?\s+)?href="(.*?)" tabindex="1003" class="ancoraOpcao"> Externo<\/a>/m
-      const resultado = regex.exec(resposta)
-      if (resultado === null) return null
-      return dropzone.utils.validarAcao(resultado[1], 'documento_receber')
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      const links = Array.from(documento.querySelectorAll('a'))
+      const linkExterno = links.find(function (link) {
+        return link.textContent
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLocaleLowerCase('pt-BR') === 'externo'
+      })
+
+      if (linkExterno) {
+        const origens = [
+          linkExterno.getAttribute('href'),
+          linkExterno.getAttribute('onclick'),
+          linkExterno.getAttribute('data-url')
+        ].filter(Boolean)
+
+        for (const origem of origens) {
+          const url = dropzone.utils.validarAcao(origem, 'documento_receber')
+          if (url) return url
+        }
+      }
+
+      /*
+       * Na resposta AJAX do SEI-RJ, a lista pode estar guardada como texto
+       * dentro de JavaScript. Nesse caso o DOMParser não cria os links.
+       * Procurar cada âncora pelo rótulo permite aceitar atributos em qualquer
+       * ordem, aspas simples ou duplas e espaços variáveis.
+       */
+      const ancoraRegex = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi
+      let ancora
+      while ((ancora = ancoraRegex.exec(String(resposta))) !== null) {
+        const rotulo = ancora[2]
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;|&#160;/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLocaleLowerCase('pt-BR')
+        if (rotulo !== 'externo') continue
+
+        const href = /\bhref\s*=\s*(["'])(.*?)\1/i.exec(ancora[1])
+        if (!href) continue
+        const url = dropzone.utils.validarAcao(href[2], 'documento_receber')
+        if (url) return url
+      }
+
+      return null
     },
 
     abrirPagina: function (resposta) {
