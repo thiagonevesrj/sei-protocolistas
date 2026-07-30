@@ -546,7 +546,66 @@ dropzone.Http.prototype.passos = {
       return hipotese
     },
 
-    obterDados: function (hdnAnexos, resposta) {
+    obterUrlHipoteseLegal: function (resposta) {
+      /*
+       * O SEI carrega as hipóteses legais sob demanda depois que o usuário
+       * marca "Restrito". A URL dessa consulta fica em uma string JavaScript
+       * do formulário e contém esta ação em todas as versões conhecidas.
+       */
+      const strings = String(resposta).matchAll(/(['"])(.*?)\1/g)
+      for (const resultado of strings) {
+        if (!/hipotese_legal_select_nome_base_legal/i.test(resultado[2])) continue
+        const url = dropzone.utils.resolverUrl(resultado[2])
+        if (url) return url
+      }
+      return null
+    },
+
+    carregarHipoteseInformacaoPessoal: function (resposta, callback) {
+      const $resposta = $('<div/>').append($.parseHTML(resposta, document, true))
+      const hipoteseExistente = this.passos['4']
+        .escolherHipoteseInformacaoPessoal($resposta.find('#selHipoteseLegal'))
+      if (hipoteseExistente) {
+        callback(hipoteseExistente)
+        return
+      }
+
+      const url = this.passos['4'].obterUrlHipoteseLegal(resposta)
+      if (!url) {
+        callback(null, 'a consulta de hipóteses legais não foi localizada no formulário.')
+        return
+      }
+
+      $.ajax({
+        url,
+        method: 'POST',
+        dataType: 'text',
+        data: {
+          primeiroItemValor: '',
+          primeiroItemDescricao: '',
+          valorItemSelecionado: '',
+          staNivelAcesso: 1
+        },
+        success: function (opcoes) {
+          const html = String(opcoes)
+            .replace(/<\?xml[^>]*\?>/gi, '')
+            .trim()
+          const $select = $('<select/>').html(html)
+          const hipotese = this.passos['4']
+            .escolherHipoteseInformacaoPessoal($select)
+          if (!hipotese) {
+            callback(null, 'a opção “Informação Pessoal” não foi devolvida pelo SEI.')
+            return
+          }
+          callback(hipotese)
+        }.bind(this),
+        error: function () {
+          callback(null, 'o SEI recusou a consulta de hipóteses legais.')
+        }
+      })
+    },
+
+    obterDados: function (hdnAnexos, resposta, hipoteseCarregada) {
       const $resposta = $('<div/>').append($.parseHTML(resposta, document, true))
       const $form = $resposta.find('form#frmDocumentoCadastro')
       const urlParaEnvio = $form.attr('action')
@@ -564,8 +623,9 @@ dropzone.Http.prototype.passos = {
 
       const serie = this.passos['4'].escolherTipoDocumentoExterno($form.find('#selSerie'))
       if (!serie) return null
-      const hipoteseInformacaoPessoal = this.passos['4']
+      const hipoteseInformacaoPessoal = hipoteseCarregada || this.passos['4']
         .escolherHipoteseInformacaoPessoal($form.find('#selHipoteseLegal'))
+      if (!hipoteseInformacaoPessoal) return null
 
       const nomeDoDocumento = this.arquivoParaUpload.name.replace(/\.[^/.]+$/, '').slice(0, 49)
       postFields.selSerie = serie
@@ -578,11 +638,9 @@ dropzone.Http.prototype.passos = {
       postFields.hdnFlagDocumentoCadastro = postFields.hdnFlagDocumentoCadastro || '2'
       postFields.rdoNivelAcesso = '1'
       postFields.hdnStaNivelAcessoLocal = '1'
-      if (hipoteseInformacaoPessoal) {
-        postFields.selHipoteseLegal = hipoteseInformacaoPessoal
-        postFields.hdnIdHipoteseLegal = hipoteseInformacaoPessoal
-        postFields.hdnIdHipoteseLegalSugestao = hipoteseInformacaoPessoal
-      }
+      postFields.selHipoteseLegal = hipoteseInformacaoPessoal
+      postFields.hdnIdHipoteseLegal = hipoteseInformacaoPessoal
+      postFields.hdnIdHipoteseLegalSugestao = hipoteseInformacaoPessoal
 
       /* montar post body */
       let postData = ''
@@ -615,28 +673,74 @@ dropzone.Http.prototype.passos = {
       return documento.querySelector('#divArvoreHtml') !== null
     },
 
-    submeterFormulario: function (hdnAnexos, resposta) {
-      const dados = this.passos['4'].obterDados.call(this, hdnAnexos, resposta)
-      if (!dados) {
-        this.falhar('Etapa 4: o formulário atual de documento externo está incompleto ou incompatível.')
-        return
+    extrairMensagemValidacao: function (resposta) {
+      const mensagens = []
+      const adicionar = function (texto) {
+        const limpo = String(texto || '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\\n|\\r/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (limpo && !mensagens.includes(limpo)) mensagens.push(limpo.slice(0, 240))
       }
-      $.ajax({
-        url: dropzone.utils.resolverUrl(dados.url),
-        method: 'POST',
-        data: dados.data,
-        contentType: 'application/x-www-form-urlencoded; charset=ISO-8859-1',
-        success: function (data, textStatus, xhr) {
-          if (this.passos['4'].paginaRetornouCorretamente.call(this, data, xhr.responseURL)) {
-            this.fnNovoStatus('completo', 1)
-          } else {
-            this.falhar('Etapa 4: o SEI devolveu o formulário sem confirmar a criação do documento.')
-          }
-        }.bind(this),
-        error: function () {
-          this.falhar('Etapa 4: o SEI recusou a gravação final do documento externo.')
-        }.bind(this)
+
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      Array.from(documento.querySelectorAll(
+        '.infraErro, .infraExcecao, .infraAviso, #divInfraMensagem, [role="alert"]'
+      )).forEach(function (elemento) {
+        adicionar(elemento.textContent)
       })
+
+      const alertas = String(resposta).matchAll(/\balert\s*\(\s*(['"])(.*?)\1\s*\)/gis)
+      for (const alerta of alertas) adicionar(alerta[2])
+
+      return mensagens[0] || null
+    },
+
+    submeterFormulario: function (hdnAnexos, resposta) {
+      this.passos['4'].carregarHipoteseInformacaoPessoal.call(
+        this,
+        resposta,
+        function (hipotese, erroHipotese) {
+          if (!hipotese) {
+            this.falhar(`Etapa 4: ${erroHipotese}`)
+            return
+          }
+
+          const dados = this.passos['4'].obterDados.call(
+            this,
+            hdnAnexos,
+            resposta,
+            hipotese
+          )
+          if (!dados) {
+            this.falhar('Etapa 4: o formulário atual de documento externo está incompleto ou incompatível.')
+            return
+          }
+
+          $.ajax({
+            url: dropzone.utils.resolverUrl(dados.url),
+            method: 'POST',
+            data: dados.data,
+            contentType: 'application/x-www-form-urlencoded; charset=ISO-8859-1',
+            success: function (data, textStatus, xhr) {
+              if (this.passos['4'].paginaRetornouCorretamente.call(this, data, xhr.responseURL)) {
+                this.fnNovoStatus('completo', 1)
+              } else {
+                const validacao = this.passos['4'].extrairMensagemValidacao(data)
+                const detalhe = validacao ? ` Motivo informado pelo SEI: ${validacao}` : ''
+                this.falhar(
+                  'Etapa 4: o SEI devolveu o formulário sem confirmar a criação do documento.' +
+                  detalhe
+                )
+              }
+            }.bind(this),
+            error: function () {
+              this.falhar('Etapa 4: o SEI recusou a gravação final do documento externo.')
+            }.bind(this)
+          })
+        }.bind(this)
+      )
     }
 
   }
