@@ -5,6 +5,12 @@
 Construir o SEI Protocolistas como extensão gratuita, local e de código aberto para reduzir cliques,
 retrabalho e erros na rotina de protocolistas.
 
+## Identidade e autoria
+
+- O nome do idealizador é **Thiago Neves**, sempre escrito com **H**.
+- A assinatura visual oficial é **by Thiago Neves Design**.
+- Nunca publicar `Tiago Neves`, sem o H, em telas, imagens, documentação ou metadados do projeto.
+
 ## Forma de trabalho
 
 - Diagnosticar primeiro. Alterar depois. Nunca o contrário.

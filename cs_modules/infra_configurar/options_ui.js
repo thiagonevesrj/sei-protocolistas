@@ -6,6 +6,8 @@
 function optionsUi (BaseName) {
   const mconsole = new __mconsole(BaseName + '.optionsUi')
 
+  limitarEsquemasCoresNativos()
+
   $('#divInfraAreaTelaD').append("<div id='seipp-div-options-ui'/>")
   $('#seipp-div-options-ui').load(
     currentBrowser.runtime.getURL('cs_modules/infra_configurar/options_ui/index.html'), function () {
@@ -45,7 +47,7 @@ function optionsUi (BaseName) {
    ******************************************************************************/
   function OptionsLoad () {
     /* Tema */
-    $('#theme').val(SavedOptions.theme)
+    $('#theme').val('white')
 
     /* Checkbox's */
     $("input[type='checkbox']").each(function () {
@@ -162,6 +164,29 @@ function optionsUi (BaseName) {
 
     /* Salvar */
     $('#save-button').on('click', OptionsSave)
+  }
+
+  function limitarEsquemasCoresNativos () {
+    const normalizar = texto => texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()
+
+    document.querySelectorAll('#frmInfraConfigurar select').forEach(select => {
+      const opcoes = Array.from(select.options)
+      const opcaoClara = opcoes.find(opcao => normalizar(opcao.textContent) === 'azul claro')
+      const opcaoPreta = opcoes.find(opcao => normalizar(opcao.textContent) === 'preto (alto contraste)')
+
+      if (!opcaoClara || !opcaoPreta) return
+
+      opcoes.forEach(opcao => {
+        if (opcao !== opcaoClara && opcao !== opcaoPreta) opcao.remove()
+      })
+
+      opcaoClara.textContent = 'Claro'
+      opcaoPreta.textContent = 'Preto (Alto Contraste)'
+    })
   }
 
   function getUsuarioSistema () {
