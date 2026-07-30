@@ -3,7 +3,7 @@
   "name": "SEI Protocolistas",
   "short_name": "SEI Protocolistas",
   "description": "Ferramentas de produtividade para protocolistas no Sistema Eletrônico de Informações (SEI), com base no projeto SEI++.",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "author": "Thiago Neves e colaboradores do SEI++",
   "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
   "icons": {"48": "icons/seipp-new.png"},

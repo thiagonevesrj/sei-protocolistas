@@ -307,10 +307,35 @@ dropzone.Http.prototype.passos = {
   3: {
 
     obterURLUpload: function (resposta) {
-      const regex = /objUpload\s*=\s*new\s+infraUpload\s*\(\s*['"]frmAnexos['"]\s*,\s*['"](.+?)['"]\s*\)/m
-      const resultado = regex.exec(resposta)
-      if (resultado === null) return null
-      return resultado[1]
+      /*
+       * O construtor infraUpload ganhou parâmetros adicionais em versões mais
+       * novas do SEI. Para obter a URL, basta ler o segundo argumento; não é
+       * necessário exigir o fechamento do construtor logo depois dele.
+       */
+      const constructorRegex = /new\s+infraUpload\s*\(\s*(['"])frmAnexos\1\s*,\s*(['"])(.*?)\2/im
+      const constructorResult = constructorRegex.exec(resposta)
+      if (constructorResult !== null) {
+        return constructorResult[3]
+          .replace(/&amp;/g, '&')
+          .replace(/\\u0026|\\x26/gi, '&')
+          .replace(/\\\//g, '/')
+      }
+
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      const formAnexos = documento.querySelector('form#frmAnexos')
+      const formAction = formAnexos?.getAttribute('action')
+      if (formAction && /upload/i.test(formAction)) return formAction
+
+      const texto = String(resposta)
+        .replace(/&amp;/g, '&')
+        .replace(/\\u0026|\\x26/gi, '&')
+        .replace(/\\\//g, '/')
+      const urls = texto.match(
+        /(?:https?:\/\/[^'"\s)]+|(?:controlador(?:_ajax)?\.php|infra_upload\.php)\?[^'"\s)]+)/gi
+      ) || []
+      return urls.find(function (url) {
+        return /upload|acao_ajax=infra_upload/i.test(url)
+      }) || null
     },
 
     obterUsuarioEUnidade: function (resposta) {
