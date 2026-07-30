@@ -688,13 +688,28 @@ dropzone.Http.prototype.passos = {
       if (!$form.length || !urlParaEnvio) return null
 
       /*
-        Parte dos campos do SEI muda entre versões. Preservar os campos que o
-        próprio formulário entregou evita perder hashes, flags e validações
-        acrescentadas pelo SEI-RJ.
-      */
+       * Replica o contrato usado pelo SEI Pro 1.6.11. Não devemos serializar
+       * indiscriminadamente o formulário inteiro: o SEI Pro envia apenas os
+       * campos estruturais hdn/txt/sel/rdo reconhecidos pelo cadastro de
+       * documento externo.
+       */
       const postFields = {}
-      $form.serializeArray().forEach(function (field) {
-        postFields[field.name] = field.value
+      $form.find('input[type="hidden"]').each(function () {
+        const nome = $(this).attr('name')
+        const id = $(this).attr('id') || ''
+        if (nome && id.includes('hdn')) postFields[nome] = $(this).val()
+      })
+      $form.find('input[type="text"]').each(function () {
+        const id = $(this).attr('id') || ''
+        if (id.includes('txt')) postFields[id] = $(this).val()
+      })
+      $form.find('select').each(function () {
+        const id = $(this).attr('id') || ''
+        if (id.includes('sel')) postFields[id] = $(this).val()
+      })
+      $form.find('input[type="radio"]').each(function () {
+        const nome = $(this).attr('name') || ''
+        if (nome.includes('rdo')) postFields[nome] = $(this).val()
       })
 
       const serie = this.passos['4'].escolherTipoDocumentoExterno($form.find('#selSerie'))
@@ -708,15 +723,22 @@ dropzone.Http.prototype.passos = {
       postFields.hdnIdSerie = serie
       postFields.txtDataElaboracao = dropzone.utils.hoje()
       postFields.rdoTextoInicial = 'N'
-      postFields.txtNumero = nomeDoDocumento
+      /*
+       * O SEI Pro pré-codifica este campo e, no laço final, aplica somente a
+       * conversão hexadecimal específica do SEI. Manter as duas etapas evita
+       * que o nome seja reinterpretado como entidade HTML pelo servidor.
+       */
+      postFields.txtNumero = dropzone.utils.escapeComponent(nomeDoDocumento)
       postFields.rdoFormato = 'N'
       postFields.hdnAnexos = hdnAnexos
-      postFields.hdnFlagDocumentoCadastro = postFields.hdnFlagDocumentoCadastro || '2'
+      postFields.hdnFlagDocumentoCadastro = '2'
       postFields.rdoNivelAcesso = '1'
       postFields.hdnStaNivelAcessoLocal = '1'
       postFields.selHipoteseLegal = hipoteseInformacaoPessoal
       postFields.hdnIdHipoteseLegal = hipoteseInformacaoPessoal
-      postFields.hdnIdHipoteseLegalSugestao = hipoteseInformacaoPessoal
+      postFields.selTipoConferencia = ''
+      postFields.hdnIdTipoConferencia = ''
+      postFields.txaObservacoes = ''
 
       /* montar post body */
       let postData = ''
