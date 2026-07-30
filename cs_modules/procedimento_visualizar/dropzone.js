@@ -43,7 +43,7 @@ dropzone.utils = {
   extrairUrlControlador: function (value) {
     const texto = String(value || '').replace(/&amp;/g, '&')
     const resultado = texto.match(/(?:https?:\/\/[^'"\s)]+|controlador\.php\?[^'"\s)]+)/i)
-    return resultado ? resultado[0] : null
+    return resultado ? resultado[0].replace(/\\+$/, '') : null
   },
 
   resolverUrl: function (value) {
@@ -289,13 +289,44 @@ dropzone.Http.prototype.passos = {
 
     obterUrl: function (resposta) {
       const documento = new DOMParser().parseFromString(resposta, 'text/html')
-      const links = Array.from(documento.querySelectorAll('a[href]'))
+      const links = Array.from(documento.querySelectorAll(
+        'a[href], a[onclick], a[data-url]'
+      ))
       const linkExterno = links.find(function (element) {
         return element.textContent.trim().toLocaleLowerCase('pt-BR') === 'externo'
       })
-      if (!linkExterno) return null
-      return dropzone.utils.extrairUrlControlador(linkExterno.getAttribute('href')) ||
-        linkExterno.getAttribute('href')
+      if (linkExterno) {
+        const origem = [
+          linkExterno.getAttribute('href'),
+          linkExterno.getAttribute('onclick'),
+          linkExterno.getAttribute('data-url')
+        ].filter(Boolean).join(' ')
+        const url = dropzone.utils.extrairUrlControlador(origem)
+        if (url) return url
+      }
+
+      /*
+       * O SEI-RJ também pode entregar as opções como trechos de HTML guardados
+       * dentro de JavaScript. Uma requisição AJAX não executa esse JavaScript,
+       * portanto o link ainda não existe no DOM analisado acima. Ler o trecho
+       * como texto permite localizar a URL sem executar código da página.
+       */
+      const ancoraRegex = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi
+      let ancora
+      while ((ancora = ancoraRegex.exec(resposta)) !== null) {
+        const texto = ancora[2]
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;|&#160;/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLocaleLowerCase('pt-BR')
+        if (texto !== 'externo') continue
+
+        const url = dropzone.utils.extrairUrlControlador(ancora[1])
+        if (url) return url
+      }
+
+      return null
     },
 
     abrirPagina: function (resposta) {
