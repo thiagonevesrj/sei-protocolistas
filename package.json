@@ -1,6 +1,6 @@
 {
   "name": "sei-protocolistas",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Extensão de produtividade para protocolistas no Sistema Eletrônico de Informações - SEI",
   "main": "index.js",
   "repository": "https://github.com/thiagonevesrj/sei-protocolistas.git",

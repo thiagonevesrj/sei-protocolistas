@@ -1,10 +1,11 @@
-/* global currentBrowser */
 (() => {
   'use strict'
 
   const STORAGE_KEY = 'cliqueProtocolistaRascunho'
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const GOLD = '#e0ae28'
+  const browserApi = window.currentBrowser ||
+    (typeof chrome !== 'undefined' ? chrome : browser)
 
   const PROCESS_TYPES = [
     {
@@ -96,8 +97,8 @@
 
   function storageGet (key) {
     return new Promise((resolve, reject) => {
-      const result = currentBrowser.storage.local.get(key, (items) => {
-        const lastError = currentBrowser.runtime.lastError
+      const result = browserApi.storage.local.get(key, (items) => {
+        const lastError = browserApi.runtime?.lastError
         if (lastError) reject(lastError)
         else resolve(items)
       })
@@ -110,8 +111,8 @@
 
   function storageSet (items) {
     return new Promise((resolve, reject) => {
-      const result = currentBrowser.storage.local.set(items, () => {
-        const lastError = currentBrowser.runtime.lastError
+      const result = browserApi.storage.local.set(items, () => {
+        const lastError = browserApi.runtime?.lastError
         if (lastError) reject(lastError)
         else resolve()
       })
@@ -124,8 +125,8 @@
 
   function storageRemove (key) {
     return new Promise((resolve, reject) => {
-      const result = currentBrowser.storage.local.remove(key, () => {
-        const lastError = currentBrowser.runtime.lastError
+      const result = browserApi.storage.local.remove(key, () => {
+        const lastError = browserApi.runtime?.lastError
         if (lastError) reject(lastError)
         else resolve()
       })
@@ -412,20 +413,23 @@
       event.preventDefault()
       message.className = 'sp-clique-message'
       message.textContent = ''
-
-      const draft = readDraftFromForm(form)
-      if (!draft.tipoProcesso || !draft.nome) {
-        message.className = 'sp-clique-message sp-clique-message--error'
-        message.textContent = 'Escolha o tipo de processo e informe o nome do interessado.'
-        return
-      }
+      continueButton.disabled = true
+      continueButton.textContent = 'Processando...'
 
       try {
+        const draft = readDraftFromForm(form)
+        if (!draft.tipoProcesso || !draft.nome) {
+          throw new Error('Escolha o tipo de processo e informe o nome do interessado.')
+        }
+
         await storageSet({ [STORAGE_KEY]: draft })
         continueToProcessType(draft, backdrop, message)
       } catch (error) {
+        console.error('[SEI Protocolistas] Falha ao iniciar processo:', error)
         message.className = 'sp-clique-message sp-clique-message--error'
-        message.textContent = `Não foi possível guardar o rascunho: ${error.message || error}`
+        message.textContent = `Não foi possível continuar: ${error.message || error}`
+        continueButton.disabled = false
+        continueButton.textContent = 'Tentar novamente'
       }
     })
 
