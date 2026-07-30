@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-30",
+  "processTypes": [
+    {
+      "id": "devolucao-taxas",
+      "name": "Devolução de Taxas",
+      "seiNames": [
+        "Detran: Devolução de Taxas"
+      ],
+      "destinationUnit": "DIVAF",
+      "subjectAcronym": "DAF",
+      "responseModel": "daf",
+      "catalogStatus": "pilot",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "desistencia-categoria-primeira-habilitacao",
+      "name": "Desistência de Categoria na 1ª Habilitação",
+      "seiNames": [
+        "DETRAN: Desistência de categoria na 1ª habilitação"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "solicitacao-geral-habilitacao",
+      "name": "Solicitação Geral - Habilitação",
+      "seiNames": [
+        "Detran: Solicitação Geral - Habilitação"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "solicitacoes-gerais-veiculos",
+      "name": "Solicitações Gerais - Veículos",
+      "seiNames": [
+        "Detran: Solicitações Gerais - Veículos"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "cancelamento-comunicacao-venda",
+      "name": "Cancelamento de Comunicação de Venda",
+      "seiNames": [
+        "Detran: Cancelamento de Comunicação de Venda"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "certidao-identificacao-civil",
+      "name": "Certidão de Identificação Civil",
+      "seiNames": [
+        "Detran: Solicitação de Certidão de Identificação Civil"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "solicitacao-pericia-medica",
+      "name": "Solicitação de Perícia Médica",
+      "seiNames": [
+        "Detran: Solicitação de Perícia Médica"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "DIVMED",
+      "responseModel": "divmed",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "isencao-taxa",
+      "name": "Isenção de Taxa",
+      "seiNames": [
+        "Detran: Isenção de taxa"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "averbacao-cnh-estrangeira",
+      "name": "Averbação de CNH Estrangeira",
+      "seiNames": [
+        "Detran: Averbação de CNH Estrangeira"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "oficio-mero-expediente",
+      "name": "Elaboração de Ofício de Mero Expediente",
+      "seiNames": [
+        "Administrativo: Elaboração de Ofício de Mero Expediente"
+      ],
+      "destinationUnit": "",
+      "subjectAcronym": "",
+      "responseModel": "standard",
+      "catalogStatus": "pending-mapping",
+      "documentsStatus": "pending-validation"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-30",
+  "models": [
+    {
+      "id": "daf",
+      "name": "Protocolo DAF",
+      "status": "draft-user-supplied",
+      "body": "Processo aberto, {{numeroProcesso}}\n\nCom isso encerramos o nosso atendimento. O andamento do processo pode ser acompanhado pela Pesquisa Pública:\n\n{{linkPesquisaPublica}}\n\nPASSOS PARA A CONSULTA:\n\n1. Informar o número completo do processo, incluindo “SEI-”;\n2. Na opção “Municípios”, selecionar “ERJ”;\n3. Clicar em “Pesquisar processos”;\n4. Clicar no número do processo exibido em azul para acessar a página de consulta.\n\nIMPORTANTE:\n\nNão fornecemos informações a respeito de processos já em tramitação. Para sanar eventuais exigências, o requerente deverá comparecer à unidade onde o processo se encontra ou entrar em contato pelos canais da DAF:\n\nTELEFONES:\n(21) 2332-0043 — assuntos de pagamento;\n(21) 2332-0078 e (21) 2332-0070 — consultas e exigências.\n\nE-MAIL:\nDAF.ANL@DETRAN.RJ.GOV.BR\n\nOBSERVAÇÃO:\nA devolução será realizada por crédito em conta bancária de titularidade do requerente, que deverá acompanhar a entrada do crédito em seu extrato bancário.\n\nCANAIS GERAIS:\nTeleatendimento: (21) 3460-4040 e (21) 3460-4041\nOuvidoria: (21) 2332-0438 e (21) 2321-0450\nWhatsApp: https://api.whatsapp.com/send/?phone=552134604040&text&type=phone_number&app_absent=0\n\nAtenciosamente,\n\nAtendimento do Serviço de Protocolo — DETRAN-RJ"
+    },
+    {
+      "id": "standard",
+      "name": "Protocolo padrão",
+      "status": "draft-user-supplied",
+      "body": "Processo aberto, {{numeroProcesso}}\n\nSEU ATENDIMENTO POR PARTE DO SERVIÇO DE PROTOCOLO ESTÁ ENCERRADO. TODAS AS TRATATIVAS E INFORMAÇÕES AGORA SÃO JUNTO AO SETOR ONDE O PROCESSO SE ENCONTRA.\n\nO andamento do processo pode ser acompanhado pela Pesquisa Pública:\n\n{{linkPesquisaPublica}}\n\nPASSOS PARA A CONSULTA:\n\n1. Informar o número completo do processo, incluindo “SEI-”;\n2. Na opção “Municípios”, selecionar “ERJ”;\n3. Clicar em “Pesquisar processos”;\n4. Clicar no número do processo exibido em azul para acessar a página de consulta.\n\nEventuais exigências ou instruções devem ser tratadas junto ao setor onde o processo se encontra.\n\nCANAIS GERAIS:\nTeleatendimento: (21) 3460-4040 e (21) 3460-4041\nOuvidoria: (21) 2332-0438 e (21) 2321-0450\nWhatsApp: https://api.whatsapp.com/send/?phone=552134604040&text&type=phone_number&app_absent=0\n\nPOR FAVOR, NÃO RESPONDA ESTE E-MAIL.\n\nAtenciosamente,\n\nAtendimento do Serviço de Protocolo — DETRAN-RJ"
+    },
+    {
+      "id": "drv",
+      "name": "Protocolo DRV",
+      "status": "draft-user-supplied",
+      "body": "Processo aberto, {{numeroProcesso}}\n\nO andamento do processo pode ser acompanhado pela Pesquisa Pública:\n\n{{linkPesquisaPublica}}\n\nPASSOS PARA A CONSULTA:\n\n1. Informar o número completo do processo, incluindo “SEI-”;\n2. Na opção “Municípios”, selecionar “ERJ”;\n3. Clicar em “Pesquisar processos”;\n4. Clicar no número do processo exibido em azul para acessar a página de consulta.\n\nPara sanar eventuais exigências, o requerente deverá comparecer à unidade onde o processo se encontra ou entrar em contato pelo e-mail:\n\natendimento.drv@detran.rj.gov.br\n\nCANAIS GERAIS:\nTeleatendimento: (21) 3460-4040 e (21) 3460-4041\nOuvidoria: (21) 2332-0438 e (21) 2321-0450\nWhatsApp: https://api.whatsapp.com/send/?phone=552134604040&text&type=phone_number&app_absent=0\n\nEventuais exigências ou instruções devem ser tratadas junto ao setor onde o processo se encontra.\n\nPOR FAVOR, NÃO RESPONDA ESTE E-MAIL.\n\nAtenciosamente,\n\nAtendimento do Serviço de Protocolo — DETRAN-RJ"
+    },
+    {
+      "id": "agem",
+      "name": "Protocolo AGEM",
+      "status": "draft-user-supplied",
+      "body": "Processo aberto, {{numeroProcesso}}\n\nO andamento do processo pode ser acompanhado pela Pesquisa Pública:\n\n{{linkPesquisaPublica}}\n\nPASSOS PARA A CONSULTA:\n\n1. Informar o número completo do processo, incluindo “SEI-”;\n2. Na opção “Municípios”, selecionar “ERJ”;\n3. Clicar em “Pesquisar processos”;\n4. Clicar no número do processo exibido em azul para acessar a página de consulta.\n\nA partir deste momento, o contato deve ser feito pelo e-mail:\n\nagem@detran.rj.gov.br\n\nEventuais exigências ou instruções devem ser tratadas junto ao setor onde o processo se encontra.\n\nPOR FAVOR, NÃO RESPONDA ESTE E-MAIL.\n\nAtenciosamente,\n\nAtendimento do Serviço de Protocolo — DETRAN-RJ"
+    },
+    {
+      "id": "divmed",
+      "name": "Protocolo DIVMED",
+      "status": "draft-user-supplied",
+      "body": "Processo aberto, {{numeroProcesso}}\n\nO andamento do processo pode ser acompanhado pela Pesquisa Pública:\n\n{{linkPesquisaPublica}}\n\nPASSOS PARA A CONSULTA:\n\n1. Informar o número completo do processo, incluindo “SEI-”;\n2. Na opção “Municípios”, selecionar “ERJ”;\n3. Clicar em “Pesquisar processos”;\n4. Clicar no número do processo exibido em azul para acessar a página de consulta.\n\nA partir deste momento, o contato deve ser feito pelo WhatsApp:\n\nhttps://wa.me/552123320206\n\nEventuais exigências ou instruções devem ser tratadas junto ao setor onde o processo se encontra.\n\nPOR FAVOR, NÃO RESPONDA ESTE E-MAIL.\n\nAtenciosamente,\n\nAtendimento do Serviço de Protocolo — DETRAN-RJ"
+    }
+  ]
+}

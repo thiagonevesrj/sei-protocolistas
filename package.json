@@ -1,6 +1,6 @@
 {
   "name": "sei-protocolistas",
-  "version": "0.2.21",
+  "version": "0.3.1",
   "description": "Extensão de produtividade para protocolistas no Sistema Eletrônico de Informações - SEI",
   "main": "index.js",
   "repository": "https://github.com/thiagonevesrj/sei-protocolistas.git",
@@ -41,6 +41,7 @@
   "scripts": {
     "start": "web-ext run --keep-profile-changes --firefox-profile=seipp-profile-testes",
     "lint": "bunx eslint .",
+    "validate": "node scripts/validate-extension.js",
     "prepare": "git config --local core.hooksPath .githooks"
   },
   "dependencies": {

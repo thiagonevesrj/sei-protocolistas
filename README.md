@@ -23,9 +23,18 @@ O projeto está na fase de validação dos fluxos de abertura rápida e inclusã
 legado que ainda precisa ser validado permanece no repositório, mas as opções fora do escopo inicial
 estão ocultas e desativadas por padrão.
 
+A versão `0.3.1` inicia a fundação da **Central Protocolista**, com catálogo local dos processos
+prioritários, configuração individual do número do protocolista, editor dos modelos de resposta,
+limpeza de dados temporários e importação/exportação de preferências sem dados de cidadãos.
+A Central pode ser aberta pelo ícone da extensão.
+
 Consulte [docs/DIAGNOSTICO-INICIAL.md](docs/DIAGNOSTICO-INICIAL.md) para acompanhar o inventário técnico.
 As decisões operacionais obrigatórias estão registradas em
 [docs/REGRAS-FUNCIONAIS.md](docs/REGRAS-FUNCIONAIS.md).
+O histórico consolidado, as decisões de produto e o roteiro de desenvolvimento estão no
+[Plano Mestre](docs/PLANO-MESTRE.md).
+Antes de distribuir uma nova versão, siga o
+[Checklist de Regressão](docs/CHECKLIST-REGRESSAO.md).
 
 ## Licença e créditos
 

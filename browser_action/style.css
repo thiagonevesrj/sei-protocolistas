@@ -1,20 +1,62 @@
 body {
     margin: 0;
-    width: 300px;
+    width: 330px;
+    color: #f8fafc;
+    background: #030d1b;
     font-family: Arial, Helvetica, sans-serif;
 }
 
 #title {
+    display: grid;
+    gap: 2px;
     color: #fff;
-    background-color: #1351b4;
+    background-color: #06172d;
     margin: 0;
-    padding: 12px;
-    text-align: center;
+    padding: 15px 18px 13px;
+    border-bottom: 3px solid #e0ae28;
+}
+
+#title strong {
+    font-size: 17px;
+}
+
+#title small {
+    color: #f1c44f;
+    font-family: "Segoe Script", "Brush Script MT", cursive;
+    font-size: 9px;
+    font-style: italic;
 }
 
 #popup-content {
-    margin: 15px;
+    margin: 18px;
     line-height: 1.4;
+}
+
+#popup-content > p {
+    margin: 0 0 14px;
+    color: #aebdd0;
+}
+
+#open-central {
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 11px 12px;
+    color: #071224;
+    background: #f1c44f;
+    border: 1px solid #f1c44f;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#open-central:hover,
+#open-central:focus {
+    background: #ffd66a;
+}
+
+.field {
+    padding-top: 12px;
+    border-top: 1px solid rgba(174, 189, 208, 0.2);
 }
 
 .field > label {
@@ -26,5 +68,5 @@ body {
 #popup-content small {
     display: block;
     margin-top: 12px;
-    color: #555;
+    color: #8598af;
 }

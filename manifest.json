@@ -3,13 +3,13 @@
   "name": "SEI Protocolistas",
   "short_name": "SEI Protocolistas",
   "description": "Ferramentas de produtividade para protocolistas no Sistema Eletrônico de Informações (SEI), com base no projeto SEI++.",
-  "version": "0.2.21",
+  "version": "0.3.1",
   "author": "Thiago Neves e colaboradores do SEI++",
   "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
   "icons": {"48": "icons/seipp-new.png"},
   "permissions": ["storage"],
   "host_permissions": [
-    "*://*.br/*controlador.php?acao=*"
+    "*://sei.rj.gov.br/*"
   ],
   "action": {
     "default_icon": "icons/seipp-new.png",
@@ -25,18 +25,19 @@
 
   "content_scripts": [
     {
-      "matches": ["*://*.br/*"],
+      "matches": ["*://sei.rj.gov.br/*"],
       "run_at": "document_start",
       "css": ["cs_modules/core.css"],
       "all_frames": true,
       "js": [
         "cs_modules/core/start/lib.js",
+        "cs_modules/core/start/limparContextoTemporario.js",
         "vendor/jquery/jquery.min.js",
         "vendor/jquery-ui/jquery-ui.min.js"
       ]
     },
     {
-      "matches": ["*://*.br/*"],
+      "matches": ["*://sei.rj.gov.br/*"],
       "run_at": "document_end",
       "css": [
         "cs_modules/core.css",
@@ -53,14 +54,14 @@
       ]
     },
     {
-      "matches": ["*://*.br/sip/login.php*"],
+      "matches": ["*://sei.rj.gov.br/sip/login.php*"],
       "run_at": "document_end",
       "js": [
         "cs_modules/core/login/index.js"
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=*", "*://*.br/*controlador_externo.php?acao=*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*", "*://sei.rj.gov.br/*controlador_externo.php?acao=*"],
       "run_at": "document_idle",
       "all_frames": false,
       "js": [
@@ -74,7 +75,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=documento_receber*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_receber*"],
       "all_frames": true,
       "js": [
         "cs_modules/documento_receber/forcarReaberturaProcesso.js",
@@ -84,8 +85,8 @@
     },
     {
       "matches": [
-        "*://*.br/*controlador.php?acao=procedimento_escolher_tipo*",
-        "*://*.br/*controlador.php?acao=procedimento_gerar*"
+        "*://sei.rj.gov.br/*controlador.php?acao=procedimento_escolher_tipo*",
+        "*://sei.rj.gov.br/*controlador.php?acao=procedimento_gerar*"
       ],
       "run_at": "document_idle",
       "all_frames": false,
@@ -93,7 +94,7 @@
       "js": ["cs_modules/clique_protocolista/index.js"]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=procedimento_controlar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_controlar*"],
       "js": [
         "cs_modules/lib/pontoControleCores.js",
         "cs_modules/procedimento_controlar/mostrarEspecificacao.js",
@@ -111,7 +112,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
       "js": [
         "cs_modules/lib/filtra_processos/index.js",
         "cs_modules/lib/filtra_processos/pesquisarInformacoes.js",
@@ -122,7 +123,7 @@
       ]
     },
         {
-      "matches": ["*://*.br/*controlador.php?acao=controle_unidade_gerar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=controle_unidade_gerar*"],
       "js": [
         "cs_modules/lib/selecionarMultiplosProcessos.js",
         "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js",
@@ -130,7 +131,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=procedimento_visualizar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_visualizar*"],
       "all_frames": true,
       "css": ["cs_modules/procedimento_visualizar/styles.css"],
       "js": [
@@ -149,7 +150,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=documento_escolher_tipo*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_escolher_tipo*"],
       "all_frames": true,
       "css": ["cs_modules/documento_escolher_tipo/styles.css"],
       "js": [
@@ -158,7 +159,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=anotacao_registrar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=anotacao_registrar*"],
       "all_frames": true,
       "js": [
         "cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js",
@@ -166,7 +167,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=infra_configurar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=infra_configurar*"],
       "css": ["cs_modules/infra_configurar/options_ui/styles.css"],
       "js": [
         "cs_modules/lib/colorToFilter.js",
@@ -175,7 +176,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=documento_gerar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_gerar*"],
       "all_frames": true,
       "js": [
         "cs_modules/documento_gerar/gerarDocumentoComModelo.js",
@@ -183,7 +184,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/*controlador.php?acao=procedimento_atribuicao_cadastrar*"],
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_atribuicao_cadastrar*"],
       "all_frames": true,
       "js": [
         "cs_modules/procedimento_atribuicao_cadastrar/ordenarSelect.js",
@@ -215,7 +216,7 @@
         "icons/sei-protocolistas-wordmark.png"
       ],
       "matches": [
-        "*://*.br/*"
+        "*://sei.rj.gov.br/*"
       ]
     }
   ]

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Central Protocolista</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__sei">SEI</span>
+        <span class="brand__name">Protocolistas</span>
+        <span class="brand__signature">by Thiago Neves Design</span>
+      </div>
+      <div class="topbar__meta">
+        <span class="environment">Central local</span>
+        <span id="extension-version">Versão</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Produtividade para quem protocola</p>
+          <h1>Central Protocolista</h1>
+          <p class="hero__description">
+            Um único ponto para triagem, abertura, conclusão e impressão.
+            Nesta primeira etapa, estamos preparando a fundação do sistema.
+          </p>
+        </div>
+        <div class="hero__status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Fundação da Central</span>
+        </div>
+      </section>
+
+      <section class="workflow-grid" aria-label="Fluxos da Central Protocolista">
+        <article class="workflow-card">
+          <span class="workflow-card__number">01</span>
+          <h2>Triagem de e-mail</h2>
+          <p>Marcar documentos ausentes e preparar assunto e resposta de TRIAGEM.</p>
+          <button type="button" disabled>Próxima etapa</button>
+        </article>
+
+        <article class="workflow-card">
+          <span class="workflow-card__number">02</span>
+          <h2>Abrir processo</h2>
+          <p>Iniciar o Clique Protocolista e reaproveitar os dados no SEI.</p>
+          <button type="button" disabled>Disponível dentro do SEI</button>
+        </article>
+
+        <article class="workflow-card">
+          <span class="workflow-card__number">03</span>
+          <h2>Concluir atendimento</h2>
+          <p>Preparar destino, resposta de FECHADO ou protocolo impresso.</p>
+          <button type="button" disabled>Etapa futura</button>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel">
+          <div class="panel__heading">
+            <div>
+              <p class="eyebrow">Configuração individual</p>
+              <h2>Identificação do protocolista</h2>
+            </div>
+            <span id="config-status" class="badge badge--warning">Não configurado</span>
+          </div>
+
+          <form id="protocolist-form" novalidate>
+            <div class="form-grid">
+              <label>
+                Nome do protocolista
+                <input
+                  id="protocolist-name"
+                  name="protocolistName"
+                  type="text"
+                  maxlength="80"
+                  autocomplete="name"
+                  placeholder="Ex.: Thiago Neves"
+                >
+              </label>
+
+              <label>
+                Número do protocolista <span aria-hidden="true">*</span>
+                <input
+                  id="protocolist-number"
+                  name="protocolistNumber"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="4"
+                  pattern="[0-9]{1,4}"
+                  placeholder="Ex.: 31"
+                  required
+                >
+              </label>
+            </div>
+
+            <p class="field-help">
+              O número será salvo somente neste navegador e usado na composição dos assuntos.
+            </p>
+
+            <div id="form-message" class="form-message" role="status" aria-live="polite"></div>
+
+            <div class="form-actions">
+              <button class="button button--primary" type="submit">Salvar configuração</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="panel panel--summary">
+          <p class="eyebrow">Primeiro piloto</p>
+          <h2>Devolução de Taxas</h2>
+          <dl>
+            <div>
+              <dt>Unidade no SEI</dt>
+              <dd>DIVAF</dd>
+            </div>
+            <div>
+              <dt>Sigla no assunto</dt>
+              <dd>DAF</dd>
+            </div>
+            <div>
+              <dt>Modelo</dt>
+              <dd>Protocolo DAF</dd>
+            </div>
+            <div>
+              <dt>Próxima entrega</dt>
+              <dd>Triagem com documentos pendentes</dd>
+            </div>
+          </dl>
+        </article>
+      </section>
+
+      <section class="panel catalog-panel">
+        <div class="panel__heading">
+          <div>
+            <p class="eyebrow">Catálogo local</p>
+            <h2>Processos prioritários</h2>
+          </div>
+          <span id="catalog-summary" class="badge">Carregando...</span>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Processo</th>
+                <th>Unidade</th>
+                <th>Sigla</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody id="catalog-body"></tbody>
+          </table>
+        </div>
+
+        <p id="catalog-error" class="form-message form-message--error" role="alert"></p>
+      </section>
+
+      <section class="panel model-panel">
+        <div class="panel__heading">
+          <div>
+            <p class="eyebrow">Editor inicial</p>
+            <h2>Modelos de resposta</h2>
+          </div>
+          <span class="badge badge--warning">Revisão necessária</span>
+        </div>
+
+        <div class="model-editor">
+          <label>
+            Modelo
+            <select id="model-select"></select>
+          </label>
+
+          <label>
+            Texto do modelo
+            <textarea id="model-body" rows="18" maxlength="30000"></textarea>
+          </label>
+        </div>
+
+        <p class="field-help">
+          Mantenha os marcadores <code>{{numeroProcesso}}</code> e
+          <code>{{linkPesquisaPublica}}</code>. Os ajustes ficam somente neste navegador.
+        </p>
+
+        <div id="model-message" class="form-message" role="status" aria-live="polite"></div>
+
+        <div class="form-actions form-actions--split">
+          <button id="restore-model" class="button button--secondary" type="button">
+            Restaurar texto-base
+          </button>
+          <button id="save-model" class="button button--primary" type="button">
+            Salvar modelo
+          </button>
+        </div>
+      </section>
+
+      <section class="content-grid content-grid--secondary">
+        <article class="panel">
+          <div class="panel__heading">
+            <div>
+              <p class="eyebrow">Privacidade operacional</p>
+              <h2>Dados temporários</h2>
+            </div>
+            <span id="temporary-status" class="badge">Verificando...</span>
+          </div>
+
+          <p class="panel-copy">
+            Nome, CPF, telefone, e-mail e dados do processo servem apenas para concluir
+            o atendimento atual. Eles não entram no arquivo de exportação.
+          </p>
+
+          <button id="clear-temporary" class="button button--secondary" type="button">
+            Limpar dados temporários agora
+          </button>
+          <div id="temporary-message" class="form-message" role="status" aria-live="polite"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel__heading">
+            <div>
+              <p class="eyebrow">Cópia e transferência</p>
+              <h2>Configuração da Central</h2>
+            </div>
+          </div>
+
+          <p class="panel-copy">
+            Exporte apenas número do protocolista e modelos personalizados para configurar
+            outro computador sem copiar dados de cidadãos.
+          </p>
+
+          <div class="transfer-actions">
+            <button id="export-settings" class="button button--secondary" type="button">
+              Exportar JSON
+            </button>
+            <button id="import-settings" class="button button--primary" type="button">
+              Importar JSON
+            </button>
+            <input id="import-file" type="file" accept="application/json,.json" hidden>
+          </div>
+          <div id="transfer-message" class="form-message" role="status" aria-live="polite"></div>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <span>SEI Protocolistas</span>
+      <span>Dados e preferências permanecem neste navegador.</span>
+    </footer>
+  </body>
+</html>

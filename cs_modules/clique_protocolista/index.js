@@ -694,7 +694,17 @@
         createdAt: Date.now(),
         expiresAt: Date.now() + MAX_CONTEXT_AGE,
         modalidade: draft.modalidade,
+        tipoProcessoId: draft.tipoProcesso,
+        tipoProcessoLabel: draft.tipoProcessoLabel,
         nome: draft.nome,
+        cpf: draft.cpf,
+        telefone: draft.telefone,
+        email: draft.email,
+        duda: draft.duda,
+        placa: draft.placa,
+        chassi: draft.chassi,
+        renavam: draft.renavam,
+        especificacao: output.specification,
         observacoes: output.observations,
         documentoPresencialPendente: draft.modalidade === 'presencial'
       }
