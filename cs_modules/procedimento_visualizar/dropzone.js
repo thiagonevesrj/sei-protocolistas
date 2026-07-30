@@ -41,14 +41,47 @@ dropzone.utils = {
   },
 
   extrairUrlControlador: function (value) {
-    const texto = String(value || '').replace(/&amp;/g, '&')
+    const texto = dropzone.utils.normalizarUrlSei(value)
     const resultado = texto.match(/(?:https?:\/\/[^'"\s)]+|controlador\.php\?[^'"\s)]+)/i)
     return resultado ? resultado[0] : null
   },
 
+  normalizarUrlSei: function (value) {
+    let texto = String(value || '')
+      .replace(/\\u0026|\\x26/gi, '&')
+      .replace(/\\\//g, '/')
+      .trim()
+
+    /*
+     * As URLs do SEI podem atravessar duas camadas de HTML: primeiro dentro de
+     * um trecho JavaScript e depois dentro da resposta da página. Por isso,
+     * "&" pode chegar como "&amp;amp;". Decodificar até estabilizar preserva
+     * todos os parâmetros (unidade, sistema e hash) necessários à navegação.
+     */
+    for (let i = 0; i < 3; i++) {
+      const anterior = texto
+      texto = texto
+        .replace(/&amp;|&#38;|&#x26;/gi, '&')
+        .replace(/&quot;|&#34;|&#x22;/gi, '"')
+      if (texto === anterior) break
+    }
+
+    return texto
+  },
+
   resolverUrl: function (value) {
     try {
-      return new URL(value, GetBaseUrl()).href
+      return new URL(dropzone.utils.normalizarUrlSei(value), GetBaseUrl()).href
+    } catch (error) {
+      return null
+    }
+  },
+
+  validarAcao: function (value, acaoEsperada) {
+    const url = dropzone.utils.resolverUrl(value)
+    if (!url) return null
+    try {
+      return new URL(url).searchParams.get('acao') === acaoEsperada ? url : null
     } catch (error) {
       return null
     }
@@ -245,9 +278,7 @@ dropzone.Http.prototype.passos = {
       if (!scriptTagProcurada) return null
       const resultado = regex.exec(scriptTagProcurada.innerHTML)
       if (resultado === null) return null
-      return resultado[1]
-        .replace(/&amp;|&#38;|&#x26;/gi, '&')
-        .replace(/\\u0026|\\x26/gi, '&')
+      return dropzone.utils.validarAcao(resultado[1], 'documento_escolher_tipo')
     },
 
     abrirPagina: function () {
@@ -257,7 +288,7 @@ dropzone.Http.prototype.passos = {
         return
       }
       $.ajax({
-        url: GetBaseUrl() + urlDocExterno,
+        url: urlDocExterno,
         success: function (resposta) {
           this.passos['2'].abrirPagina.call(this, resposta)
         }.bind(this),
@@ -280,9 +311,7 @@ dropzone.Http.prototype.passos = {
       const regex = /<a\s+(?:[^>]*?\s+)?href="(.*?)" tabindex="1003" class="ancoraOpcao"> Externo<\/a>/m
       const resultado = regex.exec(resposta)
       if (resultado === null) return null
-      return resultado[1]
-        .replace(/&amp;|&#38;|&#x26;/gi, '&')
-        .replace(/\\u0026|\\x26/gi, '&')
+      return dropzone.utils.validarAcao(resultado[1], 'documento_receber')
     },
 
     abrirPagina: function (resposta) {
@@ -292,7 +321,7 @@ dropzone.Http.prototype.passos = {
         return
       }
       $.ajax({
-        url: GetBaseUrl() + urlNovoDocExterno,
+        url: urlNovoDocExterno,
         success: function (resposta) {
           this.passos['3'].enviarArquivo.call(this, resposta)
         }.bind(this),
