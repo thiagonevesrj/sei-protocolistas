@@ -270,15 +270,29 @@ dropzone.Http.prototype.passos = {
   1: {
 
     obterUrl: function () {
-      const todasAsScriptTag = document.getElementsByTagName('script')
-      const regex = /^Nos\[0\].acoes = '<a href="(.*?)" tabindex="451"/m
-      const scriptTagProcurada = Array.from(todasAsScriptTag).find(function (element) {
-        return regex.exec(element.innerHTML) !== null
-      })
-      if (!scriptTagProcurada) return null
-      const resultado = regex.exec(scriptTagProcurada.innerHTML)
-      if (resultado === null) return null
-      return dropzone.utils.validarAcao(resultado[1], 'documento_escolher_tipo')
+      const scripts = Array.from(document.getElementsByTagName('script'))
+
+      for (const script of scripts) {
+        const conteudo = script.innerHTML || script.textContent || ''
+        if (!/Nos\[0\]\.acoes/.test(conteudo)) continue
+
+        /*
+         * A árvore guarda suas ações como fragmentos HTML dentro de JavaScript.
+         * Em vez de depender da posição/tabindex de um ícone, examina todos os
+         * links e escolhe a ação real de incluir documento.
+         */
+        const ancoraRegex = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi
+        let ancora
+        while ((ancora = ancoraRegex.exec(conteudo)) !== null) {
+          const href = /\bhref\s*=\s*(["'])(.*?)\1/i.exec(ancora[1])
+          if (!href) continue
+
+          const url = dropzone.utils.validarAcao(href[2], 'documento_escolher_tipo')
+          if (url) return url
+        }
+      }
+
+      return null
     },
 
     abrirPagina: function () {
@@ -309,61 +323,47 @@ dropzone.Http.prototype.passos = {
 
     obterUrl: function (resposta) {
       const documento = new DOMParser().parseFromString(resposta, 'text/html')
-      const links = Array.from(documento.querySelectorAll('a'))
-      const linkExterno = links.find(function (link) {
-        return link.textContent
-          .replace(/\s+/g, ' ')
-          .trim()
-          .toLocaleLowerCase('pt-BR') === 'externo'
-      })
+      const links = Array.from(documento.querySelectorAll('#tblSeries a[href], a[href]'))
 
-      if (linkExterno) {
-        const origens = [
-          linkExterno.getAttribute('href'),
-          linkExterno.getAttribute('onclick'),
-          linkExterno.getAttribute('data-url')
-        ].filter(Boolean)
-
-        for (const origem of origens) {
-          const url = dropzone.utils.validarAcao(origem, 'documento_receber')
-          if (url) return url
-        }
-      }
-
-      /*
-       * Na resposta AJAX do SEI-RJ, a lista pode estar guardada como texto
-       * dentro de JavaScript. Nesse caso o DOMParser não cria os links.
-       * Procurar cada âncora pelo rótulo permite aceitar atributos em qualquer
-       * ordem, aspas simples ou duplas e espaços variáveis.
-       */
-      const ancoraRegex = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi
-      let ancora
-      while ((ancora = ancoraRegex.exec(String(resposta))) !== null) {
-        const rotulo = ancora[2]
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/&nbsp;|&#160;/gi, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .toLocaleLowerCase('pt-BR')
-        if (rotulo !== 'externo') continue
-
-        const href = /\bhref\s*=\s*(["'])(.*?)\1/i.exec(ancora[1])
-        if (!href) continue
-        const url = dropzone.utils.validarAcao(href[2], 'documento_receber')
+      for (const link of links) {
+        const url = dropzone.utils.validarAcao(
+          link.getAttribute('href'),
+          'documento_receber'
+        )
         if (url) return url
       }
 
       return null
     },
 
+    obterPost: function (resposta) {
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      const form = documento.querySelector('form#frmDocumentoEscolherTipo')
+      if (!form?.getAttribute('action')) return null
+
+      const data = {}
+      Array.from(form.querySelectorAll('input[type="hidden"][name]')).forEach(function (input) {
+        data[input.name] = input.value
+      })
+      data.hdnIdSerie = '-1'
+
+      return {
+        url: dropzone.utils.resolverUrl(form.getAttribute('action')),
+        data
+      }
+    },
+
     abrirPagina: function (resposta) {
       const urlNovoDocExterno = this.passos['2'].obterUrl(resposta)
-      if (urlNovoDocExterno === null) {
+      const postNovoDocExterno = this.passos['2'].obterPost(resposta)
+      if (urlNovoDocExterno === null && postNovoDocExterno === null) {
         this.falhar('Etapa 2: o tipo de documento “Externo” não foi encontrado na lista do SEI.')
         return
       }
       $.ajax({
-        url: urlNovoDocExterno,
+        url: urlNovoDocExterno || postNovoDocExterno.url,
+        method: urlNovoDocExterno ? 'GET' : 'POST',
+        data: urlNovoDocExterno ? undefined : postNovoDocExterno.data,
         success: function (resposta) {
           this.passos['3'].enviarArquivo.call(this, resposta)
         }.bind(this),

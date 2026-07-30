@@ -31,3 +31,8 @@ As decisões operacionais obrigatórias estão registradas em
 
 Este projeto é distribuído sob a licença [GPL-3.0](LICENSE). O histórico do fork e os avisos de autoria do
 SEI++ são preservados.
+
+A compatibilidade do fluxo de envio de documentos externos no SEI-RJ também foi estudada com base no
+comportamento e na documentação pública do [SEI Pro](https://github.com/SEI-Pro/sei-pro), projeto de
+Pedro Henrique Soares licenciado sob a AGPL-3.0. A implementação do SEI Protocolistas foi escrita dentro
+da arquitetura deste projeto, sem incorporar os arquivos distribuídos pelo SEI Pro.
