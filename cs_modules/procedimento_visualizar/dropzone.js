@@ -244,7 +244,10 @@ dropzone.Http.prototype.passos = {
       })
       if (!scriptTagProcurada) return null
       const resultado = regex.exec(scriptTagProcurada.innerHTML)
-      return resultado === null ? null : resultado[1]
+      if (resultado === null) return null
+      return resultado[1]
+        .replace(/&amp;|&#38;|&#x26;/gi, '&')
+        .replace(/\\u0026|\\x26/gi, '&')
     },
 
     abrirPagina: function () {
@@ -276,7 +279,10 @@ dropzone.Http.prototype.passos = {
     obterUrl: function (resposta) {
       const regex = /<a\s+(?:[^>]*?\s+)?href="(.*?)" tabindex="1003" class="ancoraOpcao"> Externo<\/a>/m
       const resultado = regex.exec(resposta)
-      return resultado === null ? null : resultado[1]
+      if (resultado === null) return null
+      return resultado[1]
+        .replace(/&amp;|&#38;|&#x26;/gi, '&')
+        .replace(/\\u0026|\\x26/gi, '&')
     },
 
     abrirPagina: function (resposta) {
