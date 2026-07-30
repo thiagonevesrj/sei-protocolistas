@@ -766,7 +766,10 @@ dropzone.Http.prototype.passos = {
         const url = new URL(responseURL)
         if (
           url.searchParams.get('acao') === 'arvore_visualizar' &&
-          url.searchParams.get('acao_origem') === 'documento_receber'
+          (
+            url.searchParams.get('acao_origem') === 'documento_receber' ||
+            /^\d+$/.test(url.searchParams.get('id_documento') || '')
+          )
         ) {
           return true
         }
@@ -774,7 +777,15 @@ dropzone.Http.prototype.passos = {
         // Mantém a verificação por conteúdo para versões antigas do SEI.
       }
       const documento = new DOMParser().parseFromString(resposta, 'text/html')
-      return documento.querySelector('#divArvoreHtml') !== null
+      if (documento.querySelector('#divArvoreHtml') !== null) return true
+
+      /*
+       * Algumas instalações, inclusive variantes atuais do SEI, retornam a
+       * visualização do documento sem o parâmetro acao_origem usado pelo
+       * SEI Pro como confirmação. O identificador numérico do novo documento
+       * é a confirmação estável nessas respostas.
+       */
+      return /(?:[?&]|&amp;)id_documento=\d+/i.test(String(resposta))
     },
 
     extrairMensagemValidacao: function (resposta) {
@@ -790,15 +801,36 @@ dropzone.Http.prototype.passos = {
 
       const documento = new DOMParser().parseFromString(resposta, 'text/html')
       Array.from(documento.querySelectorAll(
-        '.infraErro, .infraExcecao, .infraAviso, #divInfraMensagem, [role="alert"]'
+        '.infraErro, .infraExcecao, .infraAviso, #divInfraMensagem, [role="alert"], #txaInfraValidacao'
       )).forEach(function (elemento) {
-        adicionar(elemento.textContent)
+        adicionar(elemento.value || elemento.textContent)
       })
 
       const alertas = String(resposta).matchAll(/\balert\s*\(\s*(['"])(.*?)\1\s*\)/gis)
       for (const alerta of alertas) adicionar(alerta[2])
 
       return mensagens[0] || null
+    },
+
+    diagnosticarRespostaFinal: function (resposta, responseURL) {
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      let acao = 'indisponível'
+      let idDocumento = 'não'
+      try {
+        const url = new URL(responseURL)
+        acao = url.searchParams.get('acao') || 'sem-ação'
+        idDocumento = /^\d+$/.test(url.searchParams.get('id_documento') || '') ? 'sim' : 'não'
+      } catch (error) {
+        // A resposta textual abaixo ainda fornece o restante do diagnóstico.
+      }
+
+      return [
+        `ação=${acao}`,
+        `idDocumento=${idDocumento}`,
+        `formCadastro=${documento.querySelector('#frmDocumentoCadastro') ? 'sim' : 'não'}`,
+        `árvore=${documento.querySelector('#divArvoreHtml') ? 'sim' : 'não'}`,
+        `validaçãoOculta=${documento.querySelector('#txaInfraValidacao') ? 'sim' : 'não'}`
+      ].join('; ')
     },
 
     submeterFormulario: function (hdnAnexos, resposta) {
@@ -836,10 +868,13 @@ dropzone.Http.prototype.passos = {
                 const diagnostico = this.diagnosticoUpload
                   ? `\nDiagnóstico do upload: ${this.diagnosticoUpload}`
                   : ''
+                const diagnosticoResposta = this.passos['4']
+                  .diagnosticarRespostaFinal(data, xhr.responseURL)
                 this.falhar(
                   'Etapa 4: o SEI devolveu o formulário sem confirmar a criação do documento.' +
                   detalhe +
-                  diagnostico
+                  diagnostico +
+                  `\nDiagnóstico da resposta: ${diagnosticoResposta}`
                 )
               }
             }.bind(this),
