@@ -4,13 +4,20 @@
 // eslint-disable-next-line no-unused-vars
 function getSeiVersion (baseName) {
   const script = document.querySelectorAll('script[src^="js/sei.js?"]')[0]
-  const versionText = document.querySelector('#spnInfraIdentificacaoSistema span.infraTituloLogoSistema').innerText
+  const versionElement = document.querySelector('#spnInfraIdentificacaoSistema span.infraTituloLogoSistema')
+  const versionText = versionElement ? versionElement.innerText.trim() : ''
+
   if (!script && !versionText) {
     return '0.0.0.0'
   }
-  const version = script
-    ? script.getAttribute('src').match(/(?<=\?)([^=-]+)/g)[0]
-    : versionText
+
+  const scriptMatch = script
+    ? script.getAttribute('src').match(/(?<=\?)([^=-]+)/g)
+    : null
+  const version = scriptMatch ? scriptMatch[0] : versionText
+
+  if (!version) return '0.0.0.0'
+
   const fixedVersion = fixVersionNumber(version)
   return fixedVersion
 }

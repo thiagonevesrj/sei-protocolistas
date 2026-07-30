@@ -1,5 +1,5 @@
-/* global AdicionarIdentificadorSeipp, ocultarMenuAutomaticamente,
-  VerificarBlocoAssinatura, moveLinkMenu, atalhoPublicacoesEletronicas,
+/* global AdicionarIdentificadorSeipp, VerificarBlocoAssinatura,
+  moveLinkMenu, atalhoPublicacoesEletronicas,
   linkNeutroControleProcessos, IndicarConfiguracao, ModuleInit */
 /******************************************************************************
  SEI ++: Script que adiciona novas funcionalidades ao SEI
@@ -9,8 +9,6 @@ const ModNameIdle = 'core.d_idle'
 
 ModuleInit(ModNameIdle).then((options) => {
   AdicionarIdentificadorSeipp(ModNameIdle)
-
-  ocultarMenuAutomaticamente(ModNameIdle)
 
   options.CheckTypes.forEach(function (element) {
     switch (element) {
