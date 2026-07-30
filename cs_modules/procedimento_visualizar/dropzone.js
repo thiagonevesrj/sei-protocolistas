@@ -40,6 +40,28 @@ dropzone.utils = {
     return escape(str).replace(/\+/g, '%2B')
   },
 
+  /*
+   * Codificação usada pelo SEI Pro para o nome exibido na árvore. Espaços
+   * precisam chegar como "+" e letras acentuadas usam o código hexadecimal
+   * esperado pelo SEI, que trabalha com ISO-8859-1 nesta submissão.
+   */
+  encodeURIParaHex: function (str) {
+    let resultado = ''
+    for (const caractere of String(str)) {
+      const semAcento = caractere
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      if (caractere === ' ') {
+        resultado += '+'
+      } else if (caractere !== semAcento && caractere !== '') {
+        resultado += `%${caractere.charCodeAt(0).toString(16).toUpperCase()}`
+      } else {
+        resultado += caractere
+      }
+    }
+    return resultado
+  },
+
   extrairUrlControlador: function (value) {
     const texto = dropzone.utils.normalizarUrlSei(value)
     const resultado = texto.match(/(?:https?:\/\/[^'"\s)]+|controlador\.php\?[^'"\s)]+)/i)
@@ -458,7 +480,19 @@ dropzone.Http.prototype.passos = {
       const dthora = uploadIdentificadores[4]
       const tamanho = uploadIdentificadores[3]
       const tamanhoFormatado = dropzone.utils.infraFormatarTamanhoBytes(Number.parseInt(tamanho))
-      return `${id}±${nome}±${dthora}±${tamanho}±${tamanhoFormatado}±${usuarioEUnidade.usuario}±${usuarioEUnidade.unidade}`
+      let hdnAnexos = `${id}±${nome}±${dthora}±${tamanho}±${tamanhoFormatado}±${usuarioEUnidade.usuario}±${usuarioEUnidade.unidade}`
+
+      /*
+       * Esta sequência é intencional e replica a codificação aceita pelo SEI:
+       * espaços viram "+", o separador ± vira %B1 (sem o prefixo UTF-8 %C2)
+       * e os sinais "+" permanecem como separadores de espaço.
+       */
+      hdnAnexos = hdnAnexos.replace(/ /g, '+')
+      hdnAnexos = encodeURIComponent(hdnAnexos)
+        .replace(/%C2/gi, '')
+        .replace(/%2B/gi, '+')
+
+      return hdnAnexos
     },
 
     enviarArquivo: function (resposta) {
@@ -646,7 +680,13 @@ dropzone.Http.prototype.passos = {
       let postData = ''
       for (const k in postFields) {
         if (postData !== '') postData = postData + '&'
-        const valor = dropzone.utils.escapeComponent(String(postFields[k] ?? ''))
+        let valor = dropzone.utils.escapeComponent(String(postFields[k] ?? ''))
+        if (k === 'hdnAnexos') valor = postFields[k]
+        if (k === 'txtNumero') {
+          valor = dropzone.utils.encodeURIParaHex(
+            String(postFields[k] ?? '').normalize('NFC')
+          )
+        }
         postData = postData + k + '=' + valor
       }
 
