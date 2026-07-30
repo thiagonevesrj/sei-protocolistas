@@ -230,7 +230,7 @@
     ))
       .map((element) => cleanValue(element.textContent))
       .filter((text) => text.length > 5 && text.length < 180)
-      .filter((text) => /^(detran|administrativo)\s*:/i.test(text))
+      .filter((text) => /^[^:]{2,50}\s*:/i.test(text))
 
     return [...new Map(entries.map((text) => [normalize(text), text])).values()]
       .sort((first, second) => first.localeCompare(second, 'pt-BR'))
@@ -257,7 +257,7 @@
     const allTypes = listAvailableProcessTypes()
       .filter((label) => !favoriteNames.has(processName(label)))
     if (allTypes.length) {
-      const allGroup = createElement('optgroup', { label: 'Todos os tipos disponíveis no SEI' })
+      const allGroup = createElement('optgroup', { label: 'Todos os outros tipos disponíveis no SEI' })
       allTypes.forEach((label, index) => {
         const option = createElement('option', { value: `available-${index}` }, label)
         option.dataset.processLabel = label
