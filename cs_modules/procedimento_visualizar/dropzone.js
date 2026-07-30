@@ -62,6 +62,17 @@ dropzone.utils = {
     return resultado
   },
 
+  /*
+   * Mesmo tratamento aplicado pelo SEI Pro antes do upload. O nome exibido
+   * para o usuário não muda; apenas o nome enviado no multipart é saneado.
+   */
+  sanitizarNomeUpload: function (str) {
+    return String(str)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[&/\\#+()$~%'":*?<>{}]/g, '_')
+  },
+
   extrairUrlControlador: function (value) {
     const texto = dropzone.utils.normalizarUrlSei(value)
     const resultado = texto.match(/(?:https?:\/\/[^'"\s)]+|controlador\.php\?[^'"\s)]+)/i)
@@ -495,6 +506,19 @@ dropzone.Http.prototype.passos = {
       return hdnAnexos
     },
 
+    diagnosticarIdentificadorUpload: function (uploadIdentificador, hdnAnexos, nomeEnviado) {
+      const partes = String(uploadIdentificador).split('#')
+      const nomeResposta = partes[1] || ''
+      return [
+        `partes=${partes.length}`,
+        `nomeCorresponde=${nomeResposta === nomeEnviado ? 'sim' : 'não'}`,
+        `nomeASCII=${/^[\x20-\x7E]*$/.test(nomeResposta) ? 'sim' : 'não'}`,
+        `separadores=${(String(hdnAnexos).match(/%B1/gi) || []).length}`,
+        `espaçoCru=${/\s/.test(hdnAnexos) ? 'sim' : 'não'}`,
+        `duplaCodificação=${/%25(?:B1|20|2B)/i.test(hdnAnexos) ? 'sim' : 'não'}`
+      ].join('; ')
+    },
+
     enviarArquivo: function (resposta) {
       const urlUpload = this.passos['3'].obterURLUpload(resposta)
       if (urlUpload === null) {
@@ -506,7 +530,8 @@ dropzone.Http.prototype.passos = {
         return
       }
       const data = new FormData()
-      data.append('filArquivo', this.arquivoParaUpload, this.arquivoParaUpload.name)
+      const nomeEnviado = dropzone.utils.sanitizarNomeUpload(this.arquivoParaUpload.name)
+      data.append('filArquivo', this.arquivoParaUpload, nomeEnviado)
       $.ajax({
         url: dropzone.utils.resolverUrl(urlUpload),
         method: 'POST',
@@ -524,17 +549,27 @@ dropzone.Http.prototype.passos = {
           }
           return xhr
         }.bind(this),
-        success: function (uploadIdentificador) {
+        success: function (uploadIdentificador, textStatus, xhr) {
+          /*
+           * O endpoint pode anunciar um tipo de conteúdo que induza o jQuery
+           * a converter a resposta. O SEI Pro usa os bytes textuais brutos.
+           */
+          const respostaUpload = xhr?.responseText || String(uploadIdentificador)
           const usuarioEUnidade = this.passos['3'].obterUsuarioEUnidade(resposta)
           if (usuarioEUnidade === null) {
             this.falhar('Etapa 3: os dados do usuário e da unidade não foram localizados no formulário de upload.')
             return
           }
-          const hdnAnexos = this.passos['3'].gerarHdnAnexos(usuarioEUnidade, uploadIdentificador)
+          const hdnAnexos = this.passos['3'].gerarHdnAnexos(usuarioEUnidade, respostaUpload)
           if (hdnAnexos === null) {
             this.falhar('Etapa 3: o SEI devolveu um identificador de upload em formato inesperado.')
             return
           }
+          this.diagnosticoUpload = this.passos['3'].diagnosticarIdentificadorUpload(
+            respostaUpload,
+            hdnAnexos,
+            nomeEnviado
+          )
           this.passos['4'].submeterFormulario.call(this, hdnAnexos, resposta)
         }.bind(this),
         error: function () {
@@ -624,7 +659,14 @@ dropzone.Http.prototype.passos = {
           const html = String(opcoes)
             .replace(/<\?xml[^>]*\?>/gi, '')
             .trim()
-          const $select = $('<select/>').html(html)
+          /*
+           * Dependendo da versão do SEI, a resposta contém apenas <option>
+           * ou um <select> completo. Extrair primeiro o conteúdo do select
+           * evita gerar a estrutura inválida <select><select>...</select>.
+           */
+          const selectCompleto = /<select\b[^>]*>([\s\S]*?)<\/select>/i.exec(html)
+          const opcoesHtml = selectCompleto ? selectCompleto[1] : html
+          const $select = $('<select/>').html(opcoesHtml)
           const hipotese = this.passos['4']
             .escolherHipoteseInformacaoPessoal($select)
           if (!hipotese) {
@@ -769,9 +811,13 @@ dropzone.Http.prototype.passos = {
               } else {
                 const validacao = this.passos['4'].extrairMensagemValidacao(data)
                 const detalhe = validacao ? ` Motivo informado pelo SEI: ${validacao}` : ''
+                const diagnostico = this.diagnosticoUpload
+                  ? `\nDiagnóstico do upload: ${this.diagnosticoUpload}`
+                  : ''
                 this.falhar(
                   'Etapa 4: o SEI devolveu o formulário sem confirmar a criação do documento.' +
-                  detalhe
+                  detalhe +
+                  diagnostico
                 )
               }
             }.bind(this),
