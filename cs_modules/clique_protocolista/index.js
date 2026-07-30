@@ -2,7 +2,9 @@
   'use strict'
 
   const STORAGE_KEY = 'cliqueProtocolistaRascunho'
+  const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const MAX_DRAFT_AGE = 15 * 60 * 1000
+  const MAX_CONTEXT_AGE = 60 * 60 * 1000
   const GOLD = '#e0ae28'
   const browserApi = window.currentBrowser ||
     (typeof chrome !== 'undefined' ? chrome : browser)
@@ -687,6 +689,16 @@
       warnings.length ? 'warning' : 'success'
     )
 
+    await storageSet({
+      [CONTEXT_KEY]: {
+        createdAt: Date.now(),
+        expiresAt: Date.now() + MAX_CONTEXT_AGE,
+        modalidade: draft.modalidade,
+        nome: draft.nome,
+        observacoes: output.observations,
+        documentoPresencialPendente: draft.modalidade === 'presencial'
+      }
+    })
     await storageRemove(STORAGE_KEY)
   }
 

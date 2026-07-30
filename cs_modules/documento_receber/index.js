@@ -1,16 +1,8 @@
-/* global ModuleInit, forcarReaberturaProcesso, autopreencherDocumentoExterno */
+/* global ModuleInit, autopreencherDocumentoExterno */
 const BaseName = 'documento_receber'
 
-ModuleInit(BaseName).then((options) => {
-  forcarReaberturaProcesso(BaseName)
-
-  options.CheckTypes.forEach(function (element) {
-    switch (element) {
-      case 'cliquemenos':
-        autopreencherDocumentoExterno(BaseName, options)
-        break
-      default:
-        break
-    }
-  }, this)
+ModuleInit(BaseName).then(async (options) => {
+  if (options.CheckTypes.includes('cliquemenos')) {
+    await autopreencherDocumentoExterno(BaseName)
+  }
 }).catch(e => console.log(e.message))

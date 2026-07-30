@@ -1,6 +1,6 @@
 /* global ModuleInit, seiVersionCompare, EsperaCarregar, AjustarElementosNativos,
    ConsultarInteressado, consultarAtribuicao, copiarNumeroProcessoDocumento,
-   copiarLinkInterno, documentoModelo, MostrarAnotacao, dropzone, AbrirDocumentoNovaAba,
+   copiarLinkInterno, documentoModelo, MostrarAnotacao, dropzone,
    AlterarTitulo, pontoControleCores
 */
 const BaseName = 'procedimento_visualizar'
@@ -52,8 +52,11 @@ ModuleInit(BaseName).then((options) => {
   /* Adiciona a funcionalidade de incluir documentos externos ao arrastar arquivos  */
   if (options.CheckTypes.includes('incluirdocaoarrastar')) dropzone.iniciar(BaseName)
 
-  /* Adiciona a funcionalidade de abrir o documento em nova aba com o ctrl pressionado */
-  AbrirDocumentoNovaAba(BaseName)
+  /*
+   * A função herdada que abria documentos em nova aba com Ctrl foi desativada.
+   * Ela injetava JavaScript inline na página e passou a ser bloqueada pela
+   * política de segurança (CSP) do SEI-RJ.
+   */
 
   options.CheckTypes.forEach(function (e) {
     switch (e) {
