@@ -52,6 +52,29 @@ dropzone.utils = {
     } catch (error) {
       return null
     }
+  },
+
+  extrairUrlPorAcao: function (value, acao) {
+    const texto = String(value || '')
+      .replace(/&amp;/g, '&')
+      .replace(/\\u0026|\\x26/gi, '&')
+    const urls = texto.match(
+      /(?:https?:\/\/[^'"\s)\\]+|controlador\.php\?[^'"\s)\\]+)/gi
+    ) || []
+
+    for (const candidate of urls) {
+      const cleanCandidate = candidate.replace(/\\+$/, '')
+      const resolved = dropzone.utils.resolverUrl(cleanCandidate)
+      if (!resolved) continue
+      try {
+        if (new URL(resolved).searchParams.get('acao') === acao) {
+          return cleanCandidate
+        }
+      } catch (error) {
+        // Ignora candidatos que não sejam URLs válidas.
+      }
+    }
+    return null
   }
 }
 
@@ -326,13 +349,18 @@ dropzone.Http.prototype.passos = {
         if (url) return url
       }
 
-      return null
+      /*
+       * No SEI-RJ atual, o endereço pode aparecer separado do rótulo “Externo”
+       * dentro das estruturas JavaScript da lista. A ação documento_receber é
+       * justamente o formulário que cria o tipo final Anexo.
+       */
+      return dropzone.utils.extrairUrlPorAcao(resposta, 'documento_receber')
     },
 
     abrirPagina: function (resposta) {
       const urlNovoDocExterno = this.passos['2'].obterUrl(resposta)
       if (urlNovoDocExterno === null) {
-        this.falhar('Etapa 2: o tipo de documento “Externo” não foi encontrado na lista do SEI.')
+        this.falhar('Etapa 2: o SEI não informou o caminho interno para cadastrar o arquivo como Anexo.')
         return
       }
       $.ajax({
