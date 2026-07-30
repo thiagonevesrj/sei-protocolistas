@@ -3,7 +3,7 @@
   "name": "SEI Protocolistas",
   "short_name": "SEI Protocolistas",
   "description": "Ferramentas de produtividade para protocolistas no Sistema Eletrônico de Informações (SEI), com base no projeto SEI++.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": "Thiago Neves e colaboradores do SEI++",
   "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
   "icons": {"48": "icons/seipp-new.png"},
@@ -201,7 +201,8 @@
         "icons/note.png",
         "icons/interessado.png",
         "icons/menu.svg",
-        "icons/copy.svg"
+        "icons/copy.svg",
+        "icons/sei-protocolistas-wordmark.png"
       ],
       "matches": [
         "*://*.br/*"
