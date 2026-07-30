@@ -338,6 +338,31 @@ dropzone.Http.prototype.passos = {
       }) || null
     },
 
+    diagnosticarFormularioUpload: function (resposta) {
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      const forms = Array.from(documento.querySelectorAll('form'))
+        .map(function (form) { return form.id || form.getAttribute('name') || 'sem-id' })
+        .slice(0, 5)
+      const fileInputs = Array.from(documento.querySelectorAll('input[type="file"]'))
+        .map(function (input) { return input.id || input.getAttribute('name') || 'sem-id' })
+        .slice(0, 5)
+      const titulo = String(documento.title || 'sem-título')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80)
+      const texto = String(resposta)
+
+      return [
+        `tamanho=${texto.length}`,
+        `título=${titulo}`,
+        `infraUpload=${/infraUpload/i.test(texto) ? 'sim' : 'não'}`,
+        `frmAnexos=${/frmAnexos/i.test(texto) ? 'sim' : 'não'}`,
+        `termoUpload=${/upload/i.test(texto) ? 'sim' : 'não'}`,
+        `formulários=${forms.join(',') || 'nenhum'}`,
+        `camposArquivo=${fileInputs.join(',') || 'nenhum'}`
+      ].join('; ')
+    },
+
     obterUsuarioEUnidade: function (resposta) {
       const regex = /infraFormatarTamanhoBytes\s*\(\s*arr\[['"]tamanho['"]\]\s*\)\s*,\s*['"](.+?)['"]\s*,\s*['"](.+?)['"]\s*]/m
       const resultado = regex.exec(resposta)
@@ -362,7 +387,11 @@ dropzone.Http.prototype.passos = {
     enviarArquivo: function (resposta) {
       const urlUpload = this.passos['3'].obterURLUpload(resposta)
       if (urlUpload === null) {
-        this.falhar('Etapa 3: a URL de upload não foi localizada no formulário atual do SEI.')
+        const diagnostico = this.passos['3'].diagnosticarFormularioUpload(resposta)
+        this.falhar(
+          'Etapa 3: a URL de upload não foi localizada no formulário atual do SEI.' +
+          `\nDiagnóstico: ${diagnostico}`
+        )
         return
       }
       const data = new FormData()
