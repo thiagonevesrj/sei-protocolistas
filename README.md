@@ -19,11 +19,13 @@ Reduzir cliques, retrabalho e erros nos fluxos de protocolo, especialmente:
 
 ## Estado atual
 
-A versão `0.1.0` inicia a transição visual e funcional do SEI++ para o SEI Protocolistas. O código legado
-que ainda precisa ser validado permanece no repositório, mas as opções fora do escopo inicial estão
-ocultas e desativadas por padrão.
+O projeto está na fase de validação dos fluxos de abertura rápida e inclusão de documentos. O código
+legado que ainda precisa ser validado permanece no repositório, mas as opções fora do escopo inicial
+estão ocultas e desativadas por padrão.
 
 Consulte [docs/DIAGNOSTICO-INICIAL.md](docs/DIAGNOSTICO-INICIAL.md) para acompanhar o inventário técnico.
+As decisões operacionais obrigatórias estão registradas em
+[docs/REGRAS-FUNCIONAIS.md](docs/REGRAS-FUNCIONAIS.md).
 
 ## Licença e créditos
 
