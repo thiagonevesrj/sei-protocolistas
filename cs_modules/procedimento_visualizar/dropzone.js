@@ -529,6 +529,23 @@ dropzone.Http.prototype.passos = {
       return !tipoDocumento ? options.eq(1).attr('value') : tipoDocumento
     },
 
+    escolherHipoteseInformacaoPessoal: function (select) {
+      let hipotese = null
+      select.find('option').each(function () {
+        const texto = $(this).text()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLocaleLowerCase('pt-BR')
+        if (texto.includes('informacao pessoal')) {
+          hipotese = $(this).attr('value')
+          return false
+        }
+      })
+      return hipotese
+    },
+
     obterDados: function (hdnAnexos, resposta) {
       const $resposta = $('<div/>').append($.parseHTML(resposta, document, true))
       const $form = $resposta.find('form#frmDocumentoCadastro')
@@ -547,6 +564,8 @@ dropzone.Http.prototype.passos = {
 
       const serie = this.passos['4'].escolherTipoDocumentoExterno($form.find('#selSerie'))
       if (!serie) return null
+      const hipoteseInformacaoPessoal = this.passos['4']
+        .escolherHipoteseInformacaoPessoal($form.find('#selHipoteseLegal'))
 
       const nomeDoDocumento = this.arquivoParaUpload.name.replace(/\.[^/.]+$/, '').slice(0, 49)
       postFields.selSerie = serie
@@ -557,7 +576,13 @@ dropzone.Http.prototype.passos = {
       postFields.rdoFormato = 'N'
       postFields.hdnAnexos = hdnAnexos
       postFields.hdnFlagDocumentoCadastro = postFields.hdnFlagDocumentoCadastro || '2'
-      postFields.rdoNivelAcesso = postFields.rdoNivelAcesso || '0'
+      postFields.rdoNivelAcesso = '1'
+      postFields.hdnStaNivelAcessoLocal = '1'
+      if (hipoteseInformacaoPessoal) {
+        postFields.selHipoteseLegal = hipoteseInformacaoPessoal
+        postFields.hdnIdHipoteseLegal = hipoteseInformacaoPessoal
+        postFields.hdnIdHipoteseLegalSugestao = hipoteseInformacaoPessoal
+      }
 
       /* montar post body */
       let postData = ''
@@ -574,7 +599,18 @@ dropzone.Http.prototype.passos = {
     },
 
     /* como o ajax não deteca um redirect (302), temos que verificar se a página que retornou é a correta */
-    paginaRetornouCorretamente: function (resposta) {
+    paginaRetornouCorretamente: function (resposta, responseURL) {
+      try {
+        const url = new URL(responseURL)
+        if (
+          url.searchParams.get('acao') === 'arvore_visualizar' &&
+          url.searchParams.get('acao_origem') === 'documento_receber'
+        ) {
+          return true
+        }
+      } catch (error) {
+        // Mantém a verificação por conteúdo para versões antigas do SEI.
+      }
       const documento = new DOMParser().parseFromString(resposta, 'text/html')
       return documento.querySelector('#divArvoreHtml') !== null
     },
@@ -589,8 +625,9 @@ dropzone.Http.prototype.passos = {
         url: dropzone.utils.resolverUrl(dados.url),
         method: 'POST',
         data: dados.data,
+        contentType: 'application/x-www-form-urlencoded; charset=ISO-8859-1',
         success: function (data, textStatus, xhr) {
-          if (this.passos['4'].paginaRetornouCorretamente.call(this, data)) {
+          if (this.passos['4'].paginaRetornouCorretamente.call(this, data, xhr.responseURL)) {
             this.fnNovoStatus('completo', 1)
           } else {
             this.falhar('Etapa 4: o SEI devolveu o formulário sem confirmar a criação do documento.')
