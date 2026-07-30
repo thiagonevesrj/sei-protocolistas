@@ -293,7 +293,7 @@ dropzone.Http.prototype.passos = {
       $.ajax({
         url: dropzone.utils.resolverUrl(urlDocExterno),
         success: function (resposta) {
-          this.passos['2'].abrirPagina.call(this, resposta)
+          this.passos['2'].abrirPagina.call(this, resposta, urlDocExterno)
         }.bind(this),
         error: function () {
           this.falhar('Etapa 1: o SEI recusou a abertura da página “Incluir Documento”.')
@@ -357,12 +357,7 @@ dropzone.Http.prototype.passos = {
       return dropzone.utils.extrairUrlPorAcao(resposta, 'documento_receber')
     },
 
-    abrirPagina: function (resposta) {
-      const urlNovoDocExterno = this.passos['2'].obterUrl(resposta)
-      if (urlNovoDocExterno === null) {
-        this.falhar('Etapa 2: o SEI não informou o caminho interno para cadastrar o arquivo como Anexo.')
-        return
-      }
+    abrirFormulario: function (urlNovoDocExterno) {
       $.ajax({
         url: dropzone.utils.resolverUrl(urlNovoDocExterno),
         success: function (resposta) {
@@ -373,6 +368,75 @@ dropzone.Http.prototype.passos = {
         }.bind(this)
 
       })
+    },
+
+    abrirPaginaRenderizada: function (urlSelecao) {
+      const iframe = document.createElement('iframe')
+      iframe.setAttribute('aria-hidden', 'true')
+      iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;'
+      iframe.src = dropzone.utils.resolverUrl(urlSelecao)
+
+      let tentativas = 0
+      let finalizado = false
+      let timer = null
+
+      const encerrar = function () {
+        finalizado = true
+        if (timer) window.clearTimeout(timer)
+        iframe.remove()
+      }
+
+      const verificar = function () {
+        if (finalizado) return
+        tentativas++
+
+        try {
+          const frameUrl = iframe.contentWindow.location.href
+          const frameAction = new URL(frameUrl).searchParams.get('acao')
+          if (frameAction === 'documento_receber') {
+            encerrar()
+            this.passos['2'].abrirFormulario.call(this, frameUrl)
+            return
+          }
+
+          const frameDocument = iframe.contentDocument
+          const frameHtml = frameDocument?.documentElement?.outerHTML || ''
+          const urlNovoDocExterno = this.passos['2'].obterUrl(frameHtml)
+          if (urlNovoDocExterno) {
+            encerrar()
+            this.passos['2'].abrirFormulario.call(this, urlNovoDocExterno)
+            return
+          }
+        } catch (error) {
+          dropzone.log('Aguardando o SEI renderizar a lista de documentos.')
+        }
+
+        if (tentativas >= 60) {
+          encerrar()
+          this.falhar('Etapa 2: o SEI não montou o caminho para cadastrar o arquivo como Anexo após 15 segundos.')
+          return
+        }
+        timer = window.setTimeout(verificar.bind(this), 250)
+      }.bind(this)
+
+      iframe.addEventListener('load', verificar)
+      document.body.appendChild(iframe)
+      timer = window.setTimeout(verificar, 250)
+    },
+
+    abrirPagina: function (resposta, urlSelecao) {
+      const urlNovoDocExterno = this.passos['2'].obterUrl(resposta)
+      if (urlNovoDocExterno) {
+        this.passos['2'].abrirFormulario.call(this, urlNovoDocExterno)
+        return
+      }
+
+      /*
+       * Algumas instalações do SEI só montam a lista de tipos depois que os
+       * scripts da página são executados. Nesse caso, carrega-se a própria tela
+       * do SEI em um iframe invisível, apenas para aguardar a renderização.
+       */
+      this.passos['2'].abrirPaginaRenderizada.call(this, urlSelecao)
     }
 
   },
