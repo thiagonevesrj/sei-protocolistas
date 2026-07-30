@@ -31,8 +31,8 @@
       "all_frames": true,
       "js": [
         "cs_modules/core/start/lib.js",
-        "node_modules/jquery/dist/jquery.min.js",
-        "node_modules/jquery-ui/dist/jquery-ui.min.js"
+        "vendor/jquery/jquery.min.js",
+        "vendor/jquery-ui/jquery-ui.min.js"
       ]
     },
     {
@@ -40,7 +40,7 @@
       "run_at": "document_end",
       "css": [
         "cs_modules/core.css",
-        "node_modules/jquery-ui/dist/themes/base/jquery-ui.min.css"
+        "vendor/jquery-ui/themes/base/jquery-ui.min.css"
       ],
       "all_frames": true,
       "js": [
