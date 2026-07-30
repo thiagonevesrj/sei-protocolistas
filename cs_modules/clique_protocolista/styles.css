@@ -287,3 +287,47 @@
     grid-column: auto;
   }
 }
+
+/* CLICK PROTOCOLISTA — melhoria de legibilidade */
+.sp-clique-panel .sp-clique-field label {
+  color: #dbe8f7 !important;
+  font-weight: 700 !important;
+}
+
+.sp-clique-panel .sp-clique-section legend {
+  color: #ffffff !important;
+}
+
+.sp-clique-panel .sp-clique-mode label {
+  color: #ffffff !important;
+}
+
+.sp-clique-panel .sp-clique-required {
+  color: #ff5c5c !important;
+}
+/* FAST PROC — pesquisa parcial do tipo de processo */
+.sp-clique-type-search {
+  background: #ffffff !important;
+  border: 1px solid #93a4b8 !important;
+  border-radius: 4px !important;
+  color: #111111 !important;
+  font-size: 15px !important;
+  min-height: 40px !important;
+  padding: 8px 10px !important;
+  width: 100% !important;
+}
+
+.sp-clique-type-search::placeholder {
+  color: #657487 !important;
+  opacity: 1 !important;
+}
+
+.sp-clique-type-search:focus {
+  border-color: #e0ae28 !important;
+  box-shadow: 0 0 0 3px rgb(224 174 40 / 25%) !important;
+  outline: none !important;
+}
+
+#sp-tipo-processo[size]:not([size="1"]) {
+  min-height: 120px;
+}
