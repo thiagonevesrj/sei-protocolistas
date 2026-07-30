@@ -38,6 +38,20 @@ dropzone.utils = {
   // encodeURIComponent para ISO-8859-1
   escapeComponent: function (str) {
     return escape(str).replace(/\+/g, '%2B')
+  },
+
+  extrairUrlControlador: function (value) {
+    const texto = String(value || '').replace(/&amp;/g, '&')
+    const resultado = texto.match(/(?:https?:\/\/[^'"\s)]+|controlador\.php\?[^'"\s)]+)/i)
+    return resultado ? resultado[0] : null
+  },
+
+  resolverUrl: function (value) {
+    try {
+      return new URL(value, GetBaseUrl()).href
+    } catch (error) {
+      return null
+    }
   }
 }
 
@@ -69,6 +83,10 @@ dropzone.ui = (function () {
 
   function mudarProgresso (progresso) {
     mudarTexto('Criando documentos...' + progresso + '%')
+  }
+
+  function ocultar () {
+    ui.wrapper.hide()
   }
 
   function checkarContemArquivos (dataTransfer) {
@@ -117,7 +135,8 @@ dropzone.ui = (function () {
 
   return {
     adicionarDropzone,
-    mudarProgresso
+    mudarProgresso,
+    ocultar
   }
 })()
 
@@ -134,16 +153,18 @@ dropzone.jobs = (function () {
       arquivo: arquivoParaUpload,
       nome: arquivoParaUpload.name,
       status: 'em_andamento',
-      progresso: 0
+      progresso: 0,
+      erro: ''
     }
     jobs.push(job)
   }
 
   function executar () {
     jobs.forEach(function (job) {
-      const http = new dropzone.Http(job.arquivo, function (novoStatus, novoProgresso) {
+      const http = new dropzone.Http(job.arquivo, function (novoStatus, novoProgresso, erro) {
         job.status = novoStatus
         job.progresso = novoProgresso || 0
+        job.erro = erro || ''
         atualizaProgresso()
         verificarSeCompletou()
       })
@@ -171,11 +192,17 @@ dropzone.jobs = (function () {
 
     /* quando há algum erro */
     if (jobsComErro.length > 0) {
-      const jobsStr = jobsComErro.map(function (job) { return job.nome }).join(', ')
-      alert('Ocorreu um erro ao incluir documento externo com o(s) seguinte(s) anexo(s): ' + jobsStr + '. Verifique se o processo encontra-se aberto na unidade.')
+      const jobsStr = jobsComErro.map(function (job) {
+        return `${job.nome}: ${job.erro || 'falha não identificada'}`
+      }).join('\n')
+      dropzone.ui.ocultar()
+      alert('Não foi possível incluir o(s) documento(s):\n\n' + jobsStr)
+      jobs.length = 0
+      return
     }
 
-    /* recarrega a página sempre que os jobs terminam, independente se erro ou sucesso */
+    /* recarrega a página após todos os documentos serem incluídos */
+    jobs.length = 0
     location.reload()
   }
 
@@ -195,6 +222,11 @@ dropzone.Http = function (arquivoParaUpload, fnNovoStatus) {
   this.fnNovoStatus = fnNovoStatus
 }
 
+dropzone.Http.prototype.falhar = function (mensagem) {
+  dropzone.log(mensagem)
+  this.fnNovoStatus('erro', 0, mensagem)
+}
+
 dropzone.Http.prototype.passos = {
 
   /*
@@ -205,32 +237,43 @@ dropzone.Http.prototype.passos = {
   1: {
 
     obterUrl: function () {
-      const todasAsScriptTag = document.getElementsByTagName('script')
-      const regex = /^Nos\[0\].acoes = '<a href="(.*?)" tabindex="451"/m
-      // Procurar a primeira scriptTag que contem o código em questao
-      const scriptTagProcurada = Array.from(todasAsScriptTag).find(function (element) {
-        return regex.exec(element.innerHTML) !== null
+      const links = Array.from(document.querySelectorAll('a[href]'))
+      const linkIncluirDocumento = links.find(function (element) {
+        const href = element.getAttribute('href')
+        return /acao=documento_escolher_tipo/i.test(href) ||
+          /documento_escolher_tipo/i.test(element.getAttribute('onclick') || '')
       })
-      const resultado = regex.exec(scriptTagProcurada.innerHTML)
-      if (resultado === null) return null
-      return resultado[1]
+      if (linkIncluirDocumento) {
+        const origem = [
+          linkIncluirDocumento.getAttribute('href'),
+          linkIncluirDocumento.getAttribute('onclick')
+        ].filter(Boolean).join(' ')
+        const url = dropzone.utils.extrairUrlControlador(origem)
+        if (url) return url
+      }
+
+      const scripts = Array.from(document.getElementsByTagName('script'))
+      for (const script of scripts) {
+        if (!/Nos\[0\]\.acoes/.test(script.textContent)) continue
+        const url = dropzone.utils.extrairUrlControlador(script.textContent)
+        if (url) return url
+      }
+      return null
     },
 
     abrirPagina: function () {
       const urlDocExterno = this.passos['1'].obterUrl()
       if (urlDocExterno === null) {
-        dropzone.log('Erro ao inserir documento externo: não foi possível encontrar o botão de inserir documento.')
-        this.fnNovoStatus('erro')
+        this.falhar('Etapa 1: o SEI não disponibilizou a ação “Incluir Documento”. Confira se o processo está aberto na unidade.')
         return
       }
       $.ajax({
-        url: GetBaseUrl() + urlDocExterno,
+        url: dropzone.utils.resolverUrl(urlDocExterno),
         success: function (resposta) {
           this.passos['2'].abrirPagina.call(this, resposta)
         }.bind(this),
         error: function () {
-          dropzone.log('Erro ao inserir documento externo: ocorreu um erro ao abrir a página de inserir documento.')
-          this.fnNovoStatus('erro')
+          this.falhar('Etapa 1: o SEI recusou a abertura da página “Incluir Documento”.')
         }.bind(this)
       })
     }
@@ -245,27 +288,29 @@ dropzone.Http.prototype.passos = {
   2: {
 
     obterUrl: function (resposta) {
-      const regex = /<a\s+(?:[^>]*?\s+)?href="(.*?)" tabindex="1003" class="ancoraOpcao"> Externo<\/a>/m
-      const resultado = regex.exec(resposta)
-      if (resultado === null) return null
-      return resultado[1]
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      const links = Array.from(documento.querySelectorAll('a[href]'))
+      const linkExterno = links.find(function (element) {
+        return element.textContent.trim().toLocaleLowerCase('pt-BR') === 'externo'
+      })
+      if (!linkExterno) return null
+      return dropzone.utils.extrairUrlControlador(linkExterno.getAttribute('href')) ||
+        linkExterno.getAttribute('href')
     },
 
     abrirPagina: function (resposta) {
       const urlNovoDocExterno = this.passos['2'].obterUrl(resposta)
       if (urlNovoDocExterno === null) {
-        dropzone.log('Erro ao inserir documento externo: não foi localizado link para o documento tipo externo.')
-        this.fnNovoStatus('erro')
+        this.falhar('Etapa 2: o tipo de documento “Externo” não foi encontrado na lista do SEI.')
         return
       }
       $.ajax({
-        url: GetBaseUrl() + urlNovoDocExterno,
+        url: dropzone.utils.resolverUrl(urlNovoDocExterno),
         success: function (resposta) {
           this.passos['3'].enviarArquivo.call(this, resposta)
         }.bind(this),
         error: function () {
-          dropzone.log('Erro ao inserir documento externo: ocorreu um erro ao abrir a página de escolher o tipo de documento.')
-          this.fnNovoStatus('erro')
+          this.falhar('Etapa 2: o SEI recusou a abertura do formulário de documento externo.')
         }.bind(this)
 
       })
@@ -281,14 +326,14 @@ dropzone.Http.prototype.passos = {
   3: {
 
     obterURLUpload: function (resposta) {
-      const regex = /^\s*objUpload = new infraUpload\('frmAnexos','(.+?)'\);/m
+      const regex = /objUpload\s*=\s*new\s+infraUpload\s*\(\s*['"]frmAnexos['"]\s*,\s*['"](.+?)['"]\s*\)/m
       const resultado = regex.exec(resposta)
       if (resultado === null) return null
       return resultado[1]
     },
 
     obterUsuarioEUnidade: function (resposta) {
-      const regex = /\s*objTabelaAnexos\.adicionar\(\[arr\['nome_upload'\],arr\['nome'\],arr\['data_hora'\],arr\['tamanho'],infraFormatarTamanhoBytes\(arr\['tamanho'\]\),'(.+?)' ,'(.+?)']\);/gm
+      const regex = /infraFormatarTamanhoBytes\s*\(\s*arr\[['"]tamanho['"]\]\s*\)\s*,\s*['"](.+?)['"]\s*,\s*['"](.+?)['"]\s*]/m
       const resultado = regex.exec(resposta)
       if (resultado === null) return null
       return {
@@ -299,6 +344,7 @@ dropzone.Http.prototype.passos = {
 
     gerarHdnAnexos: function (usuarioEUnidade, uploadIdentificador) {
       const uploadIdentificadores = uploadIdentificador.split('#')
+      if (uploadIdentificadores.length < 5) return null
       const id = uploadIdentificadores[0]
       const nome = uploadIdentificadores[1]
       const dthora = uploadIdentificadores[4]
@@ -310,14 +356,13 @@ dropzone.Http.prototype.passos = {
     enviarArquivo: function (resposta) {
       const urlUpload = this.passos['3'].obterURLUpload(resposta)
       if (urlUpload === null) {
-        dropzone.log('Erro ao inserir documento externo: não foi localizada a URL para enviar o arquivo.')
-        this.fnNovoStatus('erro')
+        this.falhar('Etapa 3: a URL de upload não foi localizada no formulário atual do SEI.')
         return
       }
       const data = new FormData()
       data.append('filArquivo', this.arquivoParaUpload, this.arquivoParaUpload.name)
       $.ajax({
-        url: GetBaseUrl() + urlUpload,
+        url: dropzone.utils.resolverUrl(urlUpload),
         method: 'POST',
         contentType: false,
         processData: false,
@@ -336,16 +381,18 @@ dropzone.Http.prototype.passos = {
         success: function (uploadIdentificador) {
           const usuarioEUnidade = this.passos['3'].obterUsuarioEUnidade(resposta)
           if (usuarioEUnidade === null) {
-            dropzone.log('Erro ao inserir documento externo: não foram localizados dados de usuário/unidade dentro da página.')
-            this.fnNovoStatus('erro')
+            this.falhar('Etapa 3: os dados do usuário e da unidade não foram localizados no formulário de upload.')
             return
           }
           const hdnAnexos = this.passos['3'].gerarHdnAnexos(usuarioEUnidade, uploadIdentificador)
+          if (hdnAnexos === null) {
+            this.falhar('Etapa 3: o SEI devolveu um identificador de upload em formato inesperado.')
+            return
+          }
           this.passos['4'].submeterFormulario.call(this, hdnAnexos, resposta)
         }.bind(this),
         error: function () {
-          dropzone.log('Erro ao inserir documento externo: ocorreu um erro ao realizar a operação de upload.')
-          this.fnNovoStatus('erro')
+          this.falhar('Etapa 3: o SEI recusou o envio do arquivo.')
         }.bind(this)
       })
     }
@@ -371,67 +418,40 @@ dropzone.Http.prototype.passos = {
     },
 
     obterDados: function (hdnAnexos, resposta) {
-      const $resposta = $(resposta)
-      const urlParaEnvio = $resposta.find('form#frmDocumentoCadastro').attr('action')
-      const form = {}
-      form.hdnInfraTipoPagina = $resposta.find('#hdnInfraTipoPagina').attr('value')
-      form.hdnInfraTipoPagina = $resposta.find('#hdnInfraTipoPagina').attr('value')
-      form.selSerie = this.passos['4'].escolherTipoDocumentoExterno($resposta.find('#selSerie'))
-      form.hdnStaDocumento = $resposta.find('#hdnStaDocumento').attr('value')
-      form.hdnIdUnidadeGeradoraProtocolo = $resposta.find('#hdnIdUnidadeGeradoraProtocolo').attr('value')
-      form.hdnIdProcedimento = $resposta.find('#hdnIdProcedimento').attr('value')
-      form.hdnIdTipoProcedimento = $resposta.find('#hdnIdTipoProcedimento').attr('value')
-      form.hdnSinBloqueado = $resposta.find('#hdnSinBloqueado').attr('value')
+      const $resposta = $('<div/>').append($.parseHTML(resposta, document, true))
+      const $form = $resposta.find('form#frmDocumentoCadastro')
+      const urlParaEnvio = $form.attr('action')
+      if (!$form.length || !urlParaEnvio) return null
+
+      /*
+        Parte dos campos do SEI muda entre versões. Preservar os campos que o
+        próprio formulário entregou evita perder hashes, flags e validações
+        acrescentadas pelo SEI-RJ.
+      */
+      const postFields = {}
+      $form.serializeArray().forEach(function (field) {
+        postFields[field.name] = field.value
+      })
+
+      const serie = this.passos['4'].escolherTipoDocumentoExterno($form.find('#selSerie'))
+      if (!serie) return null
 
       const nomeDoDocumento = this.arquivoParaUpload.name.replace(/\.[^/.]+$/, '').slice(0, 49)
-
-      const postFields = {
-        hdnInfraTipoPagina: form.hdnInfraTipoPagina,
-        selSerie: form.selSerie,
-        txtDataElaboracao: dropzone.utils.hoje(),
-        txtProtocoloDocumentoTextoBase: '',
-        rdoTextoInicial: 'N',
-        hdnIdDocumentoTextoBase: '',
-        txtNumero: nomeDoDocumento,
-        rdoFormato: 'N',
-        selTipoConferencia: 'null',
-        txtDescricao: '',
-        txtRemetente: '',
-        hdnIdRemetente: '',
-        txtInteressado: '',
-        hdnIdInteressado: '',
-        txtDestinatario: '',
-        hdnIdDestinatario: '',
-        txtAssunto: '',
-        hdnIdAssunto: '',
-        txaObservacoes: '',
-        selGrauSigilo: 'null',
-        rdoNivelAcesso: '0',
-        hdnFlagDocumentoCadastro: '2',
-        hdnAssuntos: '',
-        hdnInteressados: '',
-        hdnDestinatarios: '',
-        hdnIdSerie: form.selSerie,
-        hdnIdUnidadeGeradoraProtocolo: form.hdnIdUnidadeGeradoraProtocolo,
-        hdnStaDocumento: form.hdnStaDocumento,
-        hdnIdTipoConferencia: '',
-        hdnIdDocumento: '',
-        hdnIdProcedimento: form.hdnIdProcedimento,
-        hdnAnexos,
-        hdnIdHipoteseLegalSugestao: '',
-        hdnIdTipoProcedimento: form.hdnIdTipoProcedimento,
-        hdnUnidadesReabertura: '',
-        hdnSinBloqueado: form.hdnSinBloqueado,
-        hdnContatoObject: '',
-        hdnContatoIdentificador: '',
-        hdnAssuntoIdentificador: ''
-      }
+      postFields.selSerie = serie
+      postFields.hdnIdSerie = serie
+      postFields.txtDataElaboracao = dropzone.utils.hoje()
+      postFields.rdoTextoInicial = 'N'
+      postFields.txtNumero = nomeDoDocumento
+      postFields.rdoFormato = 'N'
+      postFields.hdnAnexos = hdnAnexos
+      postFields.hdnFlagDocumentoCadastro = postFields.hdnFlagDocumentoCadastro || '2'
+      postFields.rdoNivelAcesso = postFields.rdoNivelAcesso || '0'
 
       /* montar post body */
       let postData = ''
       for (const k in postFields) {
         if (postData !== '') postData = postData + '&'
-        const valor = dropzone.utils.escapeComponent(postFields[k])
+        const valor = dropzone.utils.escapeComponent(String(postFields[k] ?? ''))
         postData = postData + k + '=' + valor
       }
 
@@ -443,28 +463,29 @@ dropzone.Http.prototype.passos = {
 
     /* como o ajax não deteca um redirect (302), temos que verificar se a página que retornou é a correta */
     paginaRetornouCorretamente: function (resposta) {
-      const regex = /<div id="divArvoreHtml"><\/div>/gm
-      const resultado = regex.exec(resposta)
-      return !(resultado === null)
+      const documento = new DOMParser().parseFromString(resposta, 'text/html')
+      return documento.querySelector('#divArvoreHtml') !== null
     },
 
     submeterFormulario: function (hdnAnexos, resposta) {
       const dados = this.passos['4'].obterDados.call(this, hdnAnexos, resposta)
+      if (!dados) {
+        this.falhar('Etapa 4: o formulário atual de documento externo está incompleto ou incompatível.')
+        return
+      }
       $.ajax({
-        url: GetBaseUrl() + dados.url,
+        url: dropzone.utils.resolverUrl(dados.url),
         method: 'POST',
         data: dados.data,
         success: function (data, textStatus, xhr) {
           if (this.passos['4'].paginaRetornouCorretamente.call(this, data)) {
             this.fnNovoStatus('completo', 1)
           } else {
-            dropzone.log('Erro ao inserir documento externo: ocorreu um erro ao concluir a inserção do novo documento (redirecionou para a página errada).')
-            this.fnNovoStatus('erro')
+            this.falhar('Etapa 4: o SEI devolveu o formulário sem confirmar a criação do documento.')
           }
         }.bind(this),
         error: function () {
-          dropzone.log('Erro ao inserir documento externo: ocorreu um erro ao concluir a inserção do novo documento.')
-          this.fnNovoStatus('erro')
+          this.falhar('Etapa 4: o SEI recusou a gravação final do documento externo.')
         }.bind(this)
       })
     }
