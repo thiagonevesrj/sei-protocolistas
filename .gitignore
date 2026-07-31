@@ -1,1 +1,4 @@
 node_modules/
+
+# Backups locais de desenvolvimento
+*.backup-*
