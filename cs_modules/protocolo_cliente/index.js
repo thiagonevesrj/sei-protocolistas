@@ -47,7 +47,7 @@ function message(){const itens=[...document.querySelectorAll('p,div,span,td')].f
 function insertCard(){
   if(document.getElementById(CARD))return;
   const m=message();if(!m)return;
-  const dest=destination(m.textContent);if(!dest)return;
+  const dest=destination(m.textContent);if(!dest||/^DETRAN\/SERVPROT\.?$/i.test(dest.trim()))return;
   const s=document.createElement('section');s.id=CARD;
   s.innerHTML=`<div class="sp-icon">⚡</div><div class="sp-eye">PROCESSO FINALIZADO</div><h2>Processo encaminhado com sucesso</h2><p>O processo foi enviado para <strong>${esc(dest)}</strong>.</p><p>Imprima o comprovante de acompanhamento para entregar ao requerente.</p><button type="button">🖨 IMPRIMIR PROTOCOLO DO CLIENTE</button><div class="sp-thanks">Obrigado por usar o <strong>SEI Protocolistas</strong></div><img src="${chrome.runtime.getURL('icons/sei-protocolistas-wordmark.png')}" alt="SEI Protocolistas">`;
   s.querySelector('button').addEventListener('click',openPreview);
