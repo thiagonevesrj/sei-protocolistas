@@ -784,16 +784,45 @@
     })
 
     typeSearch.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') {
+      if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
         return
       }
 
       event.preventDefault()
+      event.stopPropagation()
 
       const availableOptions =
         typeOptions.filter(
           (option) => !option.hidden
         )
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (!availableOptions.length) {
+          return
+        }
+
+        const currentIndex =
+          availableOptions.findIndex(
+            (option) => option.value === typeSelect.value
+          )
+
+        const nextIndex =
+          event.key === 'ArrowDown'
+            ? Math.min(currentIndex + 1, availableOptions.length - 1)
+            : Math.max(currentIndex <= 0 ? 0 : currentIndex - 1, 0)
+
+        const nextOption = availableOptions[nextIndex]
+
+        typeSelect.value = nextOption.value
+        typeSearch.value = nextOption.textContent
+        typeSelect.dispatchEvent(
+          new Event('change', {
+            bubbles: true
+          })
+        )
+
+        return
+      }
 
       if (availableOptions.length === 1) {
         typeSelect.value =

@@ -307,10 +307,10 @@
 }
 /* FAST PROC — pesquisa parcial do tipo de processo */
 .sp-clique-type-search {
-  background: #ffffff !important;
+  background: #000000 !important;
   border: 1px solid #93a4b8 !important;
   border-radius: 4px !important;
-  color: #111111 !important;
+  color: #ffffff !important;
   font-size: 15px !important;
   min-height: 40px !important;
   padding: 8px 10px !important;
@@ -318,7 +318,7 @@
 }
 
 .sp-clique-type-search::placeholder {
-  color: #657487 !important;
+  color: #b8c0cc !important;
   opacity: 1 !important;
 }
 
