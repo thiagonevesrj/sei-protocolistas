@@ -204,3 +204,110 @@
 }
 
 /* CSS for Module: seipp-tooltip END */
+
+/* Cabeçalho ampliado do SEI Protocolistas */
+#navInfraBarraNavegacao,
+#divInfraBarraSistema,
+#divInfraBarraSistemaPadrao {
+  min-height: 68px !important;
+}
+
+#divInfraBarraSistemaPadraoE,
+#divInfraBarraSistemaPadraoD,
+#divInfraBarraSistemaE,
+#divInfraBarraSistemaD {
+  align-items: center !important;
+  min-height: 64px !important;
+}
+
+#sei-protocolistas-brand {
+  margin-left: 16px;
+  min-width: 360px;
+}
+
+#sei-protocolistas-brand .sei-protocolistas-brand-prefix {
+  font-size: 18px;
+}
+
+#sei-protocolistas-brand .sei-protocolistas-brand-wordmark {
+  height: 30px;
+}
+
+#sei-protocolistas-brand .sei-protocolistas-brand-signature {
+  font-size: 9px;
+}
+/* Menu lateral enxuto do SEI Protocolistas */
+#divInfraPesquisarMenu,
+#linkMenu1,
+#linkMenu2,
+#linkMenu6,
+#linkMenu7,
+#linkMenu9,
+#linkMenu13,
+#linkMenu14,
+#linkMenu21,
+#linkMenu22,
+#linkMenu23,
+#linkMenu24,
+#infraSubMenu2,
+#infraSubMenu9,
+#infraSubMenu13 {
+  display: none !important;
+}
+/* Compensa o cabeçalho ampliado no menu lateral */
+#divInfraAreaTelaE,
+.divInfraAreaTelaE {
+  padding-top: 18px !important;
+}
+/* Compensa o cabeçalho ampliado na área principal */
+#divInfraAreaTelaD,
+.divInfraAreaTelaD {
+  padding-top: 18px !important;
+}
+/* Destaque FAST PROC no menu Iniciar Processo */
+#linkMenu17 {
+  align-items: center !important;
+  background: #123f78 !important;
+  border: 2px solid #e0ae28 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 0 0 1px rgb(224 174 40 / 18%) !important;
+  color: #ffffff !important;
+  display: flex !important;
+  font-weight: 800 !important;
+  margin: 5px 4px !important;
+  padding: 10px 12px !important;
+}
+
+#linkMenu17::before {
+  color: #e0ae28;
+  content: "⚡";
+  font-size: 18px;
+  line-height: 1;
+  margin-right: 9px;
+}
+
+#linkMenu17:hover,
+#linkMenu17:focus {
+  background: #18559c !important;
+  border-color: #f0c44a !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+/* Novo logotipo completo do SEI Protocolistas */
+#sei-protocolistas-brand {
+  align-items: center !important;
+  margin-left: 18px !important;
+  min-width: 560px !important;
+}
+
+#sei-protocolistas-brand .sei-protocolistas-brand-prefix,
+#sei-protocolistas-brand .sei-protocolistas-brand-signature {
+  display: none !important;
+}
+
+#sei-protocolistas-brand .sei-protocolistas-brand-wordmark {
+  height: 54px !important;
+  max-width: 540px !important;
+  object-fit: contain !important;
+  width: auto !important;
+}
