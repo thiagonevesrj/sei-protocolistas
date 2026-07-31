@@ -1,0 +1,48 @@
+#sp-fast-proc-rq {
+  align-items: center;
+  background: #071a33;
+  border: 3px solid #e0ae28;
+  border-radius: 5px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 35%);
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  gap: 3px;
+  height: 43px;
+  justify-content: center;
+  margin: 0 8px 0 0;
+  min-width: 67px;
+  padding: 4px 8px;
+  vertical-align: middle;
+}
+
+#sp-fast-proc-rq:hover,
+#sp-fast-proc-rq:focus {
+  background: #0b2346;
+  box-shadow:
+    0 0 0 3px rgb(224 174 40 / 30%),
+    0 3px 10px rgb(0 0 0 / 35%);
+  outline: none;
+}
+
+#sp-fast-proc-rq:active {
+  transform: translateY(1px);
+}
+
+#sp-fast-proc-rq:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.sp-fast-proc-rq__bolt {
+  color: #e0ae28;
+  font-size: 17px;
+}
+
+.sp-fast-proc-rq__text {
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}

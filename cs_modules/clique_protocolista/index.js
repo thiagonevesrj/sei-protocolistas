@@ -1676,6 +1676,7 @@
       [CONTEXT_KEY]: {
         ...draft,
         createdAt: Date.now(),
+        expiresAt: Date.now() + 60 * 60 * 1000,
         especificacao: output.specification,
         observacoes: output.observations,
         documentoPresencialPendente:
