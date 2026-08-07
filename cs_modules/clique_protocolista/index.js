@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'cliqueProtocolistaRascunho'
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
+  const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
 
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const STORAGE_TIMEOUT = 5000
@@ -585,7 +586,7 @@
     }
   }
 
-  function createPanel() {
+  function createPanel(initialData = {}) {
     const backdrop = createElement('div', {
       className: 'sp-clique-backdrop',
       role: 'dialog',
@@ -662,7 +663,12 @@
         value
       })
 
-      if (index === 0) {
+      const initialMode =
+        initialData.modalidade === 'email'
+          ? 'email'
+          : 'presencial'
+
+      if (value === initialMode) {
         radio.checked = true
       }
 
@@ -912,6 +918,15 @@
         placeholder: 'Outras informações'
       }
     ].forEach((field) => addField(grid, field))
+
+    if (initialData.email) {
+      const emailField = grid.querySelector('input[name="email"]')
+
+      if (emailField) {
+        emailField.value = cleanValue(initialData.email)
+        dispatchFieldEvents(emailField)
+      }
+    }
 
     dataSection.appendChild(grid)
 
@@ -1715,11 +1730,63 @@
     await storageRemove(STORAGE_KEY)
   }
 
+  async function openFromFastMailHandoff() {
+    const stored = await storageGet(FAST_MAIL_HANDOFF_KEY)
+    const handoff = stored[FAST_MAIL_HANDOFF_KEY]
+
+    if (!handoff) {
+      return false
+    }
+
+    const expired =
+      !handoff.createdAt ||
+      Date.now() - handoff.createdAt > MAX_DRAFT_AGE ||
+      (handoff.expiresAt && Date.now() > handoff.expiresAt)
+
+    if (expired) {
+      await storageRemove(FAST_MAIL_HANDOFF_KEY)
+      return false
+    }
+
+    if (
+      handoff.source !== 'fast-mail' ||
+      handoff.mode !== 'email' ||
+      !cleanValue(handoff.email)
+    ) {
+      await storageRemove(FAST_MAIL_HANDOFF_KEY)
+      return false
+    }
+
+    if (!document.querySelector('.sp-clique-backdrop')) {
+      document.body.appendChild(
+        createPanel({
+          modalidade: 'email',
+          email: handoff.email
+        })
+      )
+    }
+
+    await storageRemove(FAST_MAIL_HANDOFF_KEY)
+
+    document
+      .querySelector('#sp-tipo-processo')
+      ?.focus()
+
+    return true
+  }
+
   if (
     getAction() ===
     'procedimento_escolher_tipo'
   ) {
     insertQuickButton()
+
+    openFromFastMailHandoff().catch((error) => {
+      console.error(
+        '[SEI Protocolistas] Falha ao abrir FAST PROC pelo FAST MAIL:',
+        error
+      )
+    })
   }
 
   if (getAction() === 'procedimento_gerar') {

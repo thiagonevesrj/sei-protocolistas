@@ -1,0 +1,234 @@
+#sei-protocolistas-fast-mail-status {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2147483647;
+  width: min(310px, calc(100vw - 20px));
+  max-height: min(78vh, 680px);
+  color: #f8fafc;
+  background: #06172d;
+  border: 1px solid #e0ae28;
+  border-radius: 12px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+  font-family: "Segoe UI", Arial, sans-serif;
+  overflow: hidden;
+}
+
+#sei-protocolistas-fast-mail-status * {
+  box-sizing: border-box;
+}
+
+#sei-protocolistas-fast-mail-status.spfm-dragging {
+  user-select: none;
+  opacity: 0.96;
+}
+
+#sei-protocolistas-fast-mail-status.spfm-collapsed {
+  width: 210px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 46px;
+  padding: 9px 10px 8px 12px;
+  cursor: move;
+  background: #06172d;
+  border-bottom: 1px solid rgba(224, 174, 40, 0.3);
+}
+
+#sei-protocolistas-fast-mail-status.spfm-collapsed .spfm-header {
+  border-bottom: 0;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-title {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.045em;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-subtitle {
+  margin-top: 1px;
+  color: #f1c44f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-icon-button {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  color: #f1c44f;
+  background: #030d1b;
+  border: 1px solid rgba(241, 196, 79, 0.48);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-panel-body {
+  max-height: calc(min(78vh, 680px) - 46px);
+  padding: 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-panel-body[hidden] {
+  display: none !important;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-summary {
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  background: #030d1b;
+  border: 1px solid rgba(174, 189, 208, 0.18);
+  border-radius: 8px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-summary strong {
+  font-size: 11px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-summary span {
+  color: #aebdd0;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-fields {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-fields label {
+  display: grid;
+  gap: 4px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-fields label > span {
+  color: #aebdd0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-fields label > span small {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.72;
+  text-transform: none;
+}
+
+#sei-protocolistas-fast-mail-status input,
+#sei-protocolistas-fast-mail-status select {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  color: #f8fafc;
+  background: #030d1b;
+  border: 1px solid rgba(174, 189, 208, 0.26);
+  border-radius: 7px;
+  outline: none;
+  font: inherit;
+  font-size: 11px;
+}
+
+#sei-protocolistas-fast-mail-status input:focus,
+#sei-protocolistas-fast-mail-status select:focus {
+  border-color: #e0ae28;
+  box-shadow: 0 0 0 2px rgba(224, 174, 40, 0.12);
+}
+
+#sei-protocolistas-fast-mail-status button:not(.spfm-icon-button) {
+  width: 100%;
+  margin-top: 9px;
+  padding: 8px 9px;
+  color: #071224;
+  background: #f1c44f;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+#sei-protocolistas-fast-mail-status button:disabled {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-missing-box {
+  margin-top: 9px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-secondary {
+  color: #f1c44f !important;
+  background: #030d1b !important;
+  border: 1px solid rgba(241, 196, 79, 0.5) !important;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-missing-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 9px;
+  background: #030d1b;
+  border: 1px solid rgba(174, 189, 208, 0.18);
+  border-radius: 8px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-missing-list[hidden],
+#sei-protocolistas-fast-mail-status .spfm-missing-box[hidden] {
+  display: none !important;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: #e8eef7;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-check input {
+  flex: 0 0 auto;
+  width: 14px;
+  min-height: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  accent-color: #f1c44f;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-mini-status {
+  min-height: 0;
+  color: #aebdd0;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+@media (max-width: 720px) {
+  #sei-protocolistas-fast-mail-status {
+    right: 8px;
+    bottom: 8px;
+    width: min(286px, calc(100vw - 16px));
+    max-height: 70vh;
+  }
+
+  #sei-protocolistas-fast-mail-status .spfm-panel-body {
+    max-height: calc(70vh - 46px);
+  }
+}

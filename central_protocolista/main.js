@@ -1,454 +1,379 @@
 (() => {
   'use strict'
 
-  const browserApi = typeof browser === 'undefined' ? chrome : browser
-  const CONFIG_KEY = 'centralProtocolistaConfiguracao'
-  const MODEL_OVERRIDES_KEY = 'centralProtocolistaModelos'
-  const DRAFT_KEY = 'cliqueProtocolistaRascunho'
-  const CONTEXT_KEY = 'cliqueProtocolistaContexto'
+  const api = typeof browser === 'undefined' ? chrome : browser
+  const OPERATOR_KEY = 'fastMailOperadorValidado'
+  const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
+  const SEI_CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
   const CATALOG_PATH = '../data/catalogo-processos.json'
-  const MODELS_PATH = '../data/modelos-resposta.json'
-  const MAX_DRAFT_AGE = 15 * 60 * 1000
-  const APP_NAME = 'SEI Protocolistas'
-  const EXPORT_SCHEMA_VERSION = 1
 
-  let responseModels = []
-  let modelOverrides = {}
+  const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
+  const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 
-  function cleanValue (value) {
-    return String(value || '').replace(/\s+/g, ' ').trim()
-  }
+  let processes = []
 
-  function storageGet (keys) {
-    return new Promise((resolve, reject) => {
-      const result = browserApi.storage.local.get(keys, (items) => {
-        const lastError = browserApi.runtime?.lastError
-        if (lastError) reject(lastError)
-        else resolve(items)
-      })
+  const $ = (selector) => document.querySelector(selector)
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim()
 
-      if (result && typeof result.then === 'function') {
-        result.then(resolve, reject)
-      }
+  const get = (keys) => new Promise((resolve, reject) => {
+    const result = api.storage.local.get(keys, (items) => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else resolve(items)
     })
-  }
+    if (result?.then) result.then(resolve, reject)
+  })
 
-  function storageSet (items) {
-    return new Promise((resolve, reject) => {
-      const result = browserApi.storage.local.set(items, () => {
-        const lastError = browserApi.runtime?.lastError
-        if (lastError) reject(lastError)
-        else resolve()
-      })
-
-      if (result && typeof result.then === 'function') {
-        result.then(resolve, reject)
-      }
+  const set = (items) => new Promise((resolve, reject) => {
+    const result = api.storage.local.set(items, () => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else resolve()
     })
-  }
+    if (result?.then) result.then(resolve, reject)
+  })
 
-  function storageRemove (keys) {
-    return new Promise((resolve, reject) => {
-      const result = browserApi.storage.local.remove(keys, () => {
-        const lastError = browserApi.runtime?.lastError
-        if (lastError) reject(lastError)
-        else resolve()
-      })
-
-      if (result && typeof result.then === 'function') {
-        result.then(resolve, reject)
-      }
+  const remove = (keys) => new Promise((resolve, reject) => {
+    const result = api.storage.local.remove(keys, () => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else resolve()
     })
+    if (result?.then) result.then(resolve, reject)
+  })
+
+  function message (selector, text, type = '') {
+    const element = $(selector)
+    if (!element) return
+    element.textContent = text
+    element.className = `message${type ? ` ${type}` : ''}`
   }
 
-  function setConfigurationStatus (configured) {
-    const status = document.querySelector('#config-status')
-    status.textContent = configured ? 'Configurado' : 'Não configurado'
-    status.className = configured
-      ? 'badge badge--success'
-      : 'badge badge--warning'
-  }
+  function extractProtocolista (email) {
+    const normalized = clean(email).toLowerCase()
+    const match = normalized.match(/^protocolista\s*(\d{1,4})@detran\.rj\.gov\.br$/i)
+    if (!match) return null
 
-  function showMessage (selector, message, type = '') {
-    const element = document.querySelector(selector)
-    element.textContent = message
-    element.className = `form-message${type ? ` form-message--${type}` : ''}`
-  }
-
-  async function loadConfiguration () {
-    try {
-      const stored = await storageGet(CONFIG_KEY)
-      const configuration = stored[CONFIG_KEY]
-      const nameInput = document.querySelector('#protocolist-name')
-      const numberInput = document.querySelector('#protocolist-number')
-
-      nameInput.value = configuration?.protocolistName || ''
-      numberInput.value = configuration?.protocolistNumber || ''
-      setConfigurationStatus(Boolean(configuration?.protocolistNumber))
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao carregar configuração:', error)
-      showMessage('#form-message', 'Não foi possível carregar a configuração local.', 'error')
+    return {
+      number: match[1],
+      email: `protocolista${match[1]}@detran.rj.gov.br`
     }
   }
 
-  async function saveConfiguration (event) {
-    event.preventDefault()
+  async function setConfiguredOperatorFromWebmail (email) {
+    const operator = extractProtocolista(email)
+    if (!operator) return null
 
-    const name = cleanValue(document.querySelector('#protocolist-name').value)
-    const number = cleanValue(document.querySelector('#protocolist-number').value)
+    const stored = await get(OPERATOR_KEY)
+    const previous = stored[OPERATOR_KEY]
+    const validated = previous?.email?.toLowerCase() === operator.email.toLowerCase() && previous?.validatedAt
 
-    if (!/^\d{1,4}$/.test(number)) {
-      setConfigurationStatus(false)
-      showMessage(
-        '#form-message',
-        'Informe somente os números da identificação do protocolista.',
-        'error'
-      )
-      document.querySelector('#protocolist-number').focus()
+    const next = validated
+      ? previous
+      : {
+          ...operator,
+          source: 'central-config',
+          configuredAt: Date.now()
+        }
+
+    await set({ [OPERATOR_KEY]: next })
+    renderOperator(next)
+    return next
+  }
+
+  function renderOperator (operator) {
+    const box = $('#operator-status')
+    if (!box) return
+
+    if (!operator?.number || !operator?.email) {
+      box.className = 'operator-status operator-status--pending'
+      box.innerHTML = '<span class="status-dot" aria-hidden="true"></span><div><strong>Protocolista não configurado</strong><span>Informe o e-mail institucional do webmail.</span></div>'
       return
     }
 
-    try {
-      await storageSet({
-        [CONFIG_KEY]: {
-          protocolistName: name,
-          protocolistNumber: number,
-          updatedAt: Date.now()
-        }
-      })
-      setConfigurationStatus(true)
-      showMessage('#form-message', 'Configuração salva neste navegador.', 'success')
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao salvar configuração:', error)
-      showMessage('#form-message', 'Não foi possível salvar a configuração.', 'error')
+    const isValidated = Boolean(operator.validatedAt) && operator.source !== 'central-config'
+    box.className = isValidated
+      ? 'operator-status operator-status--validated'
+      : 'operator-status operator-status--configured'
+
+    box.innerHTML = `
+      <span class="status-dot" aria-hidden="true"></span>
+      <div>
+        <strong>Protocolista ${operator.number} ${isValidated ? 'validado' : 'configurado'}</strong>
+        <span>${operator.email}</span>
+      </div>`
+  }
+
+  function renderCredentialStatus (selector, state) {
+    const badge = $(selector)
+    if (!badge) return
+    badge.textContent = state ? 'Credenciais salvas' : 'Não configurado'
+    badge.className = state ? 'badge success' : 'badge warning'
+  }
+
+  async function loadWebmailCredentials () {
+    const credentials = (await get(WEBMAIL_CREDENTIALS_KEY))[WEBMAIL_CREDENTIALS_KEY]
+
+    if (credentials?.remember) {
+      $('#webmail-user').value = credentials.user || ''
+      $('#webmail-password').value = credentials.password || ''
+      $('#remember-webmail-credentials').checked = true
+      renderCredentialStatus('#webmail-credentials-status', Boolean(credentials.user && credentials.password))
+      await setConfiguredOperatorFromWebmail(credentials.user)
+    } else {
+      renderCredentialStatus('#webmail-credentials-status', false)
     }
   }
 
-  function createCell (text) {
-    const cell = document.createElement('td')
-    cell.textContent = text || 'A confirmar'
-    return cell
+  async function loadSeiCredentials () {
+    const credentials = (await get(SEI_CREDENTIALS_KEY))[SEI_CREDENTIALS_KEY]
+
+    if (credentials?.remember) {
+      $('#sei-user').value = credentials.user || ''
+      $('#sei-password').value = credentials.password || ''
+      $('#remember-sei-credentials').checked = true
+      renderCredentialStatus('#sei-credentials-status', Boolean(credentials.user && credentials.password))
+    } else {
+      renderCredentialStatus('#sei-credentials-status', false)
+    }
   }
 
-  function createStatusCell (status) {
-    const cell = document.createElement('td')
-    const badge = document.createElement('span')
-    const isPilot = status === 'pilot'
-    badge.className = `table-status table-status--${isPilot ? 'pilot' : 'pending'}`
-    badge.textContent = isPilot ? 'Piloto configurado' : 'Mapeamento pendente'
-    cell.appendChild(badge)
-    return cell
+  function openWebmail () {
+    window.open(WEBMAIL_URL, '_blank', 'noopener')
   }
 
-  function renderCatalog (catalog) {
-    const body = document.querySelector('#catalog-body')
-    const processes = Array.isArray(catalog.processTypes) ? catalog.processTypes : []
+  function openSei () {
+    window.open(SEI_LOGIN_URL, '_blank', 'noopener')
+  }
+
+  async function saveWebmailCredentialsAndOpen (event) {
+    event.preventDefault()
+
+    const user = clean($('#webmail-user').value).toLowerCase()
+    const password = String($('#webmail-password').value || '')
+    const remember = $('#remember-webmail-credentials').checked
+    const operator = extractProtocolista(user)
+
+    if (!operator) {
+      return message(
+        '#webmail-credentials-message',
+        'Use o e-mail institucional no padrão protocolistaN@detran.rj.gov.br.',
+        'error'
+      )
+    }
+
+    if (!password) return message('#webmail-credentials-message', 'Informe a senha do Webmail.', 'error')
+
+    if (remember) {
+      await set({
+        [WEBMAIL_CREDENTIALS_KEY]: {
+          user: operator.email,
+          password,
+          remember: true,
+          savedAt: Date.now()
+        }
+      })
+      renderCredentialStatus('#webmail-credentials-status', true)
+      message('#webmail-credentials-message', 'Acesso do Webmail salvo neste navegador.', 'success')
+    } else {
+      await remove(WEBMAIL_CREDENTIALS_KEY)
+      renderCredentialStatus('#webmail-credentials-status', false)
+      message('#webmail-credentials-message', 'Credenciais não serão mantidas após este acesso.', 'success')
+    }
+
+    await setConfiguredOperatorFromWebmail(operator.email)
+    openWebmail()
+  }
+
+  async function saveSeiCredentialsAndOpen (event) {
+    event.preventDefault()
+
+    const user = clean($('#sei-user').value)
+    const password = String($('#sei-password').value || '')
+    const remember = $('#remember-sei-credentials').checked
+
+    if (!user) return message('#sei-credentials-message', 'Informe o usuário do SEI.', 'error')
+    if (!password) return message('#sei-credentials-message', 'Informe a senha do SEI.', 'error')
+
+    if (remember) {
+      await set({
+        [SEI_CREDENTIALS_KEY]: {
+          user,
+          password,
+          remember: true,
+          savedAt: Date.now()
+        }
+      })
+      renderCredentialStatus('#sei-credentials-status', true)
+      message('#sei-credentials-message', 'Acesso do SEI salvo neste navegador.', 'success')
+    } else {
+      await remove(SEI_CREDENTIALS_KEY)
+      renderCredentialStatus('#sei-credentials-status', false)
+      message('#sei-credentials-message', 'Credenciais não serão mantidas após este acesso.', 'success')
+    }
+
+    openSei()
+  }
+
+  async function clearWebmailCredentials () {
+    await remove(WEBMAIL_CREDENTIALS_KEY)
+    $('#webmail-credentials-form').reset()
+    $('#webmail-password').type = 'password'
+    renderCredentialStatus('#webmail-credentials-status', false)
+    message('#webmail-credentials-message', 'Credenciais do Webmail apagadas.', 'success')
+  }
+
+  async function clearSeiCredentials () {
+    await remove(SEI_CREDENTIALS_KEY)
+    $('#sei-credentials-form').reset()
+    $('#sei-password').type = 'password'
+    renderCredentialStatus('#sei-credentials-status', false)
+    message('#sei-credentials-message', 'Credenciais do SEI apagadas.', 'success')
+  }
+
+  async function clearAllCredentials () {
+    await remove([WEBMAIL_CREDENTIALS_KEY, SEI_CREDENTIALS_KEY])
+    $('#webmail-credentials-form').reset()
+    $('#sei-credentials-form').reset()
+    renderCredentialStatus('#webmail-credentials-status', false)
+    renderCredentialStatus('#sei-credentials-status', false)
+    message('#clear-all-message', 'Todas as credenciais locais foram removidas.', 'success')
+  }
+
+  function togglePassword (selector) {
+    const field = $(selector)
+    if (!field) return
+    field.type = field.type === 'password' ? 'text' : 'password'
+  }
+
+  async function startWorkday () {
+    const stored = await get([WEBMAIL_CREDENTIALS_KEY, SEI_CREDENTIALS_KEY])
+    const webmail = stored[WEBMAIL_CREDENTIALS_KEY]
+    const sei = stored[SEI_CREDENTIALS_KEY]
+
+    if (!webmail?.remember || !webmail?.user || !webmail?.password) {
+      message('#webmail-credentials-message', 'Salve primeiro o acesso do Webmail para usar INICIAR EXPEDIENTE.', 'error')
+      $('#webmail-user').focus()
+      return
+    }
+
+    if (!sei?.remember || !sei?.user || !sei?.password) {
+      message('#sei-credentials-message', 'Salve primeiro o acesso do SEI para usar INICIAR EXPEDIENTE.', 'error')
+      $('#sei-user').focus()
+      return
+    }
+
+    openWebmail()
+    window.setTimeout(openSei, 350)
+  }
+
+  function renderCatalog (list) {
+    const body = $('#catalog-body')
     body.replaceChildren()
 
-    processes.forEach((processType) => {
+    list.forEach((item) => {
       const row = document.createElement('tr')
-      row.append(
-        createCell(processType.name),
-        createCell(processType.destinationUnit),
-        createCell(processType.subjectAcronym),
-        createStatusCell(processType.catalogStatus)
-      )
+      const name = document.createElement('td')
+      const unit = document.createElement('td')
+      name.textContent = item.name || 'A confirmar'
+      unit.textContent = item.destinationUnit || 'A confirmar'
+      row.append(name, unit)
       body.appendChild(row)
     })
 
-    const configured = processes.filter((item) => item.catalogStatus === 'pilot').length
-    document.querySelector('#catalog-summary').textContent =
-      `${configured} configurado · ${processes.length - configured} pendentes`
+    $('#catalog-summary').textContent = `${list.length} procedimento${list.length === 1 ? '' : 's'}`
   }
 
   async function loadCatalog () {
     try {
       const response = await fetch(CATALOG_PATH)
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      renderCatalog(await response.json())
+      const catalog = await response.json()
+      processes = Array.isArray(catalog.processTypes) ? catalog.processTypes : []
+      renderCatalog(processes)
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao carregar catálogo:', error)
-      document.querySelector('#catalog-summary').textContent = 'Falha no catálogo'
-      document.querySelector('#catalog-error').textContent =
-        'Não foi possível carregar o catálogo local de processos.'
+      $('#catalog-summary').textContent = 'Falha no catálogo'
+      message('#catalog-error', 'Não foi possível carregar o catálogo local.', 'error')
     }
   }
 
-  function getSelectedModel () {
-    const selectedId = document.querySelector('#model-select').value
-    return responseModels.find((model) => model.id === selectedId)
+  function filterCatalog () {
+    const query = clean($('#catalog-search').value).toLowerCase()
+    const filtered = !query
+      ? processes
+      : processes.filter((item) => [item.name, item.destinationUnit]
+          .some((value) => String(value || '').toLowerCase().includes(query)))
+
+    renderCatalog(filtered)
   }
 
-  function getCurrentModelBody (model) {
-    return modelOverrides[model.id] || model.body
-  }
-
-  function renderSelectedModel () {
-    const model = getSelectedModel()
-    document.querySelector('#model-body').value = model ? getCurrentModelBody(model) : ''
-    showMessage('#model-message', '')
-  }
-
-  function renderModelOptions () {
-    const select = document.querySelector('#model-select')
-    select.replaceChildren()
-
-    responseModels.forEach((model) => {
-      const option = document.createElement('option')
-      option.value = model.id
-      option.textContent = model.name
-      select.appendChild(option)
-    })
-    renderSelectedModel()
-  }
-
-  async function loadResponseModels () {
-    try {
-      const [response, stored] = await Promise.all([
-        fetch(MODELS_PATH),
-        storageGet(MODEL_OVERRIDES_KEY)
-      ])
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-
-      const payload = await response.json()
-      responseModels = Array.isArray(payload.models) ? payload.models : []
-      modelOverrides = stored[MODEL_OVERRIDES_KEY] || {}
-      renderModelOptions()
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao carregar modelos:', error)
-      showMessage('#model-message', 'Não foi possível carregar os modelos de resposta.', 'error')
-    }
-  }
-
-  async function saveSelectedModel () {
-    const model = getSelectedModel()
-    const body = document.querySelector('#model-body').value.trim()
-    if (!model || !body) {
-      showMessage('#model-message', 'Escolha um modelo e informe o texto.', 'error')
-      return
-    }
-    if (!body.includes('{{numeroProcesso}}')) {
-      showMessage(
-        '#model-message',
-        'Mantenha o marcador {{numeroProcesso}} no texto.',
-        'error'
-      )
-      return
+  function downloadSettings () {
+    const payload = {
+      app: 'SEI Protocolistas',
+      schemaVersion: 3,
+      exportedAt: new Date().toISOString(),
+      note: 'Credenciais e senhas não são exportadas.'
     }
 
-    try {
-      modelOverrides = { ...modelOverrides, [model.id]: body }
-      await storageSet({ [MODEL_OVERRIDES_KEY]: modelOverrides })
-      showMessage('#model-message', 'Modelo personalizado salvo neste navegador.', 'success')
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao salvar modelo:', error)
-      showMessage('#model-message', 'Não foi possível salvar o modelo.', 'error')
-    }
-  }
-
-  async function restoreSelectedModel () {
-    const model = getSelectedModel()
-    if (!model) return
-
-    try {
-      const nextOverrides = { ...modelOverrides }
-      delete nextOverrides[model.id]
-      modelOverrides = nextOverrides
-      await storageSet({ [MODEL_OVERRIDES_KEY]: modelOverrides })
-      renderSelectedModel()
-      showMessage('#model-message', 'Texto-base restaurado.', 'success')
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao restaurar modelo:', error)
-      showMessage('#model-message', 'Não foi possível restaurar o modelo.', 'error')
-    }
-  }
-
-  async function cleanupExpiredTemporaryData () {
-    const stored = await storageGet([DRAFT_KEY, CONTEXT_KEY])
-    const now = Date.now()
-    const keysToRemove = []
-    const draft = stored[DRAFT_KEY]
-    const context = stored[CONTEXT_KEY]
-
-    if (draft && (!draft.createdAt || now - draft.createdAt > MAX_DRAFT_AGE)) {
-      keysToRemove.push(DRAFT_KEY)
-    }
-    if (context && (!context.expiresAt || now > context.expiresAt)) {
-      keysToRemove.push(CONTEXT_KEY)
-    }
-    if (keysToRemove.length) await storageRemove(keysToRemove)
-
-    return storageGet([DRAFT_KEY, CONTEXT_KEY])
-  }
-
-  async function updateTemporaryStatus () {
-    try {
-      const stored = await cleanupExpiredTemporaryData()
-      const draft = stored[DRAFT_KEY]
-      const context = stored[CONTEXT_KEY]
-      const status = document.querySelector('#temporary-status')
-
-      if (!draft && !context) {
-        status.textContent = 'Nenhum dado ativo'
-        status.className = 'badge badge--success'
-        return
-      }
-
-      const mode = context?.modalidade === 'email'
-        ? 'e-mail'
-        : context?.modalidade === 'presencial' ? 'presencial' : 'rascunho'
-      status.textContent = `Atendimento ${mode} ativo`
-      status.className = 'badge badge--warning'
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao verificar dados temporários:', error)
-      document.querySelector('#temporary-status').textContent = 'Falha na verificação'
-    }
-  }
-
-  async function clearTemporaryData () {
-    try {
-      await storageRemove([DRAFT_KEY, CONTEXT_KEY])
-      await updateTemporaryStatus()
-      showMessage('#temporary-message', 'Dados do atendimento atual removidos.', 'success')
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao limpar dados temporários:', error)
-      showMessage('#temporary-message', 'Não foi possível limpar os dados temporários.', 'error')
-    }
-  }
-
-  function downloadJson (payload) {
-    const content = JSON.stringify(payload, null, 2)
-    const blob = new Blob([content], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
-    const date = new Date().toISOString().slice(0, 10)
     anchor.href = url
-    anchor.download = `sei-protocolistas-config-${date}.json`
-    anchor.hidden = true
-    document.body.appendChild(anchor)
+    anchor.download = `sei-protocolistas-config-${new Date().toISOString().slice(0, 10)}.json`
     anchor.click()
-    anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    message('#transfer-message', 'Configuração exportada sem credenciais.', 'success')
   }
 
-  async function exportSettings () {
-    try {
-      const stored = await storageGet([CONFIG_KEY, MODEL_OVERRIDES_KEY])
-      downloadJson({
-        app: APP_NAME,
-        schemaVersion: EXPORT_SCHEMA_VERSION,
-        exportedAt: new Date().toISOString(),
-        permanentData: {
-          protocolistConfiguration: stored[CONFIG_KEY] || null,
-          modelOverrides: stored[MODEL_OVERRIDES_KEY] || {}
-        }
-      })
-      showMessage(
-        '#transfer-message',
-        'Configuração exportada sem dados do atendimento.',
-        'success'
-      )
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao exportar configuração:', error)
-      showMessage('#transfer-message', 'Não foi possível exportar a configuração.', 'error')
-    }
-  }
+  function bind () {
+    $('#webmail-credentials-form').addEventListener('submit', saveWebmailCredentialsAndOpen)
+    $('#sei-credentials-form').addEventListener('submit', saveSeiCredentialsAndOpen)
 
-  function validateImportedConfiguration (configuration) {
-    if (configuration === null || configuration === undefined) return null
-    const number = cleanValue(configuration.protocolistNumber)
-    if (!/^\d{1,4}$/.test(number)) {
-      throw new Error('O número do protocolista no arquivo é inválido.')
-    }
+    $('#clear-webmail-credentials').addEventListener('click', clearWebmailCredentials)
+    $('#clear-sei-credentials').addEventListener('click', clearSeiCredentials)
+    $('#clear-all-credentials').addEventListener('click', clearAllCredentials)
 
-    return {
-      protocolistName: cleanValue(configuration.protocolistName).slice(0, 80),
-      protocolistNumber: number,
-      updatedAt: Date.now()
-    }
-  }
+    $('#toggle-webmail-password').addEventListener('click', () => togglePassword('#webmail-password'))
+    $('#toggle-sei-password').addEventListener('click', () => togglePassword('#sei-password'))
 
-  function validateImportedModels (overrides) {
-    if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) return {}
-    const knownIds = new Set(responseModels.map((model) => model.id))
-    const sanitized = {}
+    $('#open-fast-mail').addEventListener('click', openWebmail)
+    $('#open-sei').addEventListener('click', openSei)
+    $('#start-workday').addEventListener('click', startWorkday)
 
-    Object.entries(overrides).forEach(([id, body]) => {
-      if (
-        knownIds.has(id) &&
-        typeof body === 'string' &&
-        body.length <= 30000 &&
-        body.includes('{{numeroProcesso}}')
-      ) {
-        sanitized[id] = body
-      }
+    $('#catalog-search').addEventListener('input', filterCatalog)
+    $('#focus-catalog').addEventListener('click', () => {
+      $('#catalog-panel').scrollIntoView({ behavior: 'smooth' })
+      setTimeout(() => $('#catalog-search').focus(), 300)
     })
-    return sanitized
-  }
 
-  async function importSettingsFile (file) {
-    try {
-      if (file.size > 1024 * 1024) {
-        throw new Error('O arquivo de configuração ultrapassa o limite de 1 MB.')
-      }
-      const payload = JSON.parse(await file.text())
-      if (payload.app !== APP_NAME || payload.schemaVersion !== EXPORT_SCHEMA_VERSION) {
-        throw new Error('Este arquivo não pertence à Central Protocolista ou é incompatível.')
-      }
+    $('#export-settings').addEventListener('click', downloadSettings)
 
-      const permanentData = payload.permanentData || {}
-      const configuration = validateImportedConfiguration(
-        permanentData.protocolistConfiguration
-      )
-      const importedModels = validateImportedModels(permanentData.modelOverrides)
-      const values = { [MODEL_OVERRIDES_KEY]: importedModels }
-      if (configuration) values[CONFIG_KEY] = configuration
-
-      await storageSet(values)
-      modelOverrides = importedModels
-      await loadConfiguration()
-      renderSelectedModel()
-      showMessage(
-        '#transfer-message',
-        'Configuração importada. Nenhum dado de cidadão foi aceito.',
-        'success'
-      )
-    } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao importar configuração:', error)
-      showMessage(
-        '#transfer-message',
-        `Não foi possível importar: ${error.message || error}`,
-        'error'
-      )
-    }
-  }
-
-  function bindEvents () {
-    document.querySelector('#protocolist-form').addEventListener('submit', saveConfiguration)
-    document.querySelector('#model-select').addEventListener('change', renderSelectedModel)
-    document.querySelector('#save-model').addEventListener('click', saveSelectedModel)
-    document.querySelector('#restore-model').addEventListener('click', restoreSelectedModel)
-    document.querySelector('#clear-temporary').addEventListener('click', clearTemporaryData)
-    document.querySelector('#export-settings').addEventListener('click', exportSettings)
-    document.querySelector('#import-settings').addEventListener('click', () => {
-      document.querySelector('#import-file').click()
-    })
-    document.querySelector('#import-file').addEventListener('change', (event) => {
-      const [file] = event.target.files
-      if (file) importSettingsFile(file)
-      event.target.value = ''
+    $('#webmail-user').addEventListener('change', async (event) => {
+      const operator = extractProtocolista(event.target.value)
+      if (operator) await setConfiguredOperatorFromWebmail(operator.email)
     })
   }
 
-  function initialize () {
-    const manifest = browserApi.runtime.getManifest()
-    document.querySelector('#extension-version').textContent = `Versão ${manifest.version}`
-    bindEvents()
-    loadConfiguration()
-    loadCatalog()
-    loadResponseModels()
-    updateTemporaryStatus()
-  }
+  document.addEventListener('DOMContentLoaded', async () => {
+    $('#extension-version').textContent = `Versão ${api.runtime.getManifest().version}`
+    bind()
 
-  document.addEventListener('DOMContentLoaded', initialize)
+    const stored = await get(OPERATOR_KEY)
+    renderOperator(stored[OPERATOR_KEY])
+
+    await Promise.all([
+      loadWebmailCredentials(),
+      loadSeiCredentials(),
+      loadCatalog()
+    ])
+
+    api.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local') return
+      if (changes[OPERATOR_KEY]) renderOperator(changes[OPERATOR_KEY].newValue)
+      if (changes[WEBMAIL_CREDENTIALS_KEY]) loadWebmailCredentials()
+      if (changes[SEI_CREDENTIALS_KEY]) loadSeiCredentials()
+    })
+  })
 })()

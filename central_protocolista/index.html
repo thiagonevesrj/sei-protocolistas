@@ -1,254 +1,172 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Central Protocolista</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="main.js" defer></script>
-  </head>
-  <body>
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand__sei">SEI</span>
-        <span class="brand__name">Protocolistas</span>
-        <span class="brand__signature">by Thiago Neves Design</span>
-      </div>
-      <div class="topbar__meta">
-        <span class="environment">Central local</span>
-        <span id="extension-version">Versão</span>
-      </div>
-    </header>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Central do Protocolista</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><b>SEI</b><strong>Protocolistas</strong><em>by Thiago Neves Design</em></div>
+    <span id="extension-version">Versão</span>
+  </header>
 
-    <main>
-      <section class="hero">
+  <main>
+    <section class="operator panel">
+      <div>
+        <p class="eyebrow">Identidade operacional</p>
+        <h1>Central do Protocolista</h1>
+        <p>Configure os acessos uma vez e reduza os cliques para iniciar o expediente, responder e abrir processos.</p>
+      </div>
+      <div id="operator-status" class="operator-status operator-status--pending">
+        <span class="status-dot" aria-hidden="true"></span>
         <div>
-          <p class="eyebrow">Produtividade para quem protocola</p>
-          <h1>Central Protocolista</h1>
-          <p class="hero__description">
-            Um único ponto para triagem, abertura, conclusão e impressão.
-            Nesta primeira etapa, estamos preparando a fundação do sistema.
-          </p>
+          <strong>Protocolista não configurado</strong>
+          <span>Informe o e-mail institucional do webmail.</span>
         </div>
-        <div class="hero__status">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>Fundação da Central</span>
-        </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="workflow-grid" aria-label="Fluxos da Central Protocolista">
-        <article class="workflow-card">
-          <span class="workflow-card__number">01</span>
-          <h2>Triagem de e-mail</h2>
-          <p>Marcar documentos ausentes e preparar assunto e resposta de TRIAGEM.</p>
-          <button type="button" disabled>Próxima etapa</button>
-        </article>
+    <section class="start-panel panel">
+      <div>
+        <p class="eyebrow">Atalho principal</p>
+        <h2>Iniciar expediente</h2>
+        <p>Abre Webmail e SEI em sequência usando os acessos configurados.</p>
+      </div>
+      <button id="start-workday" class="primary start-button" type="button">INICIAR EXPEDIENTE</button>
+    </section>
 
-        <article class="workflow-card">
-          <span class="workflow-card__number">02</span>
-          <h2>Abrir processo</h2>
-          <p>Iniciar o Clique Protocolista e reaproveitar os dados no SEI.</p>
-          <button type="button" disabled>Disponível dentro do SEI</button>
-        </article>
-
-        <article class="workflow-card">
-          <span class="workflow-card__number">03</span>
-          <h2>Concluir atendimento</h2>
-          <p>Preparar destino, resposta de FECHADO ou protocolo impresso.</p>
-          <button type="button" disabled>Etapa futura</button>
-        </article>
-      </section>
-
-      <section class="content-grid">
-        <article class="panel">
-          <div class="panel__heading">
-            <div>
-              <p class="eyebrow">Configuração individual</p>
-              <h2>Identificação do protocolista</h2>
-            </div>
-            <span id="config-status" class="badge badge--warning">Não configurado</span>
-          </div>
-
-          <form id="protocolist-form" novalidate>
-            <div class="form-grid">
-              <label>
-                Nome do protocolista
-                <input
-                  id="protocolist-name"
-                  name="protocolistName"
-                  type="text"
-                  maxlength="80"
-                  autocomplete="name"
-                  placeholder="Ex.: Thiago Neves"
-                >
-              </label>
-
-              <label>
-                Número do protocolista <span aria-hidden="true">*</span>
-                <input
-                  id="protocolist-number"
-                  name="protocolistNumber"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="4"
-                  pattern="[0-9]{1,4}"
-                  placeholder="Ex.: 31"
-                  required
-                >
-              </label>
-            </div>
-
-            <p class="field-help">
-              O número será salvo somente neste navegador e usado na composição dos assuntos.
-            </p>
-
-            <div id="form-message" class="form-message" role="status" aria-live="polite"></div>
-
-            <div class="form-actions">
-              <button class="button button--primary" type="submit">Salvar configuração</button>
-            </div>
-          </form>
-        </article>
-
-        <article class="panel panel--summary">
-          <p class="eyebrow">Primeiro piloto</p>
-          <h2>Devolução de Taxas</h2>
-          <dl>
-            <div>
-              <dt>Unidade no SEI</dt>
-              <dd>DIVAF</dd>
-            </div>
-            <div>
-              <dt>Sigla no assunto</dt>
-              <dd>DAF</dd>
-            </div>
-            <div>
-              <dt>Modelo</dt>
-              <dd>Protocolo DAF</dd>
-            </div>
-            <div>
-              <dt>Próxima entrega</dt>
-              <dd>Triagem com documentos pendentes</dd>
-            </div>
-          </dl>
-        </article>
-      </section>
-
-      <section class="panel catalog-panel">
-        <div class="panel__heading">
-          <div>
-            <p class="eyebrow">Catálogo local</p>
-            <h2>Processos prioritários</h2>
-          </div>
-          <span id="catalog-summary" class="badge">Carregando...</span>
+    <section class="credentials-grid">
+      <article class="panel access-panel">
+        <div class="heading">
+          <div><p class="eyebrow">Acesso ao Webmail</p><h2>Conta institucional</h2></div>
+          <span id="webmail-credentials-status" class="badge warning">Não configurado</span>
         </div>
 
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Processo</th>
-                <th>Unidade</th>
-                <th>Sigla</th>
-                <th>Situação</th>
-              </tr>
-            </thead>
-            <tbody id="catalog-body"></tbody>
-          </table>
-        </div>
-
-        <p id="catalog-error" class="form-message form-message--error" role="alert"></p>
-      </section>
-
-      <section class="panel model-panel">
-        <div class="panel__heading">
-          <div>
-            <p class="eyebrow">Editor inicial</p>
-            <h2>Modelos de resposta</h2>
-          </div>
-          <span class="badge badge--warning">Revisão necessária</span>
-        </div>
-
-        <div class="model-editor">
-          <label>
-            Modelo
-            <select id="model-select"></select>
+        <form id="webmail-credentials-form" autocomplete="off">
+          <label>E-mail institucional
+            <input id="webmail-user" type="email" autocomplete="off" placeholder="protocolista31@detran.rj.gov.br">
+          </label>
+          <label>Senha do Webmail
+            <div class="password-row">
+              <input id="webmail-password" type="password" autocomplete="new-password" placeholder="Senha">
+              <button id="toggle-webmail-password" class="icon-action" type="button" title="Mostrar ou ocultar senha">👁</button>
+            </div>
           </label>
 
-          <label>
-            Texto do modelo
-            <textarea id="model-body" rows="18" maxlength="30000"></textarea>
+          <label class="remember-row">
+            <input id="remember-webmail-credentials" type="checkbox">
+            <span>
+              <b>Manter usuário e senha salvos neste navegador</b>
+              <small>Facilita os próximos acessos. As credenciais ficam neste perfil do navegador.</small>
+            </span>
           </label>
+
+          <div id="webmail-credentials-message" class="message"></div>
+
+          <div class="form-actions split-actions">
+            <button id="clear-webmail-credentials" type="button">Apagar credenciais</button>
+            <button class="primary" type="submit">Salvar e abrir Webmail</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel access-panel">
+        <div class="heading">
+          <div><p class="eyebrow">Acesso ao SEI</p><h2>Conta do SEI</h2></div>
+          <span id="sei-credentials-status" class="badge warning">Não configurado</span>
         </div>
 
-        <p class="field-help">
-          Mantenha os marcadores <code>{{numeroProcesso}}</code> e
-          <code>{{linkPesquisaPublica}}</code>. Os ajustes ficam somente neste navegador.
-        </p>
-
-        <div id="model-message" class="form-message" role="status" aria-live="polite"></div>
-
-        <div class="form-actions form-actions--split">
-          <button id="restore-model" class="button button--secondary" type="button">
-            Restaurar texto-base
-          </button>
-          <button id="save-model" class="button button--primary" type="button">
-            Salvar modelo
-          </button>
-        </div>
-      </section>
-
-      <section class="content-grid content-grid--secondary">
-        <article class="panel">
-          <div class="panel__heading">
-            <div>
-              <p class="eyebrow">Privacidade operacional</p>
-              <h2>Dados temporários</h2>
+        <form id="sei-credentials-form" autocomplete="off">
+          <label>Usuário do SEI
+            <input id="sei-user" type="text" autocomplete="off" placeholder="Usuário do SEI">
+          </label>
+          <label>Senha do SEI
+            <div class="password-row">
+              <input id="sei-password" type="password" autocomplete="new-password" placeholder="Senha">
+              <button id="toggle-sei-password" class="icon-action" type="button" title="Mostrar ou ocultar senha">👁</button>
             </div>
-            <span id="temporary-status" class="badge">Verificando...</span>
+          </label>
+
+          <label class="remember-row">
+            <input id="remember-sei-credentials" type="checkbox">
+            <span>
+              <b>Manter usuário e senha salvos neste navegador</b>
+              <small>Facilita os próximos acessos. As credenciais ficam neste perfil do navegador.</small>
+            </span>
+          </label>
+
+          <div id="sei-credentials-message" class="message"></div>
+
+          <div class="form-actions split-actions">
+            <button id="clear-sei-credentials" type="button">Apagar credenciais</button>
+            <button class="primary" type="submit">Salvar e abrir SEI</button>
           </div>
+        </form>
+      </article>
+    </section>
 
-          <p class="panel-copy">
-            Nome, CPF, telefone, e-mail e dados do processo servem apenas para concluir
-            o atendimento atual. Eles não entram no arquivo de exportação.
-          </p>
+    <section class="actions">
+      <article class="card featured">
+        <span>⚡</span><p class="eyebrow">Fluxo de e-mail</p><h2>FAST MAIL</h2>
+        <p>Responder, triar documentação e preparar abertura de processo.</p>
+        <button id="open-fast-mail">Abrir Webmail</button>
+      </article>
 
-          <button id="clear-temporary" class="button button--secondary" type="button">
-            Limpar dados temporários agora
-          </button>
-          <div id="temporary-message" class="form-message" role="status" aria-live="polite"></div>
+      <article class="card">
+        <span>↗</span><p class="eyebrow">Abertura no SEI</p><h2>FAST PROC</h2>
+        <p>Abrir o SEI e continuar o fluxo de protocolo.</p>
+        <button id="open-sei">Abrir SEI</button>
+      </article>
+
+      <article class="card">
+        <span>⌕</span><p class="eyebrow">Consulta rápida</p><h2>Procedimentos</h2>
+        <p>Consultar unidade de destino, documentos e regras operacionais.</p>
+        <button id="focus-catalog">Ver catálogo</button>
+      </article>
+    </section>
+
+    <section id="catalog-panel" class="panel catalog">
+      <div class="heading">
+        <div><p class="eyebrow">Catálogo operacional</p><h2>Procedimentos e unidades</h2></div>
+        <span id="catalog-summary" class="badge">Carregando...</span>
+      </div>
+      <label class="search">Pesquisar procedimento
+        <input id="catalog-search" type="search" placeholder="Ex.: devolução, habilitação, veículo">
+      </label>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Procedimento</th><th>Unidade de destino</th></tr></thead>
+          <tbody id="catalog-body"></tbody>
+        </table>
+      </div>
+      <p id="catalog-error" class="message error"></p>
+    </section>
+
+    <details class="admin">
+      <summary>Administração e manutenção</summary>
+      <div class="admin-grid">
+        <article class="panel flat">
+          <p class="eyebrow">Credenciais</p><h2>Limpeza local</h2>
+          <p>Remove os acessos salvos neste perfil do navegador.</p>
+          <button id="clear-all-credentials">Apagar todas as credenciais</button>
+          <div id="clear-all-message" class="message"></div>
         </article>
-
-        <article class="panel">
-          <div class="panel__heading">
-            <div>
-              <p class="eyebrow">Cópia e transferência</p>
-              <h2>Configuração da Central</h2>
-            </div>
-          </div>
-
-          <p class="panel-copy">
-            Exporte apenas número do protocolista e modelos personalizados para configurar
-            outro computador sem copiar dados de cidadãos.
-          </p>
-
-          <div class="transfer-actions">
-            <button id="export-settings" class="button button--secondary" type="button">
-              Exportar JSON
-            </button>
-            <button id="import-settings" class="button button--primary" type="button">
-              Importar JSON
-            </button>
-            <input id="import-file" type="file" accept="application/json,.json" hidden>
-          </div>
-          <div id="transfer-message" class="form-message" role="status" aria-live="polite"></div>
+        <article class="panel flat">
+          <p class="eyebrow">Transferência</p><h2>Configuração local</h2>
+          <p>Exportar preferências sem exportar senhas.</p>
+          <button id="export-settings">Exportar JSON</button>
+          <div id="transfer-message" class="message"></div>
         </article>
-      </section>
-    </main>
+      </div>
+    </details>
+  </main>
 
-    <footer>
-      <span>SEI Protocolistas</span>
-      <span>Dados e preferências permanecem neste navegador.</span>
-    </footer>
-  </body>
+  <footer>
+    <span>SEI Protocolistas</span>
+    <span>Clicar menos. Digitar menos. Protocolar melhor.</span>
+  </footer>
+</body>
 </html>

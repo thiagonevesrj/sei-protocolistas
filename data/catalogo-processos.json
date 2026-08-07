@@ -1,6 +1,8 @@
 {
-  "schemaVersion": 1,
-  "updatedAt": "2026-07-30",
+  "schemaVersion": 4,
+  "updatedAt": "2026-08-06",
+  "catalogScope": "priority",
+  "catalogLabel": "Procedimentos prioritários — navegação por área",
   "processTypes": [
     {
       "id": "devolucao-taxas",
@@ -9,10 +11,60 @@
         "Detran: Devolução de Taxas"
       ],
       "destinationUnit": "DIVAF",
-      "subjectAcronym": "DAF",
+      "quickTrigger": "TAXAS",
+      "priority": true,
       "responseModel": "daf",
-      "catalogStatus": "pilot",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "validated-in-fast-mail",
+      "missingDocuments": [
+        {
+          "id": "daf-form",
+          "label": "Formulário de Devolução de Taxas",
+          "text": "Formulário de Devolução de Taxas devidamente preenchido e assinado.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DA0032_devolutaxa.pdf",
+          "linkLabel": "Acessar o Formulário de Devolução de Taxas"
+        },
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido, datado e assinado pelo requerente.",
+          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação com foto",
+          "text": "Documento oficial de identificação com foto, dentro do prazo de validade e em condições que permitam a identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "Comprovante de inscrição no CPF ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência atualizado, em nome do requerente.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Caso não possua comprovante de residência em seu nome, poderá preencher a Declaração de Residência disponível no link abaixo:"
+        },
+        {
+          "id": "duda-grt",
+          "label": "DUDA ou GRT",
+          "text": "DUDA ou GRT referente à taxa cuja devolução está sendo solicitada."
+        },
+        {
+          "id": "payment-proof",
+          "label": "Comprovante de pagamento",
+          "text": "Comprovante de pagamento do DUDA ou da GRT referente à taxa cuja devolução está sendo solicitada."
+        },
+        {
+          "id": "bank-proof",
+          "label": "Comprovante de dados bancários",
+          "text": "Comprovante de dados bancários contendo nome do titular, banco, agência e número da conta, como extrato bancário, comprovante emitido pelo internet banking ou cópia da frente e do verso do cartão bancário que contenha agência e conta."
+        }
+      ],
+      "category": "taxas"
     },
     {
       "id": "desistencia-categoria-primeira-habilitacao",
@@ -20,11 +72,67 @@
       "seiNames": [
         "DETRAN: Desistência de categoria na 1ª habilitação"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "SERVECH",
+      "quickTrigger": "DESIST-CAT",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "citizenObjective": "Desistir de uma categoria durante a primeira habilitação",
+      "missingDocuments": [
+        {
+          "id": "desistance-form",
+          "label": "Requerimento de Desistência de Categoria",
+          "text": "Requerimento de Desistência de Categoria na 1ª Habilitação devidamente preenchido e assinado, com indicação da categoria da qual o requerente deseja desistir.",
+          "link": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/req_desistencia_categoria_1hab.pdf",
+          "linkLabel": "Acessar o Requerimento de Desistência de Categoria"
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Na ausência de comprovante em nome do requerente, utilize a Declaração de Residência disponível abaixo:"
+        },
+        {
+          "id": "lawyer-representation",
+          "label": "Representação por advogado",
+          "text": "Procuração simples e Carteira da Ordem dos Advogados do Brasil, quando houver representação por advogado."
+        },
+        {
+          "id": "documentary-agent-representation",
+          "label": "Representação por despachante documentalista",
+          "text": "Anotação de Serviço Documental (ASD) e carteira do Conselho Regional dos Despachantes Documentalistas do Estado do Rio de Janeiro, quando houver representação por despachante documentalista."
+        },
+        {
+          "id": "public-agent-representation",
+          "label": "Representação por despachante público",
+          "text": "Certificado Analítico e Carteira do Sindicato dos Despachantes, quando houver representação por despachante público."
+        },
+        {
+          "id": "other-representation",
+          "label": "Representação por outro procurador",
+          "text": "Procuração pública, documento oficial de identificação e CPF do procurador, quando houver representação por terceiro que não seja advogado ou despachante."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "Desistência de categoria no processo de primeira habilitação",
+        "cardId": "677290e1915209e347b75be7",
+        "lastActivity": "2026-07-14"
+      }
     },
     {
       "id": "solicitacao-geral-habilitacao",
@@ -32,11 +140,188 @@
       "seiNames": [
         "Detran: Solicitação Geral - Habilitação"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "DIRHAB",
+      "quickTrigger": "GERAL-HAB",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "citizenObjective": "Fazer uma solicitação geral sobre habilitação ou CNH",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral preenchido com a exposição dos fatos e a solicitação, assinado à caneta ou por certificação digital.",
+          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "supporting-document",
+          "label": "Documento que comprove a solicitação",
+          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver."
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Na ausência de comprovante em nome do requerente, utilize a Declaração de Residência disponível abaixo:"
+        },
+        {
+          "id": "cnpj",
+          "label": "CNPJ, quando pessoa jurídica",
+          "text": "Comprovante de inscrição no CNPJ, quando a solicitação for realizada por pessoa jurídica."
+        },
+        {
+          "id": "company-acts",
+          "label": "Documentos constitutivos da pessoa jurídica",
+          "text": "Documentos constitutivos da pessoa jurídica, quando aplicável."
+        },
+        {
+          "id": "company-partner-id",
+          "label": "Identificação do sócio solicitante",
+          "text": "Documento oficial de identificação e CPF do sócio que solicita o serviço, quando aplicável."
+        },
+        {
+          "id": "lawyer-representation",
+          "label": "Representação por advogado",
+          "text": "Procuração simples e Carteira da Ordem dos Advogados do Brasil, quando houver representação por advogado."
+        },
+        {
+          "id": "documentary-agent-representation",
+          "label": "Representação por despachante documentalista",
+          "text": "Anotação de Serviço Documental (ASD) e carteira do Conselho Regional dos Despachantes Documentalistas do Estado do Rio de Janeiro, quando houver representação por despachante documentalista."
+        },
+        {
+          "id": "public-agent-representation",
+          "label": "Representação por despachante público",
+          "text": "Certificado Analítico e Carteira do Sindicato dos Despachantes, quando houver representação por despachante público."
+        },
+        {
+          "id": "other-representation",
+          "label": "Representação por outro procurador",
+          "text": "Procuração pública, documento oficial de identificação e CPF do procurador, quando houver representação por terceiro que não seja advogado ou despachante."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "HAB - Genérico",
+        "cardId": "64e2a0fc88d682bd3ad5edb5",
+        "lastActivity": "2026-07-14"
+      }
+    },
+    {
+      "id": "transferencia-prontuario-habilitacao",
+      "name": "Transferência de Prontuário de Habilitação",
+      "seiNames": [
+        "Detran: Solicitação Geral - Habilitação"
+      ],
+      "destinationUnit": "NUCRA",
+      "quickTrigger": "TRANSF-PRONT",
+      "priority": true,
+      "responseModel": "standard",
+      "category": "habilitacao",
+      "citizenObjective": "Transferir prontuário de habilitação de outro estado para o Rio de Janeiro",
+      "missingDocuments": [
+        {
+          "id": "transfer-form",
+          "label": "Requerimento de Transferência de Prontuário",
+          "text": "Requerimento de Transferência de Prontuário preenchido e assinado à caneta ou por certificação digital.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/requerimento_transferencia_prontuario.pdf",
+          "linkLabel": "Acessar o Requerimento de Transferência de Prontuário"
+        },
+        {
+          "id": "origin-cnh",
+          "label": "CNH expedida pelo estado de origem",
+          "text": "Original ou cópia da Carteira Nacional de Habilitação expedida pelo estado de origem."
+        },
+        {
+          "id": "identification-parentage",
+          "label": "Documento de identificação com filiação e naturalidade",
+          "text": "Documento de identificação válido, com foto, filiação e naturalidade."
+        },
+        {
+          "id": "duda-206-2",
+          "label": "DUDA 206-2",
+          "text": "Guia do DUDA código 206-2 referente ao serviço de Transferência de Prontuário.",
+          "link": "https://www.ib7.bradesco.com.br/ibpfdetranrj/debitoVeiculoRJDudaSelecionarProduto.do?cdProdutoInicial=INI",
+          "linkLabel": "Emitir o DUDA 206-2"
+        },
+        {
+          "id": "duda-payment-proof",
+          "label": "Comprovante de pagamento do DUDA",
+          "text": "Comprovante de pagamento do DUDA código 206-2."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Na ausência de comprovante em nome do requerente, utilize a Declaração de Residência disponível abaixo e observe os documentos complementares:"
+        },
+        {
+          "id": "residence-holder-proof",
+          "label": "Comprovante de residência do titular da conta",
+          "text": "Comprovante de residência do titular, quando o requerente utilizar Declaração de Residência."
+        },
+        {
+          "id": "residence-holder-id",
+          "label": "Identificação do titular do comprovante",
+          "text": "Documento oficial de identificação do titular do comprovante de residência, quando utilizada Declaração de Residência."
+        },
+        {
+          "id": "residence-holder-declaration",
+          "label": "Declaração do titular com firma reconhecida",
+          "text": "Declaração do titular do comprovante, com firma reconhecida por semelhança, confirmando que o requerente reside no endereço informado."
+        },
+        {
+          "id": "relationship-or-authorization",
+          "label": "Comprovação de vínculo ou autorização",
+          "text": "Certidão de casamento ou união estável, comprovação de parentesco ou autorização acompanhada dos documentos comprobatórios, conforme quem estiver solicitando o serviço."
+        },
+        {
+          "id": "lawyer-representation",
+          "label": "Representação por advogado",
+          "text": "Procuração simples e Carteira da Ordem dos Advogados do Brasil, quando houver representação por advogado."
+        },
+        {
+          "id": "documentary-agent-representation",
+          "label": "Representação por despachante documentalista",
+          "text": "Anotação de Serviço Documental (ASD) e carteira do Conselho Regional dos Despachantes Documentalistas do Estado do Rio de Janeiro, quando houver representação por despachante documentalista."
+        },
+        {
+          "id": "public-agent-representation",
+          "label": "Representação por despachante público",
+          "text": "Certificado Analítico e Carteira do Sindicato dos Despachantes, quando houver representação por despachante público."
+        },
+        {
+          "id": "other-representation",
+          "label": "Representação por outro procurador",
+          "text": "Procuração pública, documento oficial de identificação e CPF do procurador, quando houver representação por terceiro que não seja advogado ou despachante."
+        }
+      ],
+      "documentsStatus": "trello-current-card",
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "Transferência de Prontuário de Habilitação",
+        "cardId": "68b6010614930008a05c012e",
+        "lastActivity": "2026-07-31",
+        "directive": "SEI-150016/135852/2025"
+      }
     },
     {
       "id": "solicitacoes-gerais-veiculos",
@@ -44,11 +329,12 @@
       "seiNames": [
         "Detran: Solicitações Gerais - Veículos"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "PROTDIRRV",
+      "quickTrigger": "GERAL-VEIC",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "pending-validation",
+      "category": "veiculos"
     },
     {
       "id": "cancelamento-comunicacao-venda",
@@ -56,11 +342,12 @@
       "seiNames": [
         "Detran: Cancelamento de Comunicação de Venda"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "CVDIVDCI",
+      "quickTrigger": "CANC-VENDA",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "pending-validation",
+      "category": "veiculos"
     },
     {
       "id": "certidao-identificacao-civil",
@@ -68,11 +355,12 @@
       "seiNames": [
         "Detran: Solicitação de Certidão de Identificação Civil"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "DIRIC",
+      "quickTrigger": "ID-CIVIL",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "pending-validation",
+      "category": "outros"
     },
     {
       "id": "solicitacao-pericia-medica",
@@ -80,11 +368,12 @@
       "seiNames": [
         "Detran: Solicitação de Perícia Médica"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "DIVMED",
+      "destinationUnit": "DIVMED",
+      "quickTrigger": "PERICIA",
+      "priority": true,
       "responseModel": "divmed",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "pending-validation",
+      "category": "habilitacao"
     },
     {
       "id": "isencao-taxa",
@@ -92,11 +381,12 @@
       "seiNames": [
         "Detran: Isenção de taxa"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "SERVECH",
+      "quickTrigger": "ISENCAO",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "pending-validation",
+      "category": "habilitacao"
     },
     {
       "id": "averbacao-cnh-estrangeira",
@@ -104,23 +394,96 @@
       "seiNames": [
         "Detran: Averbação de CNH Estrangeira"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "NUCNAE",
+      "quickTrigger": "CNH-ESTR",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "pending-validation",
+      "category": "habilitacao"
     },
     {
       "id": "oficio-mero-expediente",
-      "name": "Elaboração de Ofício de Mero Expediente",
+      "name": "Ofícios de outros órgãos",
       "seiNames": [
         "Administrativo: Elaboração de Ofício de Mero Expediente"
       ],
-      "destinationUnit": "",
-      "subjectAcronym": "",
+      "destinationUnit": "DIJUR",
+      "quickTrigger": "OFICIO",
+      "priority": true,
       "responseModel": "standard",
-      "catalogStatus": "pending-mapping",
-      "documentsStatus": "pending-validation"
+      "documentsStatus": "provisional-route-future-review",
+      "category": "oficios",
+      "citizenObjective": "Protocolar ofício recebido de outro órgão",
+      "routingNote": "Destino padrão DIJUR, com possibilidade de correção manual no FAST MAIL."
+    },
+    {
+      "id": "averiguacao-clonagem",
+      "name": "Averiguação de Clonagem",
+      "seiNames": [
+        "Detran: Averiguação de Clonagem"
+      ],
+      "destinationUnit": "DIVCLONE",
+      "quickTrigger": "CLONAGEM",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation",
+      "category": "veiculos"
     }
-  ]
+  ],
+  "fastMailNavigation": {
+    "areas": [
+      {
+        "id": "habilitacao",
+        "label": "Habilitação",
+        "objectives": [
+          {
+            "id": "transferir-prontuario",
+            "label": "Transferir prontuário de outro estado para o RJ",
+            "processId": "transferencia-prontuario-habilitacao"
+          },
+          {
+            "id": "desistir-categoria-1hab",
+            "label": "Desistir de categoria na primeira habilitação",
+            "processId": "desistencia-categoria-primeira-habilitacao"
+          },
+          {
+            "id": "outra-solicitacao-habilitacao",
+            "label": "Fazer outra solicitação sobre habilitação/CNH",
+            "processId": "solicitacao-geral-habilitacao"
+          }
+        ]
+      },
+      {
+        "id": "veiculos",
+        "label": "Veículos",
+        "manualSelection": true,
+        "processIds": [
+          "solicitacoes-gerais-veiculos",
+          "cancelamento-comunicacao-venda",
+          "averiguacao-clonagem"
+        ]
+      },
+      {
+        "id": "taxas",
+        "label": "Taxas",
+        "processId": "devolucao-taxas"
+      },
+      {
+        "id": "oficios",
+        "label": "Ofícios",
+        "processId": "oficio-mero-expediente"
+      },
+      {
+        "id": "outros",
+        "label": "Outros",
+        "manualSelection": true,
+        "processIds": [
+          "certidao-identificacao-civil",
+          "solicitacao-pericia-medica",
+          "isencao-taxa",
+          "averbacao-cnh-estrangeira"
+        ]
+      }
+    ]
+  }
 }

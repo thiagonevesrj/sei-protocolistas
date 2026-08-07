@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "updatedAt": "2026-08-04",
+  "catalogScope": "priority",
+  "catalogLabel": "Procedimentos prioritários",
+  "processTypes": [
+    {
+      "id": "devolucao-taxas",
+      "name": "Devolução de Taxas",
+      "seiNames": [
+        "Detran: Devolução de Taxas"
+      ],
+      "destinationUnit": "DIVAF",
+      "quickTrigger": "TAXAS",
+      "priority": true,
+      "responseModel": "daf",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "desistencia-categoria-primeira-habilitacao",
+      "name": "Desistência de Categoria na 1ª Habilitação",
+      "seiNames": [
+        "DETRAN: Desistência de categoria na 1ª habilitação"
+      ],
+      "destinationUnit": "SERVECH",
+      "quickTrigger": "DESIST-CAT",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "solicitacao-geral-habilitacao",
+      "name": "Solicitação Geral - Habilitação",
+      "seiNames": [
+        "Detran: Solicitação Geral - Habilitação"
+      ],
+      "destinationUnit": "DIRHAB",
+      "quickTrigger": "GERAL-HAB",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "solicitacoes-gerais-veiculos",
+      "name": "Solicitações Gerais - Veículos",
+      "seiNames": [
+        "Detran: Solicitações Gerais - Veículos"
+      ],
+      "destinationUnit": "PROTDIRRV",
+      "quickTrigger": "GERAL-VEIC",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "cancelamento-comunicacao-venda",
+      "name": "Cancelamento de Comunicação de Venda",
+      "seiNames": [
+        "Detran: Cancelamento de Comunicação de Venda"
+      ],
+      "destinationUnit": "CVDIVDCI",
+      "quickTrigger": "CANC-VENDA",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "certidao-identificacao-civil",
+      "name": "Certidão de Identificação Civil",
+      "seiNames": [
+        "Detran: Solicitação de Certidão de Identificação Civil"
+      ],
+      "destinationUnit": "DIRIC",
+      "quickTrigger": "ID-CIVIL",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "solicitacao-pericia-medica",
+      "name": "Solicitação de Perícia Médica",
+      "seiNames": [
+        "Detran: Solicitação de Perícia Médica"
+      ],
+      "destinationUnit": "DIVMED",
+      "quickTrigger": "PERICIA",
+      "priority": true,
+      "responseModel": "divmed",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "isencao-taxa",
+      "name": "Isenção de Taxa",
+      "seiNames": [
+        "Detran: Isenção de taxa"
+      ],
+      "destinationUnit": "SERVECH",
+      "quickTrigger": "ISENCAO",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "averbacao-cnh-estrangeira",
+      "name": "Averbação de CNH Estrangeira",
+      "seiNames": [
+        "Detran: Averbação de CNH Estrangeira"
+      ],
+      "destinationUnit": "NUCNAE",
+      "quickTrigger": "CNH-ESTR",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "oficio-mero-expediente",
+      "name": "Elaboração de Ofício de Mero Expediente",
+      "seiNames": [
+        "Administrativo: Elaboração de Ofício de Mero Expediente"
+      ],
+      "destinationUnit": "PROTDIJUR",
+      "quickTrigger": "OFICIO",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    },
+    {
+      "id": "averiguacao-clonagem",
+      "name": "Averiguação de Clonagem",
+      "seiNames": [
+        "Detran: Averiguação de Clonagem"
+      ],
+      "destinationUnit": "DIVCLONE",
+      "quickTrigger": "CLONAGEM",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "pending-validation"
+    }
+  ]
+}
