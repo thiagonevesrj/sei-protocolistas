@@ -25,6 +25,7 @@
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
   let currentOperator = null
+  let processResultAutofillRunning = false
 
   function processTypeById (procedureId) {
     return catalogProcesses.find((item) => item.id === procedureId) || null
@@ -830,10 +831,14 @@
     }
   }
 
-  async function insertPendingProcessResponse () {
+  async function insertPendingProcessResponse (automatic = false) {
+    if (automatic && processResultAutofillRunning) return
+
     const button = document.querySelector('#spfm-insert-process-response')
     const status = document.querySelector('#spfm-process-response-status')
     const originalText = button?.textContent || 'INSERIR RESPOSTA DO PROCESSO'
+
+    if (automatic) processResultAutofillRunning = true
 
     if (button) {
       button.disabled = true
@@ -844,15 +849,27 @@
       const payload = await pendingProcessResult()
       if (!payload) throw new Error('Não há dados de processo para este e-mail.')
 
-      const editor = findMessageBodyEditor()
+      const editor = automatic
+        ? await waitFor(findMessageBodyEditor, 7000)
+        : findMessageBodyEditor()
       if (!editor) throw new Error('Não localizei o corpo editável do e-mail.')
 
-      insertProcessCompletedResponse(
-        editor,
-        buildProcessCompletedResponseHtml(payload)
-      )
+      if (automatic) {
+        const subjectField = await waitFor(findSubjectField, 7000)
+        if (!subjectField) throw new Error('Não localizei o assunto editável do e-mail.')
+      }
 
-      finalizeSubjectWithProcessResult(payload)
+      if (!finalizeSubjectWithProcessResult(payload)) {
+        throw new Error('Não foi possível atualizar automaticamente o assunto do e-mail.')
+      }
+
+      if (!editor.querySelector?.('[data-sei-protocolistas="process-completed-response"]')) {
+        insertProcessCompletedResponse(
+          editor,
+          buildProcessCompletedResponseHtml(payload)
+        )
+      }
+
       renderAttendanceCompletedState(payload)
 
       await storageRemove(EMAIL_RESULT_KEY)
@@ -869,7 +886,17 @@
         button.disabled = false
         button.textContent = originalText
       }
+    } finally {
+      if (automatic) processResultAutofillRunning = false
     }
+  }
+
+  async function autoInsertPendingProcessResponse () {
+    const payload = await pendingProcessResult()
+    if (!payload) return
+
+    await updateProcessResponseButton()
+    await insertPendingProcessResponse(true)
   }
 
 
@@ -1510,7 +1537,9 @@
     panel.querySelector('#spfm-triagem').addEventListener('click', prepareTriagem)
     panel.querySelector('#spfm-missing-toggle').addEventListener('click', toggleMissingDocuments)
     panel.querySelector('#spfm-insert-requirement').addEventListener('click', insertMissingDocumentsRequirement)
-    panel.querySelector('#spfm-insert-process-response').addEventListener('click', insertPendingProcessResponse)
+    panel.querySelector('#spfm-insert-process-response').addEventListener('click', () => {
+      insertPendingProcessResponse(false)
+    })
     panel.querySelector('#spfm-requester-cpf').addEventListener('input', (event) => {
       event.target.value = formatCpf(event.target.value)
     })
@@ -1559,7 +1588,9 @@
 
     if (operator) await storageSet({ [OPERATOR_KEY]: operator })
 
-    await updateProcessResponseButton()
+    if (IS_COMPOSE_WINDOW) {
+      await autoInsertPendingProcessResponse()
+    }
 
     if (senderEmail) {
       const stored = await storageGet(ATTENDANCE_KEY)
@@ -1620,7 +1651,7 @@
     await loadPanelAttendance()
     updateMissingDocumentsVisibility()
     await scan()
-    await updateProcessResponseButton()
+    await autoInsertPendingProcessResponse()
 
     // O Bcc é obrigatório em todas as respostas: prepara automaticamente.
     window.setTimeout(() => prepareBcc(), 700)
@@ -1629,8 +1660,8 @@
 
   api.runtime.onMessage.addListener((message) => {
     if (message?.type !== PROCESS_RESULT_READY_MESSAGE) return
-    updateProcessResponseButton().catch((error) => {
-      console.error('[SEI Protocolistas] Falha ao atualizar o retorno do processo:', error)
+    autoInsertPendingProcessResponse().catch((error) => {
+      console.error('[SEI Protocolistas] Falha ao inserir automaticamente o retorno do processo:', error)
     })
   })
 
