@@ -304,6 +304,40 @@
   outline-offset: 3px !important;
 }
 
+.sp-clique-save-primary {
+  align-items: center !important;
+  background: var(--sp-navy) !important;
+  border: 2px solid var(--sp-gold) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 35%) !important;
+  color: #fff !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  gap: 7px !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  padding: 8px 16px !important;
+  text-decoration: none !important;
+}
+
+.sp-clique-save-primary:not(input)::before {
+  color: var(--sp-gold);
+  content: '⚡';
+  font-size: 17px;
+  line-height: 1;
+}
+
+.sp-clique-save-primary:hover,
+.sp-clique-save-primary:focus {
+  background: var(--sp-navy-light) !important;
+  box-shadow:
+    0 3px 10px rgb(0 0 0 / 35%),
+    0 0 0 3px rgb(224 174 40 / 35%) !important;
+  outline: none !important;
+}
+
 .sp-clique-status {
   background: #fff8dc;
   border: 2px solid var(--sp-gold);
