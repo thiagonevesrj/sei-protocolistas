@@ -167,6 +167,12 @@
   outline: none;
 }
 
+.sp-clique-field input.sp-clique-prefill-missing {
+  border-color: #d6a326;
+  background: #fff8df;
+  box-shadow: 0 0 0 2px rgba(214, 163, 38, .18);
+}
+
 .sp-clique-required {
   color: var(--sp-danger);
 }

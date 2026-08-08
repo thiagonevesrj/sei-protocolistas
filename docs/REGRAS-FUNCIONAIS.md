@@ -31,3 +31,14 @@ SEI Protocolistas.
 
 - A extensão pode preencher e selecionar campos, mas não deve acionar `Salvar` automaticamente.
 - O protocolista deve revisar os dados e confirmar a operação no SEI.
+
+## Continuidade entre FAST MAIL e FAST PROC
+
+- O perfil configurado na Central identifica o operador a partir do e-mail institucional.
+- O navegador mantém as sessões ativas; quando a tela de login reaparecer, a extensão pode
+  preencher e enviar as credenciais que o operador escolheu manter neste perfil do navegador.
+- `ABRIR PROCESSO` deve transportar os dados disponíveis no FAST MAIL, abrir o SEI, localizar
+  `Iniciar Processo` e apresentar o FAST PROC preenchido para revisão.
+- Nome, CPF, e-mail, procedimento, área, objetivo, destino e operador devem ser reaproveitados
+  quando disponíveis. Informação ausente deve permanecer visível para preenchimento manual.
+- A automação não pode criar, salvar ou encaminhar o processo sem a confirmação do protocolista.

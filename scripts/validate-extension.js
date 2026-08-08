@@ -21,6 +21,16 @@ function readJson (relativePath) {
   }
 }
 
+function readText (relativePath) {
+  const fullPath = path.join(root, relativePath)
+  try {
+    return fs.readFileSync(fullPath, 'utf8')
+  } catch (error) {
+    errors.push(`${relativePath}: ${error.message}`)
+    return ''
+  }
+}
+
 function expect (condition, message) {
   if (!condition) errors.push(message)
 }
@@ -46,6 +56,10 @@ const manifest = readJson('manifest.json')
 const packageJson = readJson('package.json')
 const catalog = readJson('data/catalogo-processos.json')
 const responseModels = readJson('data/modelos-resposta.json')
+const fastMailSource = readText('cs_modules/fast_mail/index.js')
+const fastProcSource = readText('cs_modules/clique_protocolista/index.js')
+const seiLoginSource = readText('cs_modules/core/login/index.js')
+const handoffSource = readText('cs_modules/fast_proc_handoff/index.js')
 
 if (manifest && packageJson) {
   expect(
@@ -99,7 +113,32 @@ if (manifest && packageJson) {
       )
     })
   })
+
+  const handoffEntry = contentScripts.find((entry) =>
+    (entry.js || []).includes('cs_modules/fast_proc_handoff/index.js')
+  )
+  expect(Boolean(handoffEntry), 'Manifesto: orquestrador FAST MAIL → FAST PROC obrigatório')
+  expect(handoffEntry?.all_frames === false, 'Manifesto: orquestrador deve executar apenas no frame principal')
 }
+
+[
+  'name',
+  'cpf',
+  'procedureId',
+  'seiProcessName',
+  'destination',
+  'areaId',
+  'objectiveId',
+  'operator'
+].forEach((field) => {
+  expect(fastMailSource.includes(`${field},`) || fastMailSource.includes(`${field}:`), `FAST MAIL: handoff sem ${field}`)
+})
+expect(fastMailSource.includes('window.open(\'about:blank\''), 'FAST MAIL: deve abrir o SEI a partir do clique do operador')
+expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automática de login obrigatória')
+expect(fastProcSource.includes("source: 'fast-mail'"), 'FAST PROC: origem do FAST MAIL obrigatória')
+expect(fastProcSource.includes('sp-clique-prefill-missing'), 'FAST PROC: campos ausentes devem ser destacados')
+expect(seiLoginSource.includes('centralProtocolistaSeiCredentials'), 'SEI: credenciais da Central não são reaproveitadas')
+expect(handoffSource.includes('procedimento_escolher_tipo'), 'SEI: navegação até Iniciar Processo obrigatória')
 
 let processTypes = []
 let processIds = new Set()
@@ -200,6 +239,7 @@ if (responseModels) {
   'cs_modules/clique_protocolista/index.js',
   'cs_modules/fast_mail/index.js',
   'cs_modules/fast_mail/styles.css',
+  'cs_modules/fast_proc_handoff/index.js',
   'docs/CHECKLIST-REGRESSAO.md',
   'docs/PLANO-MESTRE.md',
   'docs/REGRAS-FUNCIONAIS.md'

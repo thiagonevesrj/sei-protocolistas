@@ -543,7 +543,7 @@
     grid.appendChild(wrapper)
   }
 
-  function readDraftFromForm(form) {
+  function readDraftFromForm(form, initialData = {}) {
     const selectedOption =
       form.elements.tipoProcesso.selectedOptions[0]
 
@@ -565,6 +565,15 @@
         cleanValue(form.elements.telefone.value),
       email:
         cleanValue(form.elements.email.value),
+      destino:
+        cleanValue(form.elements.destino.value),
+      attendanceId: cleanValue(initialData.attendanceId),
+      procedureId: cleanValue(initialData.procedureId),
+      areaId: cleanValue(initialData.areaId),
+      areaLabel: cleanValue(initialData.areaLabel),
+      objectiveId: cleanValue(initialData.objectiveId),
+      objectiveLabel: cleanValue(initialData.objectiveLabel),
+      operator: initialData.operator || null,
       duda:
         cleanValue(form.elements.duda.value),
       placa:
@@ -888,6 +897,12 @@
         placeholder: 'E-mail do interessado'
       },
       {
+        name: 'destino',
+        label: 'Unidade de destino',
+        wide: true,
+        placeholder: 'Unidade indicada no FAST MAIL'
+      },
+      {
         name: 'duda',
         label: 'DUDA',
         placeholder: 'Número do DUDA'
@@ -919,13 +934,43 @@
       }
     ].forEach((field) => addField(grid, field))
 
-    if (initialData.email) {
-      const emailField = grid.querySelector('input[name="email"]')
+    const initialFields = {
+      nome: initialData.name,
+      cpf: initialData.cpf,
+      email: initialData.email,
+      destino: initialData.destination
+    }
 
-      if (emailField) {
-        emailField.value = cleanValue(initialData.email)
-        dispatchFieldEvents(emailField)
+    Object.entries(initialFields).forEach(([name, value]) => {
+      const field = grid.querySelector(`input[name="${name}"]`)
+      if (!field || !value) return
+      field.value = cleanValue(value)
+      dispatchFieldEvents(field)
+    })
+
+    if (initialData.source === 'fast-mail') {
+      const processSelect = grid.querySelector('#sp-tipo-processo')
+      const processSearch = grid.querySelector('#sp-tipo-processo-pesquisa')
+      const expectedNames = [initialData.seiProcessName, initialData.procedureName]
+        .map(processName)
+        .filter(Boolean)
+      const option = Array.from(processSelect?.options || []).find((item) =>
+        expectedNames.includes(processName(item.dataset.processLabel || item.textContent))
+      )
+
+      if (option) {
+        processSelect.value = option.value
+        processSearch.value = option.textContent
+        processSelect.dispatchEvent(new Event('change', { bubbles: true }))
       }
+
+      ['cpf'].forEach((name) => {
+        const field = grid.querySelector(`input[name="${name}"]`)
+        if (field && !cleanValue(field.value)) {
+          field.classList.add('sp-clique-prefill-missing')
+          field.placeholder = 'Não informado no FAST MAIL — preencha para continuar'
+        }
+      })
     }
 
     dataSection.appendChild(grid)
@@ -994,7 +1039,7 @@
       continueButton.textContent = 'Processando...'
 
       try {
-        const draft = readDraftFromForm(form)
+        const draft = readDraftFromForm(form, initialData)
 
         if (!draft.tipoProcesso) {
           throw new Error(
@@ -1760,8 +1805,21 @@
     if (!document.querySelector('.sp-clique-backdrop')) {
       document.body.appendChild(
         createPanel({
+          source: 'fast-mail',
           modalidade: 'email',
-          email: handoff.email
+          attendanceId: handoff.attendanceId,
+          email: handoff.email,
+          name: handoff.name,
+          cpf: handoff.cpf,
+          procedureId: handoff.procedureId,
+          procedureName: handoff.procedureName,
+          seiProcessName: handoff.seiProcessName,
+          destination: handoff.destination,
+          areaId: handoff.areaId,
+          areaLabel: handoff.areaLabel,
+          objectiveId: handoff.objectiveId,
+          objectiveLabel: handoff.objectiveLabel,
+          operator: handoff.operator
         })
       )
     }

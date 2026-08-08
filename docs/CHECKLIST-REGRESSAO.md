@@ -26,6 +26,9 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 - [ ] Clicar no ícone da extensão.
 - [ ] Abrir a Central Protocolista.
 - [ ] Confirmar que a versão exibida é a mesma do manifesto.
+- [ ] Salvar o e-mail institucional e confirmar a identificação automática do protocolista.
+- [ ] Salvar as credenciais fictícias/de teste do Webmail e do SEI com a opção de manter ativada.
+- [ ] Encerrar as sessões de teste, usar `INICIAR EXPEDIENTE` e confirmar que as telas de login são retomadas.
 - [ ] Salvar um número de protocolista fictício.
 - [ ] Fechar e reabrir a Central.
 - [ ] Confirmar que a configuração permaneceu no navegador.
@@ -96,14 +99,16 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 - [ ] Confirmar que Devolução de Taxas apresenta as pendências validadas.
 - [ ] Marcar uma pendência fictícia e confirmar a prévia da resposta.
 - [ ] Confirmar a geração dos assuntos `TRIAGEM`, `UNDEFINED` e `FECHADO` nos cenários previstos.
-- [ ] Confirmar que `ABRIR PROCESSO` registra o atendimento sem enviar o e-mail automaticamente.
+- [ ] Confirmar que `ABRIR PROCESSO` abre o SEI sem enviar o e-mail automaticamente.
+- [ ] Confirmar que nome, CPF, e-mail, procedimento, área, objetivo, destino e operador disponíveis são transportados.
 - [ ] Confirmar que nenhum dado de cidadão aparece no arquivo exportado de preferências.
 
 ## FAST PROC — abertura no SEI
 
 - [ ] Partir de um atendimento fictício registrado pelo FAST MAIL.
-- [ ] Abrir manualmente `Iniciar Processo` no SEI.
-- [ ] Confirmar que o FAST PROC reconhece o e-mail transportado.
+- [ ] Confirmar que a extensão localiza `Iniciar Processo` sem novo clique do protocolista.
+- [ ] Confirmar que o FAST PROC abre preenchido com todos os dados disponíveis no FAST MAIL.
+- [ ] Repetir sem CPF e confirmar que o campo ausente fica destacado para preenchimento manual.
 - [ ] Confirmar que o formulário do processo continua sob revisão do protocolista.
 - [ ] Confirmar que `Salvar`, encaminhar e enviar permanecem ações manuais.
 - [ ] Finalizar um processo fictício e confirmar o retorno preparado para o e-mail correto.
