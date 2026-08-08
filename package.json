@@ -1,6 +1,6 @@
 {
   "name": "sei-protocolistas",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Extensão de produtividade para protocolistas no Sistema Eletrônico de Informações - SEI",
   "main": "index.js",
   "repository": "https://github.com/thiagonevesrj/sei-protocolistas.git",
@@ -40,7 +40,7 @@
   },
   "scripts": {
     "start": "web-ext run --keep-profile-changes --firefox-profile=seipp-profile-testes",
-    "lint": "eslint scripts/validate-extension.js scripts/test-fast-proc-flow.js browser_action/main.js cs_modules/core/login/index.js cs_modules/fast_proc_handoff/index.js",
+    "lint": "eslint scripts/validate-extension.js scripts/test-fast-proc-flow.js background/service-worker.js browser_action/main.js cs_modules/core/login/index.js cs_modules/fast_proc_handoff/index.js",
     "lint:all": "eslint .",
     "validate": "node scripts/validate-extension.js && node scripts/test-fast-proc-flow.js",
     "prepare": "git config --local core.hooksPath .githooks"

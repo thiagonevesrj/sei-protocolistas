@@ -111,7 +111,10 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 - [ ] Repetir sem CPF e confirmar que o campo ausente fica destacado para preenchimento manual.
 - [ ] Confirmar que o formulário do processo continua sob revisão do protocolista.
 - [ ] Confirmar que `Salvar`, encaminhar e enviar permanecem ações manuais.
-- [ ] Finalizar um processo fictício e confirmar o retorno preparado para o e-mail correto.
+- [ ] Finalizar um processo fictício e clicar em `PREPARAR RESPOSTA POR E-MAIL`.
+- [ ] Confirmar que a extensão volta automaticamente para a mesma aba e conversa que iniciou o atendimento.
+- [ ] Confirmar que o histórico do cliente permanece visível e os dados do processo ficam disponíveis.
+- [ ] Repetir com a aba original fechada e confirmar que a URL do atendimento é reaberta como recuperação.
 - [ ] Repetir sem handoff anterior e confirmar que o Clique Protocolista continua funcional.
 
 ## Validação automática

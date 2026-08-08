@@ -60,6 +60,8 @@ const fastMailSource = readText('cs_modules/fast_mail/index.js')
 const fastProcSource = readText('cs_modules/clique_protocolista/index.js')
 const seiLoginSource = readText('cs_modules/core/login/index.js')
 const handoffSource = readText('cs_modules/fast_proc_handoff/index.js')
+const returnCoordinatorSource = readText('background/service-worker.js')
+const protocolSource = readText('cs_modules/protocolo_cliente/index.js')
 
 if (manifest && packageJson) {
   expect(
@@ -86,6 +88,13 @@ if (manifest && packageJson) {
   }
   if (manifest.action?.default_icon) {
     expectFile(manifest.action.default_icon, 'manifest.action.default_icon')
+  }
+  expect(
+    manifest.background?.service_worker === 'background/service-worker.js',
+    'Manifesto: coordenador de retorno ao Webmail obrigatório'
+  )
+  if (manifest.background?.service_worker) {
+    expectFile(manifest.background.service_worker, 'manifest.background.service_worker')
   }
 
   const contentScripts = manifest.content_scripts || []
@@ -139,6 +148,9 @@ expect(fastProcSource.includes("source: 'fast-mail'"), 'FAST PROC: origem do FAS
 expect(fastProcSource.includes('sp-clique-prefill-missing'), 'FAST PROC: campos ausentes devem ser destacados')
 expect(seiLoginSource.includes('centralProtocolistaSeiCredentials'), 'SEI: credenciais da Central não são reaproveitadas')
 expect(handoffSource.includes('procedimento_escolher_tipo'), 'SEI: navegação até Iniciar Processo obrigatória')
+expect(returnCoordinatorSource.includes('fastMailAttendanceRoutes'), 'Retorno: mapa de abas por atendimento obrigatório')
+expect(returnCoordinatorSource.includes("api.tabs, 'update'"), 'Retorno: aba original deve receber foco')
+expect(protocolSource.includes('sei-protocolistas:return-fast-mail'), 'PROTOCOLO CLIENTE: comando de retorno obrigatório')
 
 let processTypes = []
 let processIds = new Set()
@@ -233,6 +245,7 @@ if (responseModels) {
   'browser_action/index.html',
   'browser_action/main.js',
   'browser_action/style.css',
+  'background/service-worker.js',
   'central_protocolista/index.html',
   'central_protocolista/main.js',
   'central_protocolista/styles.css',

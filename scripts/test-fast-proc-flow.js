@@ -108,10 +108,87 @@ async function testStartProcessNavigation () {
   assert.strictEqual(clicked, 1)
 }
 
+async function testReturnToOriginalEmail () {
+  let listener
+  let activeTabId = null
+  let focusedWindowId = null
+  let notifiedMessage = null
+  const stored = {}
+  const tabs = new Map([[31, { id: 31, windowId: 7, url: 'https://venus2.detran.rj.gov.br/owa/email-original' }]])
+  const chrome = {
+    runtime: {
+      lastError: null,
+      onMessage: {
+        addListener: (callback) => { listener = callback }
+      }
+    },
+    storage: {
+      local: {
+        get: (key, respond) => respond({ [key]: stored[key] }),
+        set: (items, respond) => {
+          Object.assign(stored, items)
+          respond()
+        }
+      }
+    },
+    tabs: {
+      get: (tabId, respond) => respond(tabs.get(tabId)),
+      create: (options, respond) => respond({ id: 32, windowId: 7, url: options.url }),
+      update: (tabId, options, respond) => {
+        if (options.active) activeTabId = tabId
+        respond(tabs.get(tabId))
+      },
+      sendMessage: (tabId, message, respond) => {
+        notifiedMessage = { tabId, message }
+        respond({ ok: true })
+      }
+    },
+    windows: {
+      update: (windowId, options, respond) => {
+        if (options.focused) focusedWindowId = windowId
+        respond({ id: windowId })
+      }
+    }
+  }
+
+  vm.runInNewContext(read('background/service-worker.js'), { chrome, console, Date, Promise })
+
+  const send = (message, sender = {}) => new Promise((resolve) => {
+    const asyncResponse = listener(message, sender, resolve)
+    assert.strictEqual(asyncResponse, true)
+  })
+
+  const attendanceId = 'atendimento-31'
+  const registered = await send({
+    type: 'sei-protocolistas:register-fast-mail-origin',
+    attendanceId,
+    email: 'cliente@example.com',
+    url: 'https://venus2.detran.rj.gov.br/owa/email-original',
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 60000
+  }, { tab: tabs.get(31) })
+
+  assert.strictEqual(registered.ok, true)
+  assert.strictEqual(stored.fastMailAttendanceRoutes[attendanceId].tabId, 31)
+
+  const returned = await send({
+    type: 'sei-protocolistas:return-fast-mail',
+    attendanceId
+  })
+
+  assert.strictEqual(returned.ok, true)
+  assert.strictEqual(activeTabId, 31)
+  assert.strictEqual(focusedWindowId, 7)
+  assert.strictEqual(notifiedMessage.tabId, 31)
+  assert.strictEqual(notifiedMessage.message.type, 'sei-protocolistas:process-result-ready')
+  assert.strictEqual(notifiedMessage.message.attendanceId, attendanceId)
+}
+
 async function run () {
   await testSeiAutoLogin()
   await testStartProcessNavigation()
-  console.log('Fluxo FAST MAIL → SEI → FAST PROC validado.')
+  await testReturnToOriginalEmail()
+  console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
 
 run().catch((error) => {

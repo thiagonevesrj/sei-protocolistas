@@ -41,4 +41,7 @@ SEI Protocolistas.
   `Iniciar Processo` e apresentar o FAST PROC preenchido para revisão.
 - Nome, CPF, e-mail, procedimento, área, objetivo, destino e operador devem ser reaproveitados
   quando disponíveis. Informação ausente deve permanecer visível para preenchimento manual.
+- Ao preparar a resposta final, a extensão deve focar a mesma aba do Webmail que iniciou o
+  atendimento, preservando a conversa e o histórico do cliente. Se a aba tiver sido fechada,
+  deve tentar reabrir a URL original do atendimento.
 - A automação não pode criar, salvar ou encaminhar o processo sem a confirmação do protocolista.

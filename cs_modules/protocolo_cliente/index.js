@@ -3,6 +3,7 @@
 const CARD='sp-protocolo-cliente-card';
 const CONTEXT_KEY='cliqueProtocolistaContexto';
 const EMAIL_RESULT_KEY='fastMailProcessoFinalizado';
+const RETURN_TO_EMAIL_MESSAGE='sei-protocolistas:return-fast-mail';
 const browserApi=typeof browser==='undefined'?chrome:browser;
 let cardLoading=false;
 const storageGet=key=>new Promise((resolve,reject)=>{
@@ -16,6 +17,13 @@ const storageSet=items=>new Promise((resolve,reject)=>{
   const result=browserApi.storage.local.set(items,()=>{
     const error=browserApi.runtime?.lastError;
     if(error)reject(error);else resolve();
+  });
+  if(result?.then)result.then(resolve,reject);
+});
+const runtimeMessage=message=>new Promise((resolve,reject)=>{
+  const result=browserApi.runtime.sendMessage(message,response=>{
+    const error=browserApi.runtime?.lastError;
+    if(error)reject(error);else if(response?.ok===false)reject(new Error(response.error||'Não foi possível retornar ao e-mail.'));else resolve(response||{});
   });
   if(result?.then)result.then(resolve,reject);
 });
@@ -75,13 +83,13 @@ async function readContext(){
   }
 }
 async function prepareEmailResponse(button,context,processData){
-  const original=button.textContent;
   button.disabled=true;
   button.textContent='PREPARANDO...';
   try{
     const payload={
       source:'fast-proc',
       modalidade:'email',
+      attendanceId:context?.attendanceId||'',
       email:context?.email||'',
       numero:processData.numero,
       requerente:processData.requerente,
@@ -99,12 +107,17 @@ async function prepareEmailResponse(button,context,processData){
         respostaEmailPendente:true
       }
     });
-    button.textContent='DADOS PRONTOS — VOLTE AO E-MAIL';
+    button.textContent='RETORNANDO AO E-MAIL...';
+    await runtimeMessage({
+      type:RETURN_TO_EMAIL_MESSAGE,
+      attendanceId:payload.attendanceId
+    });
+    button.textContent='E-MAIL ORIGINAL ABERTO';
   }catch(error){
     console.error('[SEI Protocolistas] Falha ao preparar resposta por e-mail:',error);
     button.disabled=false;
-    button.textContent=original;
-    window.alert('Não foi possível preparar os dados da resposta por e-mail.');
+    button.textContent='DADOS PRONTOS — VOLTE AO E-MAIL';
+    window.alert(error.message||'Os dados ficaram prontos, mas não foi possível retornar automaticamente ao e-mail.');
   }
 }
 async function insertCard(){

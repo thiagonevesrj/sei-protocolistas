@@ -19,6 +19,8 @@
   const DAF_FORM_URL = 'https://www.detran.rj.gov.br/images/formularios/DA0032_devolutaxa.pdf'
   const RESIDENCE_DECLARATION_URL = 'https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf'
   const GENERAL_REQUEST_URL = 'https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf'
+  const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
+  const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
@@ -58,6 +60,16 @@
       const error = api.runtime?.lastError
       if (error) reject(error)
       else resolve()
+    })
+    if (result?.then) result.then(resolve, reject)
+  })
+
+  const runtimeMessage = (message) => new Promise((resolve, reject) => {
+    const result = api.runtime.sendMessage(message, (response) => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else if (response?.ok === false) reject(new Error(response.error || 'Falha na comunicação da extensão.'))
+      else resolve(response || {})
     })
     if (result?.then) result.then(resolve, reject)
   })
@@ -1261,6 +1273,14 @@
             updatedAt: Date.now()
           }
         })
+        await runtimeMessage({
+          type: REGISTER_ORIGIN_MESSAGE,
+          attendanceId,
+          email,
+          url: location.href,
+          createdAt: handoff.createdAt,
+          expiresAt: Date.now() + (60 * 60 * 1000)
+        })
         seiWindow.location.replace(SEI_LOGIN_URL)
         seiWindow.opener = null
       } catch (error) {
@@ -1606,6 +1626,13 @@
     window.setTimeout(() => prepareBcc(), 700)
     window.setInterval(scan, 2500)
   }
+
+  api.runtime.onMessage.addListener((message) => {
+    if (message?.type !== PROCESS_RESULT_READY_MESSAGE) return
+    updateProcessResponseButton().catch((error) => {
+      console.error('[SEI Protocolistas] Falha ao atualizar o retorno do processo:', error)
+    })
+  })
 
   initialize()
 })()
