@@ -1056,8 +1056,9 @@ async function autopreencherDocumentoExterno (BaseName) {
       'justify-content:space-between',
       'margin:4px 0 8px',
       'min-height:0',
-      'max-width:calc(100vw - 24px)',
-      'width:calc(100vw - 24px)'
+      'max-width:100%',
+      'min-width:0',
+      'width:100%'
     ].join(';')
 
     heading.parentElement.insertBefore(
@@ -1107,6 +1108,11 @@ async function autopreencherDocumentoExterno (BaseName) {
     commandBar.style.setProperty(
       'min-height',
       '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'max-width',
+      '100%',
       'important'
     )
     commandBar.style.setProperty(

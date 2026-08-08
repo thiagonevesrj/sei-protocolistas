@@ -726,11 +726,24 @@
       id: 'sp-tipo-processo-pesquisa',
       className: 'sp-clique-type-search',
       type: 'search',
+      list: 'sp-tipo-processo-opcoes',
+      role: 'combobox',
+      'aria-autocomplete': 'list',
+      'aria-controls': 'sp-tipo-processo-opcoes',
+      required: 'required',
       autocomplete: 'off',
       placeholder: 'Pesquisar por parte do nome: taxas, perícia, ofício...'
     })
 
     const typeSelect = createProcessTypeSelect()
+    const typeSuggestions = createElement('datalist', {
+      id: 'sp-tipo-processo-opcoes'
+    })
+
+    typeSelect.hidden = true
+    typeSelect.tabIndex = -1
+    typeSelect.removeAttribute('required')
+    typeSelect.setAttribute('aria-hidden', 'true')
 
     const typeOptions = Array.from(
       typeSelect.querySelectorAll('option')
@@ -738,48 +751,70 @@
       (option) => option.value
     )
 
-    typeSearch.addEventListener('input', () => {
+    typeOptions.forEach((option) => {
+      typeSuggestions.appendChild(
+        createElement('option', {
+          value: option.textContent
+        })
+      )
+    })
+
+    const matchingTypeOptions = () => {
       const query = normalize(typeSearch.value)
-      let visibleCount = 0
 
-      typeOptions.forEach((option) => {
-        const optionText = normalize(
-          option.textContent
-        )
+      if (!query) {
+        return []
+      }
 
-        const matches =
-          !query ||
-          optionText.includes(query)
+      return typeOptions.filter((option) =>
+        normalize(option.textContent).includes(query)
+      )
+    }
 
-        option.hidden = !matches
-        option.disabled = !matches
+    const selectTypeOption = (option) => {
+      if (!option) {
+        typeSelect.value = ''
+        return false
+      }
 
-        if (matches) {
-          visibleCount += 1
-        }
-      })
+      typeSelect.value = option.value
+      typeSearch.value = option.textContent
+      typeSelect.dispatchEvent(
+        new Event('change', {
+          bubbles: true
+        })
+      )
 
-      Array.from(
-        typeSelect.querySelectorAll('optgroup')
-      ).forEach((group) => {
-        const hasVisibleOption = Array.from(
-          group.querySelectorAll('option')
-        ).some(
-          (option) => !option.hidden
-        )
+      return true
+    }
 
-        group.hidden = !hasVisibleOption
-      })
+    const synchronizeSelectedType = () => {
+      const typedName = normalize(typeSearch.value)
+      const exactOption = typeOptions.find((option) =>
+        normalize(option.textContent) === typedName
+      )
 
-      typeSelect.value = ''
-
-      if (query) {
-        typeSelect.size = Math.min(
-          Math.max(visibleCount, 2),
-          8
-        )
+      if (exactOption) {
+        selectTypeOption(exactOption)
       } else {
-        typeSelect.size = 1
+        typeSelect.value = ''
+      }
+    }
+
+    typeSearch.addEventListener(
+      'input',
+      synchronizeSelectedType
+    )
+
+    typeSearch.addEventListener('change', () => {
+      synchronizeSelectedType()
+
+      if (!typeSelect.value) {
+        const matches = matchingTypeOptions()
+
+        if (matches.length === 1) {
+          selectTypeOption(matches[0])
+        }
       }
     })
 
@@ -793,75 +828,31 @@
       ) {
         typeSearch.value =
           selectedOption.textContent
-
-        typeSelect.size = 1
       }
     })
 
     typeSearch.addEventListener('keydown', (event) => {
-      if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
+      if (event.key !== 'Enter') {
         return
       }
 
-      event.preventDefault()
-      event.stopPropagation()
+      synchronizeSelectedType()
 
-      const availableOptions =
-        typeOptions.filter(
-          (option) => !option.hidden
-        )
+      if (!typeSelect.value) {
+        const matches = matchingTypeOptions()
 
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        if (!availableOptions.length) {
-          return
+        if (matches.length === 1) {
+          event.preventDefault()
+          selectTypeOption(matches[0])
         }
-
-        const currentIndex =
-          availableOptions.findIndex(
-            (option) => option.value === typeSelect.value
-          )
-
-        const nextIndex =
-          event.key === 'ArrowDown'
-            ? Math.min(currentIndex + 1, availableOptions.length - 1)
-            : Math.max(currentIndex <= 0 ? 0 : currentIndex - 1, 0)
-
-        const nextOption = availableOptions[nextIndex]
-
-        typeSelect.value = nextOption.value
-        typeSearch.value = nextOption.textContent
-        typeSelect.dispatchEvent(
-          new Event('change', {
-            bubbles: true
-          })
-        )
-
-        return
-      }
-
-      if (availableOptions.length === 1) {
-        typeSelect.value =
-          availableOptions[0].value
-
-        typeSearch.value =
-          availableOptions[0].textContent
-
-        typeSelect.size = 1
-
-        typeSelect.dispatchEvent(
-          new Event('change', {
-            bubbles: true
-          })
-        )
-      } else {
-        typeSelect.focus()
       }
     })
 
     typeWrapper.append(
       typeLabel,
       typeSearch,
-      typeSelect
+      typeSelect,
+      typeSuggestions
     )
 
     grid.appendChild(typeWrapper)
@@ -1357,7 +1348,7 @@
         document.body.appendChild(createPanel())
 
         document
-          .querySelector('#sp-tipo-processo')
+          .querySelector('#sp-tipo-processo-pesquisa')
           ?.focus()
       }
     })
@@ -1787,6 +1778,49 @@
     return true
   }
 
+  function closeInterestedSuggestions (interestedField) {
+    if (!interestedField) {
+      return
+    }
+
+    interestedField.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        code: 'Escape',
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true
+      })
+    )
+
+    try {
+      if (
+        window.jQuery?.fn?.autocomplete &&
+        window.jQuery(interestedField).data('ui-autocomplete')
+      ) {
+        window.jQuery(interestedField).autocomplete('close')
+      }
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Não foi possível fechar o autocomplete pelo jQuery:',
+        error
+      )
+    }
+
+    interestedField.blur()
+
+    document.querySelectorAll(
+      '.ui-autocomplete, ' +
+        'ul[id*="Interessado"], ' +
+        'div[id*="Interessado"][role="listbox"]'
+    ).forEach((suggestions) => {
+      if (!suggestions.closest('.sp-clique-backdrop')) {
+        suggestions.style.display = 'none'
+      }
+    })
+  }
+
   function findSaveButton() {
     return Array.from(
       document.querySelectorAll(
@@ -1951,6 +1985,8 @@
     if (interestedSelected) {
       await wait(250)
       clickAddInterested(interested)
+      await wait(250)
+      closeInterestedSuggestions(interested)
     }
 
     chooseRestrito()
@@ -1979,6 +2015,14 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    closeInterestedSuggestions(interested)
+
+    const saveButton = findSaveButton()
+
+    if (saveButton) {
+      saveButton.focus({ preventScroll: true })
+    }
   }
 
   async function openFromFastMailHandoff() {
@@ -2033,7 +2077,7 @@
     await storageRemove(FAST_MAIL_HANDOFF_KEY)
 
     document
-      .querySelector('#sp-tipo-processo')
+      .querySelector('#sp-tipo-processo-pesquisa')
       ?.focus()
 
     return true

@@ -416,6 +416,6 @@
   outline: none !important;
 }
 
-#sp-tipo-processo[size]:not([size="1"]) {
-  min-height: 120px;
+#sp-tipo-processo[hidden] {
+  display: none !important;
 }

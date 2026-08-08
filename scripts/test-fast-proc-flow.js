@@ -320,8 +320,10 @@ function testExternalDocumentHeaderIsCompact () {
   assert.ok(source.includes("'white-space',"))
   assert.ok(source.includes("'nowrap',"))
   assert.ok(source.includes(
-    "'max-width:calc(100vw - 24px)'"
+    "'max-width:100%'"
   ))
+  assert.ok(source.includes("'width:100%'"))
+  assert.ok(!source.includes('calc(100vw - 24px)'))
   assert.ok(source.includes(
     "'0 0 0 auto'"
   ))
@@ -350,6 +352,28 @@ function testPrimarySaveLabelIsUnified () {
   assert.ok(styles.includes('white-space: nowrap !important'))
 }
 
+function testProcessTypeUsesOneSearchableField () {
+  const source = read('cs_modules/clique_protocolista/index.js')
+  const styles = read('cs_modules/clique_protocolista/styles.css')
+
+  assert.ok(source.includes("list: 'sp-tipo-processo-opcoes'"))
+  assert.ok(source.includes("const typeSuggestions = createElement('datalist'"))
+  assert.ok(source.includes('typeSelect.hidden = true'))
+  assert.ok(source.includes('matchingTypeOptions'))
+  assert.ok(source.includes(".querySelector('#sp-tipo-processo-pesquisa')"))
+  assert.ok(styles.includes('#sp-tipo-processo[hidden]'))
+}
+
+function testInterestedAutocompleteIsReleased () {
+  const source = read('cs_modules/clique_protocolista/index.js')
+
+  assert.ok(source.includes('function closeInterestedSuggestions'))
+  assert.ok(source.includes("key: 'Escape'"))
+  assert.ok(source.includes("autocomplete('close')"))
+  assert.ok(source.includes('interestedField.blur()'))
+  assert.ok(source.includes('saveButton.focus({ preventScroll: true })'))
+}
+
 async function run () {
   await testSeiAutoLogin()
   await testStartProcessNavigation()
@@ -363,6 +387,8 @@ async function run () {
   testExternalDocumentHeaderIsCompact()
   testExternalDocumentSaveIsHighlighted()
   testPrimarySaveLabelIsUnified()
+  testProcessTypeUsesOneSearchableField()
+  testInterestedAutocompleteIsReleased()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
 
