@@ -228,6 +228,17 @@ function testAutomaticEmailCompletion () {
   assert.ok(source.includes('await autoInsertPendingProcessResponse()'))
 }
 
+function testHighlightedQuickRequestButton () {
+  const source = read('cs_modules/requerimento_rapido/index.js')
+  const styles = read('cs_modules/requerimento_rapido/styles.css')
+
+  assert.ok(source.includes("QUICK_REQUEST_LABEL = 'REQUERIMENTO RÁPIDO'"))
+  assert.ok(source.includes("QUICK_REQUEST_LOADING_LABEL = 'ABRINDO...'"))
+  assert.ok(source.includes("button.id = 'sp-fast-proc-rq'"))
+  assert.ok(styles.includes('min-width: 222px'))
+  assert.ok(styles.includes('border: 2px solid #e0ae28'))
+}
+
 async function run () {
   await testSeiAutoLogin()
   await testStartProcessNavigation()
@@ -235,6 +246,7 @@ async function run () {
   testCompactFastProcLayout()
   testUnusedSeiFieldsAreHidden()
   testAutomaticEmailCompletion()
+  testHighlightedQuickRequestButton()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
 
