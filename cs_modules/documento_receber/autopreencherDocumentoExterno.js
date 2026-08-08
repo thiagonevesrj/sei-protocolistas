@@ -632,18 +632,144 @@ async function autopreencherDocumentoExterno (BaseName) {
       accessControl?.closest('fieldset') ||
       accessLegend?.closest('fieldset')
 
-    if (!fieldset) {
+    const groupHidden =
+      hideDocumentFieldGroup(
+        [
+          'Nível de Acesso',
+          'Hipótese Legal'
+        ],
+        [
+          '#optRestrito',
+          '#selHipoteseLegal',
+          'input[type="radio"]' +
+            '[name*="NivelAcesso"]',
+          'select[name*="Hipotese"]',
+          'select[id*="Hipotese"]'
+        ]
+      )
+
+    if (fieldset) {
+      fieldset.setAttribute(
+        'data-sei-protocolistas-hidden',
+        'nivel-de-acesso-completo'
+      )
+      fieldset.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+      fieldset.style.setProperty(
+        'height',
+        '0',
+        'important'
+      )
+      fieldset.style.setProperty(
+        'margin',
+        '0',
+        'important'
+      )
+      fieldset.style.setProperty(
+        'padding',
+        '0',
+        'important'
+      )
+    }
+
+    return Boolean(
+      fieldset || groupHidden
+    )
+  }
+
+  function getAccessibleDocuments () {
+    const documents = new Set()
+
+    function collect (targetWindow) {
+      try {
+        if (!targetWindow?.document) {
+          return
+        }
+
+        documents.add(targetWindow.document)
+
+        for (
+          let index = 0;
+          index < targetWindow.frames.length;
+          index += 1
+        ) {
+          collect(targetWindow.frames[index])
+        }
+      } catch (error) {
+        // Ignora frames que não pertencem ao SEI.
+      }
+    }
+
+    try {
+      collect(window.top || window)
+    } catch (error) {
+      collect(window)
+    }
+
+    return Array.from(documents)
+  }
+
+  function hideQuickRequestToolbar () {
+    const rqButton = getAccessibleDocuments()
+      .map(targetDocument =>
+        targetDocument.querySelector(
+          '#sp-fast-proc-rq'
+        )
+      )
+      .find(Boolean)
+
+    if (!rqButton) {
       return false
     }
 
-    fieldset.setAttribute(
+    let toolbar = rqButton.parentElement
+
+    while (
+      toolbar &&
+      toolbar.tagName !== 'BODY' &&
+      toolbar.tagName !== 'HTML'
+    ) {
+      const iconLinks = Array.from(
+        toolbar.querySelectorAll('a')
+      ).filter(anchor =>
+        anchor.querySelector('img')
+      )
+
+      if (iconLinks.length >= 8) {
+        break
+      }
+
+      toolbar = toolbar.parentElement
+    }
+
+    if (
+      !toolbar ||
+      toolbar.tagName === 'BODY' ||
+      toolbar.tagName === 'HTML'
+    ) {
+      return false
+    }
+
+    toolbar.setAttribute(
       'data-sei-protocolistas-hidden',
-      'nivel-de-acesso-completo'
+      'barra-processo-apos-requerimento-rapido'
     )
-    fieldset.style.setProperty(
-      'display',
-      'none',
-      'important'
+
+    ;[
+      ['display', 'none'],
+      ['height', '0'],
+      ['margin', '0'],
+      ['min-height', '0'],
+      ['padding', '0']
+    ].forEach(([property, value]) =>
+      toolbar.style.setProperty(
+        property,
+        value,
+        'important'
+      )
     )
 
     return true
@@ -1438,6 +1564,8 @@ async function autopreencherDocumentoExterno (BaseName) {
     restrito,
     informacaoPessoal
   )
+
+  hideQuickRequestToolbar()
 
   /*
    * Finaliza a pendência sem salvar o documento.
