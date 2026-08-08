@@ -260,6 +260,10 @@ function testExternalDocumentFieldsAreCollapsed () {
   assert.ok(source.includes('function hideAccessLevelFieldset'))
   assert.ok(source.includes("accessControl?.closest('fieldset')"))
   assert.ok(source.includes("accessLegend?.closest('fieldset')"))
+  assert.ok(source.includes("'Hipótese Legal'"))
+  assert.ok(source.includes("'height',"))
+  assert.ok(source.includes("'margin',"))
+  assert.ok(source.includes("'padding',"))
   assert.ok(source.includes('\'Para arquivamento\''))
   assert.ok(source.includes('\'Tipo de Conferência\''))
   assert.ok(source.includes('\'Nível de Acesso\''))
@@ -267,6 +271,31 @@ function testExternalDocumentFieldsAreCollapsed () {
   assert.ok(source.includes('documentoOriginal,'))
   assert.ok(source.includes('restrito,'))
   assert.ok(source.includes('informacaoPessoal'))
+}
+
+function testQuickRequestToolbarIsHiddenAfterFill () {
+  const source = read(
+    'cs_modules/documento_receber/autopreencherDocumentoExterno.js'
+  )
+
+  const hideFunction = source.indexOf(
+    'function hideQuickRequestToolbar'
+  )
+  const automaticFieldsCall = source.lastIndexOf(
+    'hideAutomaticDocumentFields('
+  )
+  const toolbarCall = source.lastIndexOf(
+    'hideQuickRequestToolbar()'
+  )
+
+  assert.ok(hideFunction > -1)
+  assert.ok(source.includes("'#sp-fast-proc-rq'"))
+  assert.ok(source.includes('targetWindow.frames.length'))
+  assert.ok(source.includes('iconLinks.length >= 8'))
+  assert.ok(source.includes(
+    "'barra-processo-apos-requerimento-rapido'"
+  ))
+  assert.ok(toolbarCall > automaticFieldsCall)
 }
 
 function testExternalDocumentHeaderIsCompact () {
@@ -315,6 +344,7 @@ async function run () {
   testAutomaticEmailCompletion()
   testHighlightedQuickRequestButton()
   testExternalDocumentFieldsAreCollapsed()
+  testQuickRequestToolbarIsHiddenAfterFill()
   testExternalDocumentHeaderIsCompact()
   testExternalDocumentSaveIsHighlighted()
   testPrimarySaveLabelIsUnified()
