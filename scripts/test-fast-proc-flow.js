@@ -201,11 +201,26 @@ function testCompactFastProcLayout () {
   assert.ok(styles.includes('position: sticky'))
 }
 
+function testAutomaticEmailCompletion () {
+  const source = read('cs_modules/fast_mail/index.js')
+  const automaticFunction = source.indexOf('async function autoInsertPendingProcessResponse')
+  const runtimeListener = source.indexOf('api.runtime.onMessage.addListener')
+  const subjectUpdate = source.indexOf('if (!finalizeSubjectWithProcessResult(payload))')
+  const bodyInsertion = source.indexOf('insertProcessCompletedResponse(', subjectUpdate)
+
+  assert.ok(automaticFunction > -1)
+  assert.ok(runtimeListener > automaticFunction)
+  assert.ok(source.includes('await insertPendingProcessResponse(true)'))
+  assert.ok(subjectUpdate > -1 && bodyInsertion > subjectUpdate)
+  assert.ok(source.includes('await autoInsertPendingProcessResponse()'))
+}
+
 async function run () {
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
   testCompactFastProcLayout()
+  testAutomaticEmailCompletion()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
 
