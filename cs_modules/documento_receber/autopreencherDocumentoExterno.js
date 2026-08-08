@@ -275,6 +275,120 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   }
 
+  function hideDocumentFieldSection (
+    labelText,
+    fieldSelectors = []
+  ) {
+    const expected =
+      normalize(labelText)
+
+    const label = Array.from(
+      document.querySelectorAll('label')
+    ).find(item =>
+      normalize(item.textContent)
+        .startsWith(expected)
+    )
+
+    const targets = new Set(
+      label ? [label] : []
+    )
+
+    fieldSelectors.forEach(selector => {
+      document
+        .querySelectorAll(selector)
+        .forEach(element =>
+          targets.add(element)
+        )
+    })
+
+    const sections = new Set()
+
+    targets.forEach(target => {
+      let candidate = target
+
+      while (
+        candidate &&
+        candidate !== document.body
+      ) {
+        const labels = Array.from(
+          candidate.querySelectorAll('label')
+        ).filter(item =>
+          normalize(item.textContent)
+        )
+
+        const hasOtherField =
+          labels.some(item =>
+            !normalize(item.textContent)
+              .startsWith(expected)
+          )
+
+        const looksLikeSection =
+          candidate.matches(
+            'tr, .row, .form-group, ' +
+            '[id^="divRemetente"], ' +
+            '[id*="Assunto"]'
+          )
+
+        if (
+          looksLikeSection &&
+          !hasOtherField
+        ) {
+          sections.add(candidate)
+          break
+        }
+
+        candidate =
+          candidate.parentElement
+      }
+    })
+
+    if (!sections.size) {
+      return false
+    }
+
+    sections.forEach(section => {
+      section.setAttribute(
+        'data-sei-protocolistas-hidden',
+        expected
+      )
+
+      section.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+    })
+
+    return true
+  }
+
+  function hideUnusedDocumentFields () {
+    hideDocumentFieldSection(
+      'Remetente',
+      [
+        '#txtRemetente',
+        'input[name="txtRemetente"]',
+        '#divRemetente',
+        '[id^="divRemetente"]'
+      ]
+    )
+
+    hideDocumentFieldSection(
+      'Classificação por Assuntos',
+      [
+        '#txtAssunto',
+        '#selAssuntos',
+        'input[name*="Assunto"]',
+        'textarea[name*="Assunto"]',
+        'select[name*="Assunto"]',
+        '#divClassificacaoAssuntos',
+        '#divAssuntos',
+        '[id*="Classificacao"][id*="Assunto"]',
+        '[id^="divAssunto"]'
+      ]
+    )
+  }
+
   function fillField (
     element,
     value
@@ -551,6 +665,8 @@ async function autopreencherDocumentoExterno (BaseName) {
     }
   }
 
+  hideUnusedDocumentFields()
+
   const stored = await storageGet([
     CONTEXT_KEY,
     REGISTRY_KEY,
@@ -678,6 +794,8 @@ async function autopreencherDocumentoExterno (BaseName) {
 
   await wait(400)
 
+  hideUnusedDocumentFields()
+
   /*
    * 2. Formato:
    *    Digitalizado nesta Unidade.
@@ -717,6 +835,8 @@ async function autopreencherDocumentoExterno (BaseName) {
    * depois que Digitalizado é marcado.
    */
   await wait(500)
+
+  hideUnusedDocumentFields()
 
   const conference = await waitFor(() =>
     findField(
