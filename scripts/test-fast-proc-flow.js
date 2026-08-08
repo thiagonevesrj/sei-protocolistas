@@ -264,6 +264,15 @@ function testExternalDocumentFieldsAreCollapsed () {
   assert.ok(source.includes("'height',"))
   assert.ok(source.includes("'margin',"))
   assert.ok(source.includes("'padding',"))
+  assert.ok(source.includes(
+    'function collapseEmptyAutomaticFieldAncestors'
+  ))
+  assert.ok(source.includes(
+    "'data-sei-protocolistas-collapsed'"
+  ))
+  assert.ok(source.includes(
+    "'campos-automaticos-vazios'"
+  ))
   assert.ok(source.includes('\'Para arquivamento\''))
   assert.ok(source.includes('\'Tipo de Conferência\''))
   assert.ok(source.includes('\'Nível de Acesso\''))
@@ -310,6 +319,12 @@ function testExternalDocumentHeaderIsCompact () {
   assert.ok(source.includes('\'justify-content:space-between\''))
   assert.ok(source.includes("'white-space',"))
   assert.ok(source.includes("'nowrap',"))
+  assert.ok(source.includes(
+    "'max-width:calc(100vw - 24px)'"
+  ))
+  assert.ok(source.includes(
+    "'0 0 0 auto'"
+  ))
   assert.ok(source.includes('compactDocumentHeader()'))
 }
 
