@@ -184,10 +184,28 @@ async function testReturnToOriginalEmail () {
   assert.strictEqual(notifiedMessage.message.attendanceId, attendanceId)
 }
 
+function testCompactFastProcLayout () {
+  const source = read('cs_modules/clique_protocolista/index.js')
+  const styles = read('cs_modules/clique_protocolista/styles.css')
+  const emailPosition = source.indexOf('name: \'email\'')
+  const destinationPosition = source.indexOf('name: \'destino\'')
+  const phonePosition = source.indexOf('name: \'telefone\'')
+  const optionalPosition = source.indexOf('const optionalDetails')
+
+  assert.ok(emailPosition > -1 && emailPosition < destinationPosition)
+  assert.ok(destinationPosition < phonePosition && phonePosition < optionalPosition)
+  assert.ok(source.includes('createElement(\'details\''))
+  assert.ok(source.includes('Mais informações — DUDA, placa, processo, ofício e outros'))
+  assert.ok(!/open: 'open'/.test(source))
+  assert.ok(styles.includes('.sp-clique-actions'))
+  assert.ok(styles.includes('position: sticky'))
+}
+
 async function run () {
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
+  testCompactFastProcLayout()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
 
