@@ -1788,36 +1788,56 @@
   }
 
   function findSaveButton() {
-    const direct = findFirst([
-      '#btnSalvar',
-      'button[id*="Salvar"]',
-      'input[id*="Salvar"]',
-      'input[name*="Salvar"]',
-      'input[type="submit"]'
-    ])
-
-    if (direct && direct.offsetParent !== null) {
-      return direct
-    }
-
     return Array.from(
       document.querySelectorAll(
         'button, input[type="button"], ' +
           'input[type="submit"], a'
       )
-    ).find((element) => {
-      if (element.offsetParent === null) {
-        return false
-      }
+    )
+      .filter((element) => {
+        if (element.offsetParent === null) {
+          return false
+        }
 
-      const text = normalize(
-        element.textContent ||
-          element.value ||
-          element.title
-      )
+        const text = normalize(
+          element.textContent ||
+            element.value ||
+            element.title
+        )
 
-      return text === 'salvar'
-    })
+        return text === 'salvar'
+      })
+      .sort(
+        (first, second) =>
+          first.getBoundingClientRect().top -
+          second.getBoundingClientRect().top
+      )[0] || null
+  }
+
+  function highlightPrimarySaveButton() {
+    const saveButton = findSaveButton()
+
+    if (!saveButton) {
+      return false
+    }
+
+    saveButton.classList.add(
+      'sp-clique-save-primary'
+    )
+    saveButton.setAttribute(
+      'aria-label',
+      'Salvar processo'
+    )
+    saveButton.setAttribute(
+      'title',
+      'Salvar processo'
+    )
+
+    if (saveButton.matches('input')) {
+      saveButton.value = '⚡ SALVAR'
+    }
+
+    return true
   }
 
   function buildOutput(draft) {
@@ -1847,6 +1867,7 @@
 
   async function fillProcessForm() {
     hideUnusedProcessFields()
+    highlightPrimarySaveButton()
 
     const stored = await storageGet(STORAGE_KEY)
     const draft = stored[STORAGE_KEY]
