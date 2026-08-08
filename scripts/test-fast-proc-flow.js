@@ -320,9 +320,23 @@ function testExternalDocumentHeaderIsCompact () {
   assert.ok(source.includes("'white-space',"))
   assert.ok(source.includes("'nowrap',"))
   assert.ok(source.includes(
-    "'max-width:100%'"
+    'function compactDocumentHeader'
   ))
-  assert.ok(source.includes("'width:100%'"))
+  assert.ok(source.includes(
+    'const fitHeaderToVisibleArea = () =>'
+  ))
+  assert.ok(source.includes(
+    'document.documentElement.clientWidth'
+  ))
+  assert.ok(source.includes(
+    'row.getBoundingClientRect().left'
+  ))
+  assert.ok(source.includes(
+    'const safeRightGap = 24'
+  ))
+  assert.ok(source.includes(
+    "window.addEventListener(\n      'resize',"
+  ))
   assert.ok(!source.includes('calc(100vw - 24px)'))
   assert.ok(source.includes(
     "'0 0 0 auto'"

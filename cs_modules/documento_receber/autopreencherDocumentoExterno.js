@@ -1056,9 +1056,8 @@ async function autopreencherDocumentoExterno (BaseName) {
       'justify-content:space-between',
       'margin:4px 0 8px',
       'min-height:0',
-      'max-width:100%',
       'min-width:0',
-      'width:100%'
+      'overflow:visible'
     ].join(';')
 
     heading.parentElement.insertBefore(
@@ -1068,6 +1067,42 @@ async function autopreencherDocumentoExterno (BaseName) {
 
     row.appendChild(heading)
     row.appendChild(commandBar)
+
+    const fitHeaderToVisibleArea = () => {
+      const viewportWidth =
+        document.documentElement.clientWidth ||
+        window.innerWidth
+
+      const rowLeft =
+        row.getBoundingClientRect().left
+
+      const safeRightGap = 24
+      const availableWidth = Math.max(
+        0,
+        Math.floor(
+          viewportWidth -
+          rowLeft -
+          safeRightGap
+        )
+      )
+
+      row.style.setProperty(
+        'width',
+        `${availableWidth}px`,
+        'important'
+      )
+      row.style.setProperty(
+        'max-width',
+        `${availableWidth}px`,
+        'important'
+      )
+    }
+
+    fitHeaderToVisibleArea()
+    window.addEventListener(
+      'resize',
+      fitHeaderToVisibleArea
+    )
 
     heading.style.setProperty(
       'margin',
