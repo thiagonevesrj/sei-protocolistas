@@ -202,9 +202,17 @@
 }
 
 .sp-clique-field input.sp-clique-prefill-missing {
-  border-color: #d6a326;
-  background: #fff8df;
-  box-shadow: 0 0 0 2px rgba(214, 163, 38, .18);
+  background: #fff4c2 !important;
+  border-color: #b77a00 !important;
+  box-shadow: 0 0 0 3px rgb(224 174 40 / 28%);
+  caret-color: #111827 !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+.sp-clique-field input.sp-clique-prefill-missing::placeholder {
+  color: #624500 !important;
+  opacity: 1 !important;
 }
 
 .sp-clique-required {
