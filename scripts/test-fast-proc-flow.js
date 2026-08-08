@@ -256,6 +256,10 @@ function testExternalDocumentFieldsAreCollapsed () {
   assert.ok(source.includes('\'important\''))
   assert.ok(source.includes('function clearForArchiving'))
   assert.ok(source.includes('function hideAutomaticDocumentFields'))
+  assert.ok(source.includes('function hideDocumentFieldGroup'))
+  assert.ok(source.includes('function hideAccessLevelFieldset'))
+  assert.ok(source.includes("accessControl?.closest('fieldset')"))
+  assert.ok(source.includes("accessLegend?.closest('fieldset')"))
   assert.ok(source.includes('\'Para arquivamento\''))
   assert.ok(source.includes('\'Tipo de Conferência\''))
   assert.ok(source.includes('\'Nível de Acesso\''))
@@ -273,8 +277,24 @@ function testExternalDocumentHeaderIsCompact () {
   assert.ok(source.includes('function compactDocumentHeader'))
   assert.ok(source.includes('row.id = \'sp-documento-header-row\''))
   assert.ok(source.includes('\'display:flex\''))
+  assert.ok(source.includes('\'flex-wrap:nowrap\''))
   assert.ok(source.includes('\'justify-content:space-between\''))
+  assert.ok(source.includes("'white-space',"))
+  assert.ok(source.includes("'nowrap',"))
   assert.ok(source.includes('compactDocumentHeader()'))
+}
+
+function testExternalDocumentSaveIsHighlighted () {
+  const source = read(
+    'cs_modules/documento_receber/autopreencherDocumentoExterno.js'
+  )
+
+  assert.ok(source.includes('function highlightExternalDocumentSave'))
+  assert.ok(source.includes("saveButton.value = '⚡ SALVAR'"))
+  assert.ok(source.includes("saveButton.textContent = '⚡ SALVAR'"))
+  assert.ok(source.includes("['background', '#061a39']"))
+  assert.ok(source.includes("['border', '2px solid #e0ae28']"))
+  assert.ok(source.includes('highlightExternalDocumentSave()'))
 }
 
 function testPrimarySaveLabelIsUnified () {
@@ -296,6 +316,7 @@ async function run () {
   testHighlightedQuickRequestButton()
   testExternalDocumentFieldsAreCollapsed()
   testExternalDocumentHeaderIsCompact()
+  testExternalDocumentSaveIsHighlighted()
   testPrimarySaveLabelIsUnified()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }

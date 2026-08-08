@@ -463,6 +463,192 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   }
 
+  function hideDocumentFieldGroup (
+    labelTexts,
+    fieldSelectors
+  ) {
+    const expectedLabels =
+      labelTexts.map(normalize)
+
+    const protectedLabels = [
+      'Tipo do Documento',
+      'Data do Documento',
+      'Número',
+      'Nome na Árvore',
+      'Interessados',
+      'Observações desta unidade'
+    ].map(normalize)
+
+    const controls = new Set()
+
+    fieldSelectors.forEach(selector => {
+      document
+        .querySelectorAll(selector)
+        .forEach(control => controls.add(control))
+    })
+
+    const labels = Array.from(
+      document.querySelectorAll(
+        'label, [id^="lbl"], legend, ' +
+        '.infraLabelObrigatorio, ' +
+        '.infraLabelOpcional, span, div'
+      )
+    ).filter(element => {
+      const text = normalize(
+        Array.from(element.childNodes)
+          .filter(node =>
+            node.nodeType === Node.TEXT_NODE
+          )
+          .map(node => node.textContent)
+          .join(' ')
+      )
+
+      return expectedLabels.includes(text)
+    })
+
+    const targets = new Set([
+      ...controls,
+      ...labels
+    ])
+
+    if (!targets.size) {
+      return false
+    }
+
+    const sections = new Set()
+
+    targets.forEach(target => {
+      let candidate = target
+
+      while (
+        candidate.parentElement &&
+        candidate.parentElement !==
+          document.body &&
+        candidate.parentElement.tagName !==
+          'FORM'
+      ) {
+        const parent =
+          candidate.parentElement
+
+        const hasProtectedControl =
+          Boolean(parent.querySelector(
+            '#selSerie, ' +
+            '#txtDataElaboracao, ' +
+            '#txtNumero, ' +
+            '#txtNomeArvore, ' +
+            '#txtInteressado, ' +
+            '#txaObservacoes, ' +
+            'input[type="file"]'
+          ))
+
+        const hasUnexpectedControl =
+          Array.from(parent.querySelectorAll(
+            'input:not([type="hidden"]), ' +
+            'select, textarea'
+          )).some(control =>
+            !controls.has(control)
+          )
+
+        const hasProtectedLabel =
+          Array.from(parent.querySelectorAll(
+            'label, [id^="lbl"], legend, ' +
+            '.infraLabelObrigatorio, ' +
+            '.infraLabelOpcional'
+          )).some(element =>
+            protectedLabels.includes(
+              normalize(element.textContent)
+            )
+          )
+
+        if (
+          hasProtectedControl ||
+          hasUnexpectedControl ||
+          hasProtectedLabel
+        ) {
+          break
+        }
+
+        candidate = parent
+      }
+
+      sections.add(candidate)
+    })
+
+    const outerSections =
+      Array.from(sections).filter(section =>
+        !Array.from(sections).some(other =>
+          other !== section &&
+          other.contains(section)
+        )
+      )
+
+    outerSections.forEach(section => {
+      section.setAttribute(
+        'data-sei-protocolistas-hidden',
+        expectedLabels.join('-')
+      )
+      section.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+      section.style.setProperty(
+        'height',
+        '0',
+        'important'
+      )
+      section.style.setProperty(
+        'margin',
+        '0',
+        'important'
+      )
+      section.style.setProperty(
+        'padding',
+        '0',
+        'important'
+      )
+    })
+
+    return true
+  }
+
+  function hideAccessLevelFieldset () {
+    const accessControl =
+      document.querySelector(
+        '#optRestrito, #selHipoteseLegal, ' +
+        'input[type="radio"]' +
+          '[name*="NivelAcesso"], ' +
+        'select[name*="Hipotese"]'
+      )
+
+    const accessLegend = Array.from(
+      document.querySelectorAll('legend')
+    ).find(legend =>
+      normalize(legend.textContent) ===
+        'nivel de acesso'
+    )
+
+    const fieldset =
+      accessControl?.closest('fieldset') ||
+      accessLegend?.closest('fieldset')
+
+    if (!fieldset) {
+      return false
+    }
+
+    fieldset.setAttribute(
+      'data-sei-protocolistas-hidden',
+      'nivel-de-acesso-completo'
+    )
+    fieldset.style.setProperty(
+      'display',
+      'none',
+      'important'
+    )
+
+    return true
+  }
+
   function clearForArchiving () {
     const checkbox = findField(
       [
@@ -500,44 +686,91 @@ async function autopreencherDocumentoExterno (BaseName) {
     restrito,
     informacaoPessoal
   ) {
-    if (digitalizado) {
-      hideSelectedDocumentField(
-        'Formato',
+    const archivingCleared =
+      clearForArchiving()
+
+    if (
+      digitalizado &&
+      conference &&
+      archivingCleared
+    ) {
+      hideDocumentFieldGroup(
+        [
+          'Formato',
+          'Tipo de Conferência',
+          'Para arquivamento'
+        ],
         [
           '#optNatoDigital',
           '#optDigitalizado',
-          'input[type="radio"][name*="Formato"]'
-        ]
-      )
-    }
-
-    if (conference) {
-      hideSelectedDocumentField(
-        'Tipo de Conferência',
-        [
+          'input[type="radio"][name*="Formato"]',
           '#selTipoConferencia',
           'select[name*="TipoConferencia"]',
-          'select[id*="TipoConferencia"]'
+          'select[id*="TipoConferencia"]',
+          '#chkParaArquivamento',
+          'input[type="checkbox"]' +
+            '[id*="Arquivamento"]',
+          'input[type="checkbox"]' +
+            '[name*="Arquivamento"]'
         ]
       )
     }
-
-    clearForArchiving()
 
     if (restrito && informacaoPessoal) {
-      hideSelectedDocumentField(
-        'Nível de Acesso',
-        [
-          '#optSigiloso',
-          '#optRestrito',
-          '#optPublico',
-          '#selHipoteseLegal',
-          'input[type="radio"][name*="NivelAcesso"]',
-          'select[name*="Hipotese"]',
-          'select[id*="Hipotese"]'
-        ]
-      )
+      hideAccessLevelFieldset()
     }
+  }
+
+  function highlightExternalDocumentSave () {
+    const saveButton =
+      document.querySelector(
+        '#divInfraBarraComandosSuperior ' +
+        '#btnSalvar'
+      )
+
+    if (!saveButton) {
+      return false
+    }
+
+    if (saveButton.matches('input')) {
+      saveButton.value = '⚡ SALVAR'
+    } else {
+      saveButton.textContent = '⚡ SALVAR'
+    }
+
+    saveButton.setAttribute(
+      'aria-label',
+      'Salvar documento externo'
+    )
+    saveButton.setAttribute(
+      'title',
+      'Salvar documento externo'
+    )
+
+    ;[
+      ['align-items', 'center'],
+      ['background', '#061a39'],
+      ['border', '2px solid #e0ae28'],
+      ['border-radius', '6px'],
+      ['box-shadow', '0 3px 10px rgb(0 0 0 / 35%)'],
+      ['color', '#fff'],
+      ['cursor', 'pointer'],
+      ['display', 'inline-flex'],
+      ['font-size', '14px'],
+      ['font-weight', '700'],
+      ['justify-content', 'center'],
+      ['min-height', '40px'],
+      ['padding', '8px 16px'],
+      ['white-space', 'nowrap']
+    ].forEach(([property, value]) =>
+      saveButton.style.setProperty(
+        property,
+        value,
+        'important'
+      )
+    )
+
+    return true
   }
 
   function compactDocumentHeader () {
@@ -581,10 +814,12 @@ async function autopreencherDocumentoExterno (BaseName) {
     row.style.cssText = [
       'align-items:center',
       'display:flex',
+      'flex-wrap:nowrap',
       'gap:16px',
       'justify-content:space-between',
       'margin:4px 0 8px',
-      'min-height:0'
+      'min-height:0',
+      'width:100%'
     ].join(';')
 
     heading.parentElement.insertBefore(
@@ -598,6 +833,21 @@ async function autopreencherDocumentoExterno (BaseName) {
     heading.style.setProperty(
       'margin',
       '0',
+      'important'
+    )
+    heading.style.setProperty(
+      'flex',
+      '0 0 auto',
+      'important'
+    )
+    heading.style.setProperty(
+      'width',
+      'auto',
+      'important'
+    )
+    heading.style.setProperty(
+      'white-space',
+      'nowrap',
       'important'
     )
 
@@ -925,6 +1175,7 @@ async function autopreencherDocumentoExterno (BaseName) {
   }
 
   compactDocumentHeader()
+  highlightExternalDocumentSave()
   hideUnusedDocumentFields()
 
   const stored = await storageGet([
