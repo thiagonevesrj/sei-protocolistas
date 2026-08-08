@@ -1835,6 +1835,15 @@
 
     if (saveButton.matches('input')) {
       saveButton.value = '⚡ SALVAR'
+    } else {
+      /*
+       * O SEI separa a letra do atalho de teclado em
+       * um elemento próprio. Ao destacar o botão com
+       * flex, isso faria o rótulo aparecer como
+       * "S alvar". O texto é unificado sem alterar o
+       * evento nativo do controle.
+       */
+      saveButton.textContent = 'SALVAR'
     }
 
     return true

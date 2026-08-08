@@ -282,16 +282,42 @@ async function autopreencherDocumentoExterno (BaseName) {
     const expected =
       normalize(labelText)
 
-    const label = Array.from(
-      document.querySelectorAll('label')
-    ).find(item =>
-      normalize(item.textContent)
-        .startsWith(expected)
+    const knownHeadings = [
+      'Tipo do Documento',
+      'Data do Documento',
+      'Número',
+      'Nome na Árvore',
+      'Formato',
+      'Tipo de Conferência',
+      'Remetente',
+      'Interessados',
+      'Classificação por Assuntos',
+      'Observações desta unidade',
+      'Nível de Acesso'
+    ].map(normalize)
+
+    function ownText (element) {
+      return normalize(
+        Array.from(element.childNodes)
+          .filter(node =>
+            node.nodeType === Node.TEXT_NODE
+          )
+          .map(node => node.textContent)
+          .join(' ')
+      )
+    }
+
+    const labels = Array.from(
+      document.querySelectorAll(
+        'label, [id^="lbl"], ' +
+        '.infraLabelObrigatorio, ' +
+        '.infraLabelOpcional, span, div'
+      )
+    ).filter(item =>
+      ownText(item) === expected
     )
 
-    const targets = new Set(
-      label ? [label] : []
-    )
+    const targets = new Set(labels)
 
     fieldSelectors.forEach(selector => {
       document
@@ -301,45 +327,81 @@ async function autopreencherDocumentoExterno (BaseName) {
         )
     })
 
+    const relatedControls = new Set()
+
+    targets.forEach(target => {
+      if (
+        target.matches(
+          'input:not([type="hidden"]), ' +
+          'select, textarea'
+        )
+      ) {
+        relatedControls.add(target)
+      }
+
+      target.querySelectorAll?.(
+        'input:not([type="hidden"]), ' +
+        'select, textarea'
+      ).forEach(control =>
+        relatedControls.add(control)
+      )
+    })
+
     const sections = new Set()
 
     targets.forEach(target => {
       let candidate = target
+      let safestCandidate = target
 
       while (
-        candidate &&
-        candidate !== document.body
+        candidate.parentElement &&
+        candidate.parentElement !==
+          document.body &&
+        candidate.parentElement.tagName !==
+          'FORM'
       ) {
-        const labels = Array.from(
-          candidate.querySelectorAll('label')
-        ).filter(item =>
-          normalize(item.textContent)
-        )
+        const parent =
+          candidate.parentElement
+
+        const hasOtherHeading =
+          Array.from(
+            parent.querySelectorAll(
+              'label, [id^="lbl"], ' +
+              '.infraLabelObrigatorio, ' +
+              '.infraLabelOpcional, span, div'
+            )
+          ).some(element => {
+            const text = ownText(element)
+
+            return (
+              text &&
+              text !== expected &&
+              knownHeadings.includes(text)
+            )
+          })
 
         const hasOtherField =
-          labels.some(item =>
-            !normalize(item.textContent)
-              .startsWith(expected)
-          )
-
-        const looksLikeSection =
-          candidate.matches(
-            'tr, .row, .form-group, ' +
-            '[id^="divRemetente"], ' +
-            '[id*="Assunto"]'
+          Array.from(
+            parent.querySelectorAll(
+              'input:not([type="hidden"]), ' +
+              'select, textarea'
+            )
+          ).some(control =>
+            !relatedControls.has(control)
           )
 
         if (
-          looksLikeSection &&
-          !hasOtherField
+          hasOtherHeading ||
+          hasOtherField
         ) {
-          sections.add(candidate)
           break
         }
 
-        candidate =
-          candidate.parentElement
+        safestCandidate = parent
+        candidate = parent
       }
+
+      sections.add(safestCandidate)
     })
 
     if (!sections.size) {
@@ -368,8 +430,10 @@ async function autopreencherDocumentoExterno (BaseName) {
       [
         '#txtRemetente',
         'input[name="txtRemetente"]',
+        '#lblRemetente',
         '#divRemetente',
-        '[id^="divRemetente"]'
+        '[id*="Remetente"]',
+        '[name*="Remetente"]'
       ]
     )
 
@@ -383,8 +447,8 @@ async function autopreencherDocumentoExterno (BaseName) {
         'select[name*="Assunto"]',
         '#divClassificacaoAssuntos',
         '#divAssuntos',
-        '[id*="Classificacao"][id*="Assunto"]',
-        '[id^="divAssunto"]'
+        '[id*="Assunto"]',
+        '[name*="Assunto"]'
       ]
     )
   }

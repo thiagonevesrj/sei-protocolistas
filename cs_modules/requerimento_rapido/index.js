@@ -486,6 +486,22 @@
     return button
   }
 
+  function resetRqButton (button) {
+    if (!button?.isConnected) {
+      return
+    }
+
+    button.disabled = false
+
+    button.classList.remove(
+      'sp-fast-proc-rq--loading'
+    )
+
+    button.querySelector(
+      '.sp-fast-proc-rq__text'
+    ).textContent = QUICK_REQUEST_LABEL
+  }
+
   function clickNativeElement(element) {
     if (!element) {
       throw new Error(
@@ -578,6 +594,17 @@
     const button =
       createRqButton()
 
+    browserApi.storage?.onChanged
+      ?.addListener((changes, areaName) => {
+        if (
+          areaName === 'local' &&
+          changes[PENDING_KEY] &&
+          !changes[PENDING_KEY].newValue
+        ) {
+          resetRqButton(button)
+        }
+      })
+
     button.addEventListener(
       'click',
       async () => {
@@ -627,6 +654,11 @@
           clickNativeElement(
             includeLink
           )
+
+          window.setTimeout(
+            () => resetRqButton(button),
+            12000
+          )
         } catch (error) {
           console.error(
             '[FAST PROC RQ] Falha ao abrir Requerimento:',
@@ -639,16 +671,7 @@
             }`
           )
 
-          button.disabled = false
-
-          button.classList.remove(
-            'sp-fast-proc-rq--loading'
-          )
-
-          button.querySelector(
-            '.sp-fast-proc-rq__text'
-          ).textContent =
-            QUICK_REQUEST_LABEL
+          resetRqButton(button)
         }
       }
     )

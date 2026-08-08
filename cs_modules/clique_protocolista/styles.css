@@ -320,6 +320,7 @@
   min-height: 40px !important;
   padding: 8px 16px !important;
   text-decoration: none !important;
+  white-space: nowrap !important;
 }
 
 .sp-clique-save-primary:not(input)::before {

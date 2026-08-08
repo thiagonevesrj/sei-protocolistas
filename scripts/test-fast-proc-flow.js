@@ -237,6 +237,32 @@ function testHighlightedQuickRequestButton () {
   assert.ok(source.includes("button.id = 'sp-fast-proc-rq'"))
   assert.ok(styles.includes('min-width: 222px'))
   assert.ok(styles.includes('border: 2px solid #e0ae28'))
+  assert.ok(source.includes('function resetRqButton (button)'))
+  assert.ok(source.includes('browserApi.storage?.onChanged'))
+  assert.ok(source.includes('!changes[PENDING_KEY].newValue'))
+}
+
+function testExternalDocumentFieldsAreCollapsed () {
+  const source = read(
+    'cs_modules/documento_receber/autopreencherDocumentoExterno.js'
+  )
+
+  assert.ok(source.includes('\'[id*="Remetente"]\''))
+  assert.ok(source.includes('\'[id*="Assunto"]\''))
+  assert.ok(source.includes('\'input:not([type="hidden"]), \''))
+  assert.ok(source.includes('section.style.setProperty('))
+  assert.ok(source.includes('\'display\','))
+  assert.ok(source.includes('\'none\','))
+  assert.ok(source.includes('\'important\''))
+}
+
+function testPrimarySaveLabelIsUnified () {
+  const source = read('cs_modules/clique_protocolista/index.js')
+  const styles = read('cs_modules/clique_protocolista/styles.css')
+
+  assert.ok(source.includes("saveButton.textContent = 'SALVAR'"))
+  assert.ok(source.includes("saveButton.value = '⚡ SALVAR'"))
+  assert.ok(styles.includes('white-space: nowrap !important'))
 }
 
 async function run () {
@@ -247,6 +273,8 @@ async function run () {
   testUnusedSeiFieldsAreHidden()
   testAutomaticEmailCompletion()
   testHighlightedQuickRequestButton()
+  testExternalDocumentFieldsAreCollapsed()
+  testPrimarySaveLabelIsUnified()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
 
