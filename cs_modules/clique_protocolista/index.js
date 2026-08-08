@@ -883,13 +883,6 @@
         placeholder: 'CPF do interessado'
       },
       {
-        name: 'telefone',
-        label: 'Telefone',
-        maxLength: 25,
-        autocomplete: 'tel',
-        placeholder: 'Telefone com DDD'
-      },
-      {
         name: 'email',
         label: 'E-mail',
         type: 'email',
@@ -899,9 +892,36 @@
       {
         name: 'destino',
         label: 'Unidade de destino',
-        wide: true,
         placeholder: 'Unidade indicada no FAST MAIL'
       },
+      {
+        name: 'telefone',
+        label: 'Telefone',
+        maxLength: 25,
+        autocomplete: 'tel',
+        placeholder: 'Telefone com DDD'
+      }
+    ].forEach((field) => addField(grid, field))
+
+    const optionalDetails = createElement('details', {
+      className: 'sp-clique-optional'
+    })
+
+    optionalDetails.appendChild(
+      createElement(
+        'summary',
+        {
+          className: 'sp-clique-optional-summary'
+        },
+        'Mais informações — DUDA, placa, processo, ofício e outros'
+      )
+    )
+
+    const optionalGrid = createElement('div', {
+      className: 'sp-clique-grid sp-clique-grid--optional'
+    })
+
+    ;[
       {
         name: 'duda',
         label: 'DUDA',
@@ -932,7 +952,9 @@
         maxLength: 200,
         placeholder: 'Outras informações'
       }
-    ].forEach((field) => addField(grid, field))
+    ].forEach((field) => addField(optionalGrid, field))
+
+    optionalDetails.appendChild(optionalGrid)
 
     const initialFields = {
       nome: initialData.name,
@@ -973,7 +995,7 @@
       })
     }
 
-    dataSection.appendChild(grid)
+    dataSection.append(grid, optionalDetails)
 
     const message = createElement('div', {
       className: 'sp-clique-message',
