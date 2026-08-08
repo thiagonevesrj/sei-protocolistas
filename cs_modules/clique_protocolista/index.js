@@ -1413,6 +1413,73 @@
     )
   }
 
+  function hasVisibleFormControl(container) {
+    return Array.from(
+      container.querySelectorAll(
+        'input, select, textarea, button'
+      )
+    ).some((control) => {
+      if (
+        control.hidden ||
+        control.closest('[aria-hidden="true"]')
+      ) {
+        return false
+      }
+
+      const style = window.getComputedStyle(control)
+
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden'
+      )
+    })
+  }
+
+  function collapseEmptyFieldAncestors(element) {
+    let parent = element?.parentElement
+
+    while (
+      parent &&
+      parent !== document.body &&
+      parent.tagName !== 'FORM'
+    ) {
+      if (hasVisibleFormControl(parent)) {
+        break
+      }
+
+      const nextParent = parent.parentElement
+
+      parent.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+      parent.style.setProperty(
+        'height',
+        '0',
+        'important'
+      )
+      parent.style.setProperty(
+        'min-height',
+        '0',
+        'important'
+      )
+      parent.style.setProperty(
+        'margin',
+        '0',
+        'important'
+      )
+      parent.style.setProperty(
+        'padding',
+        '0',
+        'important'
+      )
+      parent.setAttribute('aria-hidden', 'true')
+
+      parent = nextParent
+    }
+  }
+
   function hideSmallestFieldContainer(element, maximumControls = 1) {
     if (!element) {
       return false
@@ -1445,6 +1512,7 @@
     )
 
     candidate.setAttribute('aria-hidden', 'true')
+    collapseEmptyFieldAncestors(candidate)
 
     return true
   }
@@ -1477,6 +1545,7 @@
           'important'
         )
         protocolGroup.setAttribute('aria-hidden', 'true')
+        collapseEmptyFieldAncestors(protocolGroup)
       } else {
         hideSmallestFieldContainer(
           automaticProtocol,
