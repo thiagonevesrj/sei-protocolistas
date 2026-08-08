@@ -453,6 +453,191 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   }
 
+  function hideSelectedDocumentField (
+    labelText,
+    fieldSelectors
+  ) {
+    return hideDocumentFieldSection(
+      labelText,
+      fieldSelectors
+    )
+  }
+
+  function clearForArchiving () {
+    const checkbox = findField(
+      [
+        '#chkParaArquivamento',
+        'input[type="checkbox"][id*="Arquivamento"]',
+        'input[type="checkbox"][name*="Arquivamento"]'
+      ],
+      'Para arquivamento'
+    )
+
+    if (!checkbox) {
+      return false
+    }
+
+    if (checkbox.checked) {
+      checkbox.checked = false
+      dispatchFieldEvents(checkbox)
+    }
+
+    hideSelectedDocumentField(
+      'Para arquivamento',
+      [
+        '#chkParaArquivamento',
+        'input[type="checkbox"][id*="Arquivamento"]',
+        'input[type="checkbox"][name*="Arquivamento"]'
+      ]
+    )
+
+    return !checkbox.checked
+  }
+
+  function hideAutomaticDocumentFields (
+    digitalizado,
+    conference,
+    restrito,
+    informacaoPessoal
+  ) {
+    if (digitalizado) {
+      hideSelectedDocumentField(
+        'Formato',
+        [
+          '#optNatoDigital',
+          '#optDigitalizado',
+          'input[type="radio"][name*="Formato"]'
+        ]
+      )
+    }
+
+    if (conference) {
+      hideSelectedDocumentField(
+        'Tipo de Conferência',
+        [
+          '#selTipoConferencia',
+          'select[name*="TipoConferencia"]',
+          'select[id*="TipoConferencia"]'
+        ]
+      )
+    }
+
+    clearForArchiving()
+
+    if (restrito && informacaoPessoal) {
+      hideSelectedDocumentField(
+        'Nível de Acesso',
+        [
+          '#optSigiloso',
+          '#optRestrito',
+          '#optPublico',
+          '#selHipoteseLegal',
+          'input[type="radio"][name*="NivelAcesso"]',
+          'select[name*="Hipotese"]',
+          'select[id*="Hipotese"]'
+        ]
+      )
+    }
+  }
+
+  function compactDocumentHeader () {
+    if (
+      document.querySelector(
+        '#sp-documento-header-row'
+      )
+    ) {
+      return
+    }
+
+    const heading = Array.from(
+      document.querySelectorAll(
+        'h1, h2, h3, .infraTitulo'
+      )
+    ).find(item =>
+      normalize(item.textContent) ===
+        'registrar documento externo'
+    )
+
+    const commandBar =
+      document.querySelector(
+        '#divInfraBarraComandosSuperior'
+      )
+
+    if (
+      !heading ||
+      !commandBar ||
+      !heading.parentElement
+    ) {
+      return
+    }
+
+    const formerParent =
+      commandBar.parentElement
+
+    const row =
+      document.createElement('div')
+
+    row.id = 'sp-documento-header-row'
+    row.style.cssText = [
+      'align-items:center',
+      'display:flex',
+      'gap:16px',
+      'justify-content:space-between',
+      'margin:4px 0 8px',
+      'min-height:0'
+    ].join(';')
+
+    heading.parentElement.insertBefore(
+      row,
+      heading
+    )
+
+    row.appendChild(heading)
+    row.appendChild(commandBar)
+
+    heading.style.setProperty(
+      'margin',
+      '0',
+      'important'
+    )
+
+    commandBar.style.setProperty(
+      'height',
+      'auto',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'margin',
+      '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'min-height',
+      '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'padding',
+      '0',
+      'important'
+    )
+
+    if (
+      formerParent &&
+      formerParent !== row &&
+      !formerParent.textContent.trim() &&
+      !formerParent.querySelector(
+        'input, select, textarea, button, a, img'
+      )
+    ) {
+      formerParent.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+    }
+  }
+
   function fillField (
     element,
     value
@@ -719,7 +904,17 @@ async function autopreencherDocumentoExterno (BaseName) {
         '#divInfraBarraComandosInferior'
       )
 
-    if (commandBar?.parentElement) {
+    const headerRow =
+      commandBar?.closest(
+        '#sp-documento-header-row'
+      )
+
+    if (headerRow?.parentElement) {
+      headerRow.parentElement.insertBefore(
+        status,
+        headerRow.nextSibling
+      )
+    } else if (commandBar?.parentElement) {
       commandBar.parentElement.insertBefore(
         status,
         commandBar.nextSibling
@@ -729,6 +924,7 @@ async function autopreencherDocumentoExterno (BaseName) {
     }
   }
 
+  compactDocumentHeader()
   hideUnusedDocumentFields()
 
   const stored = await storageGet([
@@ -769,19 +965,30 @@ async function autopreencherDocumentoExterno (BaseName) {
   const warnings = []
 
   if (!requerimentoRapido) {
-    if (!chooseRestrito()) {
+    const restrito =
+      chooseRestrito()
+
+    if (!restrito) {
       warnings.push(
         'nível de acesso Restrito'
       )
     }
 
-    if (
-      !await chooseInformacaoPessoal()
-    ) {
+    const informacaoPessoal =
+      await chooseInformacaoPessoal()
+
+    if (!informacaoPessoal) {
       warnings.push(
         'hipótese Informação Pessoal'
       )
     }
+
+    hideAutomaticDocumentFields(
+      false,
+      false,
+      restrito,
+      informacaoPessoal
+    )
 
     const message =
       'SEI Protocolistas definiu Restrito + Informação Pessoal. Confira antes de salvar.'
@@ -913,9 +1120,10 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   )
 
-  if (
-    !chooseDocumentOriginal(conference)
-  ) {
+  const documentoOriginal =
+    chooseDocumentOriginal(conference)
+
+  if (!documentoOriginal) {
     warnings.push(
       'tipo de conferência Documento Original'
     )
@@ -950,7 +1158,10 @@ async function autopreencherDocumentoExterno (BaseName) {
   /*
    * 4. Restrito.
    */
-  if (!chooseRestrito()) {
+  const restrito =
+    chooseRestrito()
+
+  if (!restrito) {
     warnings.push(
       'nível de acesso Restrito'
     )
@@ -961,13 +1172,21 @@ async function autopreencherDocumentoExterno (BaseName) {
    */
   await wait(400)
 
-  if (
-    !await chooseInformacaoPessoal()
-  ) {
+  const informacaoPessoal =
+    await chooseInformacaoPessoal()
+
+  if (!informacaoPessoal) {
     warnings.push(
       'hipótese legal Informação Pessoal'
     )
   }
+
+  hideAutomaticDocumentFields(
+    digitalizado,
+    documentoOriginal,
+    restrito,
+    informacaoPessoal
+  )
 
   /*
    * Finaliza a pendência sem salvar o documento.

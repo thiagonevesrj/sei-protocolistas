@@ -254,6 +254,27 @@ function testExternalDocumentFieldsAreCollapsed () {
   assert.ok(source.includes('\'display\','))
   assert.ok(source.includes('\'none\','))
   assert.ok(source.includes('\'important\''))
+  assert.ok(source.includes('function clearForArchiving'))
+  assert.ok(source.includes('function hideAutomaticDocumentFields'))
+  assert.ok(source.includes('\'Para arquivamento\''))
+  assert.ok(source.includes('\'Tipo de Conferência\''))
+  assert.ok(source.includes('\'Nível de Acesso\''))
+  assert.ok(source.includes('digitalizado,'))
+  assert.ok(source.includes('documentoOriginal,'))
+  assert.ok(source.includes('restrito,'))
+  assert.ok(source.includes('informacaoPessoal'))
+}
+
+function testExternalDocumentHeaderIsCompact () {
+  const source = read(
+    'cs_modules/documento_receber/autopreencherDocumentoExterno.js'
+  )
+
+  assert.ok(source.includes('function compactDocumentHeader'))
+  assert.ok(source.includes('row.id = \'sp-documento-header-row\''))
+  assert.ok(source.includes('\'display:flex\''))
+  assert.ok(source.includes('\'justify-content:space-between\''))
+  assert.ok(source.includes('compactDocumentHeader()'))
 }
 
 function testPrimarySaveLabelIsUnified () {
@@ -274,6 +295,7 @@ async function run () {
   testAutomaticEmailCompletion()
   testHighlightedQuickRequestButton()
   testExternalDocumentFieldsAreCollapsed()
+  testExternalDocumentHeaderIsCompact()
   testPrimarySaveLabelIsUnified()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
