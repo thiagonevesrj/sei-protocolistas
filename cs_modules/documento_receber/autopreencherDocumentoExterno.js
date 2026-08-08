@@ -680,6 +680,114 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   }
 
+  function collapseEmptyAutomaticFieldAncestors () {
+    const protectedControls = [
+      '#selSerie',
+      '#txtDataElaboracao',
+      '#txtNumero',
+      '#txtNomeArvore',
+      '#txtInteressado',
+      '#txaObservacoes',
+      'input[type="file"]',
+      '#btnSalvar'
+    ].join(', ')
+
+    const hiddenSections = Array.from(
+      document.querySelectorAll(
+        '[data-sei-protocolistas-hidden]'
+      )
+    )
+
+    function hasVisibleContent (element) {
+      const visibleControl = Array.from(
+        element.querySelectorAll(
+          'input:not([type="hidden"]), ' +
+          'select, textarea, button, a, img'
+        )
+      ).some(control =>
+        !control.closest(
+          '[data-sei-protocolistas-hidden]'
+        ) &&
+        window.getComputedStyle(control)
+          .display !== 'none'
+      )
+
+      if (visibleControl) {
+        return true
+      }
+
+      const walker =
+        document.createTreeWalker(
+          element,
+          NodeFilter.SHOW_TEXT
+        )
+
+      let textNode = walker.nextNode()
+
+      while (textNode) {
+        const owner = textNode.parentElement
+
+        if (
+          normalize(textNode.textContent) &&
+          owner &&
+          !owner.closest(
+            '[data-sei-protocolistas-hidden]'
+          ) &&
+          window.getComputedStyle(owner)
+            .display !== 'none'
+        ) {
+          return true
+        }
+
+        textNode = walker.nextNode()
+      }
+
+      return false
+    }
+
+    hiddenSections.forEach(hiddenSection => {
+      let candidate =
+        hiddenSection.parentElement
+
+      while (
+        candidate &&
+        candidate.tagName !== 'FORM' &&
+        candidate.tagName !== 'BODY' &&
+        candidate.tagName !== 'HTML'
+      ) {
+        if (
+          candidate.querySelector(
+            protectedControls
+          ) ||
+          hasVisibleContent(candidate)
+        ) {
+          break
+        }
+
+        candidate.setAttribute(
+          'data-sei-protocolistas-collapsed',
+          'campos-automaticos-vazios'
+        )
+
+        ;[
+          ['display', 'none'],
+          ['height', '0'],
+          ['margin', '0'],
+          ['min-height', '0'],
+          ['padding', '0']
+        ].forEach(([property, value]) =>
+          candidate.style.setProperty(
+            property,
+            value,
+            'important'
+          )
+        )
+
+        candidate = candidate.parentElement
+      }
+    })
+  }
+
   function getAccessibleDocuments () {
     const documents = new Set()
 
@@ -845,6 +953,8 @@ async function autopreencherDocumentoExterno (BaseName) {
     if (restrito && informacaoPessoal) {
       hideAccessLevelFieldset()
     }
+
+    collapseEmptyAutomaticFieldAncestors()
   }
 
   function highlightExternalDocumentSave () {
@@ -939,13 +1049,15 @@ async function autopreencherDocumentoExterno (BaseName) {
     row.id = 'sp-documento-header-row'
     row.style.cssText = [
       'align-items:center',
+      'box-sizing:border-box',
       'display:flex',
       'flex-wrap:nowrap',
       'gap:16px',
       'justify-content:space-between',
       'margin:4px 0 8px',
       'min-height:0',
-      'width:100%'
+      'max-width:calc(100vw - 24px)',
+      'width:calc(100vw - 24px)'
     ].join(';')
 
     heading.parentElement.insertBefore(
@@ -983,8 +1095,13 @@ async function autopreencherDocumentoExterno (BaseName) {
       'important'
     )
     commandBar.style.setProperty(
+      'flex',
+      '0 0 auto',
+      'important'
+    )
+    commandBar.style.setProperty(
       'margin',
-      '0',
+      '0 0 0 auto',
       'important'
     )
     commandBar.style.setProperty(
@@ -995,6 +1112,11 @@ async function autopreencherDocumentoExterno (BaseName) {
     commandBar.style.setProperty(
       'padding',
       '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'text-align',
+      'right',
       'important'
     )
 
