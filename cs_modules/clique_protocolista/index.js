@@ -1413,6 +1413,89 @@
     )
   }
 
+  function hideSmallestFieldContainer(element, maximumControls = 1) {
+    if (!element) {
+      return false
+    }
+
+    let candidate = element
+    let parent = element.parentElement
+
+    while (
+      parent &&
+      parent !== document.body &&
+      parent.tagName !== 'FORM'
+    ) {
+      const controls = parent.querySelectorAll(
+        'input, select, textarea, button'
+      )
+
+      if (controls.length > maximumControls) {
+        break
+      }
+
+      candidate = parent
+      parent = parent.parentElement
+    }
+
+    candidate.style.setProperty(
+      'display',
+      'none',
+      'important'
+    )
+
+    candidate.setAttribute('aria-hidden', 'true')
+
+    return true
+  }
+
+  function hideUnusedProcessFields() {
+    const automaticProtocol =
+      findFirst([
+        '#optProtocoloAutomatico',
+        'input[type="radio"][id*="ProtocoloAutomatico"]',
+        'input[type="radio"][id*="Automatico"][name*="Protocolo"]'
+      ]) ||
+      Array.from(
+        document.querySelectorAll('label')
+      ).find(
+        (item) =>
+          normalize(item.textContent) === 'automatico'
+      )?.control
+
+    if (automaticProtocol) {
+      automaticProtocol.checked = true
+      dispatchFieldEvents(automaticProtocol)
+
+      const protocolGroup =
+        automaticProtocol.closest('fieldset')
+
+      if (protocolGroup) {
+        protocolGroup.style.setProperty(
+          'display',
+          'none',
+          'important'
+        )
+        protocolGroup.setAttribute('aria-hidden', 'true')
+      } else {
+        hideSmallestFieldContainer(
+          automaticProtocol,
+          2
+        )
+      }
+    }
+
+    const priority =
+      findFirst([
+        '#selGrauPrioridade',
+        '#selPrioridade',
+        'select[id*="Prioridade"]',
+        'select[name*="Prioridade"]'
+      ]) || findFieldByLabel('Prioridade')
+
+    hideSmallestFieldContainer(priority)
+  }
+
   function fillField(element, value) {
     if (!element || !value) {
       return false
@@ -1694,6 +1777,8 @@
   }
 
   async function fillProcessForm() {
+    hideUnusedProcessFields()
+
     const stored = await storageGet(STORAGE_KEY)
     const draft = stored[STORAGE_KEY]
 

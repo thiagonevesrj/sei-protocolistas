@@ -201,6 +201,19 @@ function testCompactFastProcLayout () {
   assert.ok(styles.includes('position: sticky'))
 }
 
+function testUnusedSeiFieldsAreHidden () {
+  const source = read('cs_modules/clique_protocolista/index.js')
+  const hideFunction = source.indexOf('function hideUnusedProcessFields')
+  const fillFunction = source.indexOf('async function fillProcessForm')
+  const hideCall = source.indexOf('hideUnusedProcessFields()', fillFunction)
+
+  assert.ok(hideFunction > -1 && hideFunction < fillFunction)
+  assert.ok(hideCall > fillFunction)
+  assert.ok(source.includes('#optProtocoloAutomatico'))
+  assert.ok(source.includes('#selGrauPrioridade'))
+  assert.ok(source.includes("'display',\n          'none',\n          'important'"))
+}
+
 function testAutomaticEmailCompletion () {
   const source = read('cs_modules/fast_mail/index.js')
   const automaticFunction = source.indexOf('async function autoInsertPendingProcessResponse')
@@ -220,6 +233,7 @@ async function run () {
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
   testCompactFastProcLayout()
+  testUnusedSeiFieldsAreHidden()
   testAutomaticEmailCompletion()
   console.log('Fluxo FAST MAIL → SEI → FAST PROC → e-mail original validado.')
 }
