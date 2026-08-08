@@ -23,10 +23,14 @@ O projeto está na fase de validação dos fluxos de abertura rápida e inclusã
 legado que ainda precisa ser validado permanece no repositório, mas as opções fora do escopo inicial
 estão ocultas e desativadas por padrão.
 
-A versão `0.3.1` inicia a fundação da **Central Protocolista**, com catálogo local dos processos
-prioritários, configuração individual do número do protocolista, editor dos modelos de resposta,
-limpeza de dados temporários e importação/exportação de preferências sem dados de cidadãos.
-A Central pode ser aberta pelo ícone da extensão.
+A versão `0.3.2` consolida a linha de base funcional da **Central Protocolista**, do **FAST MAIL**
+no webmail institucional e do **FAST PROC** no SEI-RJ. O catálogo local organiza os procedimentos
+prioritários por área, a triagem prepara exigências e respostas, e o retorno do SEI ao e-mail
+reaproveita o endereço do atendimento. A abertura automática do SEI e o transporte completo de
+todos os dados entre FAST MAIL e FAST PROC permanecem como próximas etapas.
+
+A Central pode ser aberta pelo ícone da extensão. Preferências e credenciais ficam armazenadas
+localmente no navegador; não devem ser exportadas nem enviadas ao repositório.
 
 Consulte [docs/DIAGNOSTICO-INICIAL.md](docs/DIAGNOSTICO-INICIAL.md) para acompanhar o inventário técnico.
 As decisões operacionais obrigatórias estão registradas em
@@ -35,6 +39,16 @@ O histórico consolidado, as decisões de produto e o roteiro de desenvolvimento
 [Plano Mestre](docs/PLANO-MESTRE.md).
 Antes de distribuir uma nova versão, siga o
 [Checklist de Regressão](docs/CHECKLIST-REGRESSAO.md).
+
+## Validação técnica
+
+Execute `npm run validate` antes de publicar alterações. A verificação confere versões, arquivos
+referenciados no manifesto, domínios autorizados, catálogo, navegação do FAST MAIL e modelos de
+resposta. O mesmo comando é executado automaticamente pelo GitHub Actions.
+
+Use `npm run lint` para os arquivos mantidos pela linha atual. O comando `npm run lint:all` preserva
+o diagnóstico completo da dívida técnica herdada, sem aplicar correções automáticas nos módulos
+legados.
 
 ## Licença e créditos
 

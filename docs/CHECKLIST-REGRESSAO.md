@@ -4,7 +4,7 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 
 ## Preparação
 
-- [ ] Confirmar que a branch ativa é `desenvolvimento`.
+- [ ] Confirmar que a branch ativa é a branch isolada da alteração, baseada em `desenvolvimento`.
 - [ ] Confirmar que SEI++ e SEI Pro estão desativados.
 - [ ] Recarregar o SEI Protocolistas em `chrome://extensions`.
 - [ ] Confirmar que não existe alerta de carregamento da extensão.
@@ -87,6 +87,36 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 - [ ] Confirmar `Informação Pessoal`.
 - [ ] Confirmar que o botão `Salvar` permanece manual.
 
+## FAST MAIL — webmail institucional
+
+- [ ] Abrir `https://venus2.detran.rj.gov.br/owa/` com o SEI Protocolistas ativo.
+- [ ] Confirmar que o painel FAST MAIL aparece somente no OWA institucional.
+- [ ] Confirmar a identificação do e-mail e do protocolista.
+- [ ] Testar as áreas Habilitação, Veículos, Taxas, Ofícios e Outros.
+- [ ] Confirmar que Devolução de Taxas apresenta as pendências validadas.
+- [ ] Marcar uma pendência fictícia e confirmar a prévia da resposta.
+- [ ] Confirmar a geração dos assuntos `TRIAGEM`, `UNDEFINED` e `FECHADO` nos cenários previstos.
+- [ ] Confirmar que `ABRIR PROCESSO` registra o atendimento sem enviar o e-mail automaticamente.
+- [ ] Confirmar que nenhum dado de cidadão aparece no arquivo exportado de preferências.
+
+## FAST PROC — abertura no SEI
+
+- [ ] Partir de um atendimento fictício registrado pelo FAST MAIL.
+- [ ] Abrir manualmente `Iniciar Processo` no SEI.
+- [ ] Confirmar que o FAST PROC reconhece o e-mail transportado.
+- [ ] Confirmar que o formulário do processo continua sob revisão do protocolista.
+- [ ] Confirmar que `Salvar`, encaminhar e enviar permanecem ações manuais.
+- [ ] Finalizar um processo fictício e confirmar o retorno preparado para o e-mail correto.
+- [ ] Repetir sem handoff anterior e confirmar que o Clique Protocolista continua funcional.
+
+## Validação automática
+
+- [ ] Executar `npm run validate` e confirmar a mensagem de sucesso.
+- [ ] Confirmar que a verificação do GitHub Actions foi concluída sem falhas.
+- [ ] Confirmar que as versões do manifesto e do pacote são idênticas.
+- [ ] Confirmar que somente SEI-RJ e OWA institucional estão autorizados no manifesto.
+- [ ] Confirmar que o catálogo e a navegação do FAST MAIL não têm referências quebradas.
+
 ## Critério de interrupção
 
 Parar o teste e não distribuir a versão se ocorrer qualquer um destes casos:
@@ -97,4 +127,6 @@ Parar o teste e não distribuir a versão se ocorrer qualquer um destes casos:
 - aparecer `Sigilo Bancário`;
 - o nível ficar público;
 - a extensão alterar páginas fora do SEI-RJ;
+- o FAST MAIL alterar páginas fora do OWA institucional;
+- o e-mail de um atendimento ser reaproveitado em outro atendimento;
 - qualquer operação definitiva for executada sem confirmação.

@@ -1,0 +1,26 @@
+name: Validar extensão
+
+on:
+  push:
+    branches:
+      - desenvolvimento
+      - 'agent/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validar estrutura da extensão
+        run: npm run validate

@@ -1,10 +1,11 @@
 # Plano Mestre — SEI Protocolistas
 
 > Documento vivo do projeto  
-> Última consolidação: 30 de julho de 2026  
-> Versão estável analisada: `0.2.21`  
-> Branch de desenvolvimento: `desenvolvimento`  
-> Marco estável: `be7f026` — reconhecimento da confirmação de upload do SEI-RJ
+> Última consolidação: 8 de agosto de 2026
+> Linha de base funcional: `0.3.2`
+> Branch de desenvolvimento: `desenvolvimento`
+> Marco do anexo: `be7f026` — reconhecimento da confirmação de upload do SEI-RJ
+> Marco funcional consolidado: `88cdbdc` — Central, FAST MAIL e FAST PROC
 
 ## 1. Visão do projeto
 
@@ -242,6 +243,33 @@ Também existe preenchimento de:
 
 Essa automação deve passar por uma rodada completa de validação depois que a fundação da Central
 Protocolista estiver definida.
+
+### 5.8 Linha de base funcional 0.3.2
+
+Em 8 de agosto de 2026, a versão funcional validada no computador de Thiago foi preservada,
+publicada e alinhada com a branch `desenvolvimento`. A consolidação contém:
+
+- Central Protocolista aberta pelo ícone da extensão;
+- configuração local do operador e das credenciais;
+- FAST MAIL no OWA institucional, com navegação por área, triagem, exigências e respostas;
+- assuntos `TRIAGEM`, `UNDEFINED` e `FECHADO`;
+- FAST PROC na abertura de processos do SEI;
+- identificação do e-mail do atendimento e retorno do SEI ao webmail;
+- catálogo schema 4 com 12 procedimentos prioritários;
+- fluxo legado de anexação preservado.
+
+Limites conhecidos da linha de base:
+
+- `ABRIR PROCESSO` ainda não navega automaticamente até o SEI;
+- o handoff FAST MAIL → FAST PROC transporta somente o e-mail;
+- login automático ainda não está implementado;
+- credenciais lembradas ficam legíveis no armazenamento local do navegador;
+- os registros temporários ainda não possuem identificador individual por atendimento;
+- o módulo legado de background permanece fora do manifesto até revisão específica, para não
+  reativar notificações e alarmes sem validação.
+
+Esses limites devem ser corrigidos em patches separados. O saneamento técnico da versão `0.3.2`
+não pode alterar o comportamento funcional acima.
 
 ## 6. Regras funcionais obrigatórias
 
@@ -757,7 +785,7 @@ Essa frente deve começar depois do piloto completo de produtividade.
 - O modelo global de scripts herdado dificulta validação isolada.
 - Os seletores do SEI podem variar entre versões e unidades.
 - Algumas rotas usam links `javascript:` bloqueados pela política de segurança do navegador.
-- O manifesto usa padrões de endereço amplos demais.
+- O manifesto precisa permanecer restrito ao SEI-RJ e ao OWA institucional.
 - A interação com editores de webmail pode mudar quando o fornecedor atualiza a interface.
 - O fluxo presencial precisa de nova validação integral.
 
@@ -816,7 +844,7 @@ Tarefas:
 - criar editor inicial de modelos;
 - criar importação e exportação JSON;
 - separar dados permanentes de dados temporários;
-- restringir os endereços do manifesto ao SEI.
+- restringir os endereços do manifesto ao SEI-RJ e ao OWA institucional.
 
 Critério de conclusão:
 
@@ -824,9 +852,9 @@ Critério de conclusão:
 - número `31` pode ser configurado e alterado;
 - catálogo DAF pode ser consultado;
 - dados pessoais temporários expiram;
-- nenhuma página fora do SEI é alterada.
+- nenhuma página fora do SEI-RJ ou do OWA institucional é alterada.
 
-Status técnico na versão `0.3.1`:
+Status técnico na versão `0.3.2`:
 
 - estrutura visual da Central criada;
 - número do protocolista salvo localmente;
@@ -835,7 +863,8 @@ Status técnico na versão `0.3.1`:
 - exportação exclui os dados temporários do atendimento;
 - limpeza automática por validade e limpeza manual implementadas;
 - contexto do Clique Protocolista ampliado para acompanhar o atendimento até a conclusão;
-- validação operacional no Chrome e no SEI-RJ ainda necessária antes de encerrar a fase.
+- FAST MAIL e FAST PROC integrados parcialmente pelo e-mail do atendimento;
+- validação operacional completa no Chrome, OWA e SEI-RJ ainda necessária antes de encerrar a fase.
 
 ### Fase 2 — Piloto DAF: triagem sem processo
 
@@ -857,6 +886,12 @@ Critério de conclusão:
 - uma pendência DAF é respondida sem abrir Trello ou TXT;
 - assunto e corpo ficam prontos em segundos;
 - nenhuma informação pessoal fica gravada permanentemente.
+
+Status técnico na versão `0.3.2`:
+
+- triagem DAF disponível no FAST MAIL;
+- pendências, links úteis e resposta preparados no OWA;
+- validação operacional final no Chrome ainda necessária.
 
 ### Fase 3 — Piloto DAF: processo completo
 
@@ -902,6 +937,13 @@ Critério de conclusão:
 - a resposta permanece editável;
 - botão nativo de enviar não é acionado automaticamente;
 - nenhuma parte visual do SEI é injetada indevidamente no webmail.
+
+Status técnico na versão `0.3.2`:
+
+- FAST MAIL injetado somente no OWA institucional;
+- assuntos e respostas de triagem e conclusão implementados;
+- envio permanece manual;
+- abertura automática do SEI e handoff completo ainda pendentes.
 
 ### Fase 5 — Protocolo impresso
 
@@ -995,13 +1037,13 @@ Tarefas:
 
 ### Próximo bloco técnico recomendado
 
-1. congelar o fluxo estável de anexação;
-2. restringir o manifesto aos domínios corretos;
-3. criar a estrutura de dados do catálogo;
-4. criar a tela inicial da Central Protocolista;
-5. implementar a triagem DAF;
-6. testar ganho de tempo;
-7. somente então integrar o webmail.
+1. concluir o saneamento técnico da linha de base `0.3.2`;
+2. criar identificador individual por atendimento;
+3. completar o handoff com nome, CPF, e-mail, procedimento e destino;
+4. implementar Central → login SEI → Iniciar Processo → FAST PROC;
+5. implementar FAST MAIL → localizar/abrir SEI → FAST PROC preenchido;
+6. tratar o armazenamento de credenciais em patch separado;
+7. executar a regressão final no Chrome, OWA e SEI-RJ.
 
 ## 19. Indicadores de sucesso
 
