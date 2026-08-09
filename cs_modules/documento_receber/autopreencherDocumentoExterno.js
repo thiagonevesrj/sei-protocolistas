@@ -275,6 +275,908 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   }
 
+  function hideDocumentFieldSection (
+    labelText,
+    fieldSelectors = []
+  ) {
+    const expected =
+      normalize(labelText)
+
+    const knownHeadings = [
+      'Tipo do Documento',
+      'Data do Documento',
+      'Número',
+      'Nome na Árvore',
+      'Formato',
+      'Tipo de Conferência',
+      'Remetente',
+      'Interessados',
+      'Classificação por Assuntos',
+      'Observações desta unidade',
+      'Nível de Acesso'
+    ].map(normalize)
+
+    function ownText (element) {
+      return normalize(
+        Array.from(element.childNodes)
+          .filter(node =>
+            node.nodeType === Node.TEXT_NODE
+          )
+          .map(node => node.textContent)
+          .join(' ')
+      )
+    }
+
+    const labels = Array.from(
+      document.querySelectorAll(
+        'label, [id^="lbl"], ' +
+        '.infraLabelObrigatorio, ' +
+        '.infraLabelOpcional, span, div'
+      )
+    ).filter(item =>
+      ownText(item) === expected
+    )
+
+    const targets = new Set(labels)
+
+    fieldSelectors.forEach(selector => {
+      document
+        .querySelectorAll(selector)
+        .forEach(element =>
+          targets.add(element)
+        )
+    })
+
+    const relatedControls = new Set()
+
+    targets.forEach(target => {
+      if (
+        target.matches(
+          'input:not([type="hidden"]), ' +
+          'select, textarea'
+        )
+      ) {
+        relatedControls.add(target)
+      }
+
+      target.querySelectorAll?.(
+        'input:not([type="hidden"]), ' +
+        'select, textarea'
+      ).forEach(control =>
+        relatedControls.add(control)
+      )
+    })
+
+    const sections = new Set()
+
+    targets.forEach(target => {
+      let candidate = target
+      let safestCandidate = target
+
+      while (
+        candidate.parentElement &&
+        candidate.parentElement !==
+          document.body &&
+        candidate.parentElement.tagName !==
+          'FORM'
+      ) {
+        const parent =
+          candidate.parentElement
+
+        const hasOtherHeading =
+          Array.from(
+            parent.querySelectorAll(
+              'label, [id^="lbl"], ' +
+              '.infraLabelObrigatorio, ' +
+              '.infraLabelOpcional, span, div'
+            )
+          ).some(element => {
+            const text = ownText(element)
+
+            return (
+              text &&
+              text !== expected &&
+              knownHeadings.includes(text)
+            )
+          })
+
+        const hasOtherField =
+          Array.from(
+            parent.querySelectorAll(
+              'input:not([type="hidden"]), ' +
+              'select, textarea'
+            )
+          ).some(control =>
+            !relatedControls.has(control)
+          )
+
+        if (
+          hasOtherHeading ||
+          hasOtherField
+        ) {
+          break
+        }
+
+        safestCandidate = parent
+        candidate = parent
+      }
+
+      sections.add(safestCandidate)
+    })
+
+    if (!sections.size) {
+      return false
+    }
+
+    sections.forEach(section => {
+      section.setAttribute(
+        'data-sei-protocolistas-hidden',
+        expected
+      )
+
+      section.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+    })
+
+    return true
+  }
+
+  function hideUnusedDocumentFields () {
+    hideDocumentFieldSection(
+      'Remetente',
+      [
+        '#txtRemetente',
+        'input[name="txtRemetente"]',
+        '#lblRemetente',
+        '#divRemetente',
+        '[id*="Remetente"]',
+        '[name*="Remetente"]'
+      ]
+    )
+
+    hideDocumentFieldSection(
+      'Classificação por Assuntos',
+      [
+        '#txtAssunto',
+        '#selAssuntos',
+        'input[name*="Assunto"]',
+        'textarea[name*="Assunto"]',
+        'select[name*="Assunto"]',
+        '#divClassificacaoAssuntos',
+        '#divAssuntos',
+        '[id*="Assunto"]',
+        '[name*="Assunto"]'
+      ]
+    )
+  }
+
+  function hideSelectedDocumentField (
+    labelText,
+    fieldSelectors
+  ) {
+    return hideDocumentFieldSection(
+      labelText,
+      fieldSelectors
+    )
+  }
+
+  function hideDocumentFieldGroup (
+    labelTexts,
+    fieldSelectors
+  ) {
+    const expectedLabels =
+      labelTexts.map(normalize)
+
+    const protectedLabels = [
+      'Tipo do Documento',
+      'Data do Documento',
+      'Número',
+      'Nome na Árvore',
+      'Interessados',
+      'Observações desta unidade'
+    ].map(normalize)
+
+    const controls = new Set()
+
+    fieldSelectors.forEach(selector => {
+      document
+        .querySelectorAll(selector)
+        .forEach(control => controls.add(control))
+    })
+
+    const labels = Array.from(
+      document.querySelectorAll(
+        'label, [id^="lbl"], legend, ' +
+        '.infraLabelObrigatorio, ' +
+        '.infraLabelOpcional, span, div'
+      )
+    ).filter(element => {
+      const text = normalize(
+        Array.from(element.childNodes)
+          .filter(node =>
+            node.nodeType === Node.TEXT_NODE
+          )
+          .map(node => node.textContent)
+          .join(' ')
+      )
+
+      return expectedLabels.includes(text)
+    })
+
+    const targets = new Set([
+      ...controls,
+      ...labels
+    ])
+
+    if (!targets.size) {
+      return false
+    }
+
+    const sections = new Set()
+
+    targets.forEach(target => {
+      let candidate = target
+
+      while (
+        candidate.parentElement &&
+        candidate.parentElement !==
+          document.body &&
+        candidate.parentElement.tagName !==
+          'FORM'
+      ) {
+        const parent =
+          candidate.parentElement
+
+        const hasProtectedControl =
+          Boolean(parent.querySelector(
+            '#selSerie, ' +
+            '#txtDataElaboracao, ' +
+            '#txtNumero, ' +
+            '#txtNomeArvore, ' +
+            '#txtInteressado, ' +
+            '#txaObservacoes, ' +
+            'input[type="file"]'
+          ))
+
+        const hasUnexpectedControl =
+          Array.from(parent.querySelectorAll(
+            'input:not([type="hidden"]), ' +
+            'select, textarea'
+          )).some(control =>
+            !controls.has(control)
+          )
+
+        const hasProtectedLabel =
+          Array.from(parent.querySelectorAll(
+            'label, [id^="lbl"], legend, ' +
+            '.infraLabelObrigatorio, ' +
+            '.infraLabelOpcional'
+          )).some(element =>
+            protectedLabels.includes(
+              normalize(element.textContent)
+            )
+          )
+
+        if (
+          hasProtectedControl ||
+          hasUnexpectedControl ||
+          hasProtectedLabel
+        ) {
+          break
+        }
+
+        candidate = parent
+      }
+
+      sections.add(candidate)
+    })
+
+    const outerSections =
+      Array.from(sections).filter(section =>
+        !Array.from(sections).some(other =>
+          other !== section &&
+          other.contains(section)
+        )
+      )
+
+    outerSections.forEach(section => {
+      section.setAttribute(
+        'data-sei-protocolistas-hidden',
+        expectedLabels.join('-')
+      )
+      section.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+      section.style.setProperty(
+        'height',
+        '0',
+        'important'
+      )
+      section.style.setProperty(
+        'margin',
+        '0',
+        'important'
+      )
+      section.style.setProperty(
+        'padding',
+        '0',
+        'important'
+      )
+    })
+
+    return true
+  }
+
+  function hideAccessLevelFieldset () {
+    const accessControl =
+      document.querySelector(
+        '#optRestrito, #selHipoteseLegal, ' +
+        'input[type="radio"]' +
+          '[name*="NivelAcesso"], ' +
+        'select[name*="Hipotese"]'
+      )
+
+    const accessLegend = Array.from(
+      document.querySelectorAll('legend')
+    ).find(legend =>
+      normalize(legend.textContent) ===
+        'nivel de acesso'
+    )
+
+    const fieldset =
+      accessControl?.closest('fieldset') ||
+      accessLegend?.closest('fieldset')
+
+    const groupHidden =
+      hideDocumentFieldGroup(
+        [
+          'Nível de Acesso',
+          'Hipótese Legal'
+        ],
+        [
+          '#optRestrito',
+          '#selHipoteseLegal',
+          'input[type="radio"]' +
+            '[name*="NivelAcesso"]',
+          'select[name*="Hipotese"]',
+          'select[id*="Hipotese"]'
+        ]
+      )
+
+    if (fieldset) {
+      fieldset.setAttribute(
+        'data-sei-protocolistas-hidden',
+        'nivel-de-acesso-completo'
+      )
+      fieldset.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+      fieldset.style.setProperty(
+        'height',
+        '0',
+        'important'
+      )
+      fieldset.style.setProperty(
+        'margin',
+        '0',
+        'important'
+      )
+      fieldset.style.setProperty(
+        'padding',
+        '0',
+        'important'
+      )
+    }
+
+    return Boolean(
+      fieldset || groupHidden
+    )
+  }
+
+  function collapseEmptyAutomaticFieldAncestors () {
+    const protectedControls = [
+      '#selSerie',
+      '#txtDataElaboracao',
+      '#txtNumero',
+      '#txtNomeArvore',
+      '#txtInteressado',
+      '#txaObservacoes',
+      'input[type="file"]',
+      '#btnSalvar'
+    ].join(', ')
+
+    const hiddenSections = Array.from(
+      document.querySelectorAll(
+        '[data-sei-protocolistas-hidden]'
+      )
+    )
+
+    function hasVisibleContent (element) {
+      const visibleControl = Array.from(
+        element.querySelectorAll(
+          'input:not([type="hidden"]), ' +
+          'select, textarea, button, a, img'
+        )
+      ).some(control =>
+        !control.closest(
+          '[data-sei-protocolistas-hidden]'
+        ) &&
+        window.getComputedStyle(control)
+          .display !== 'none'
+      )
+
+      if (visibleControl) {
+        return true
+      }
+
+      const walker =
+        document.createTreeWalker(
+          element,
+          NodeFilter.SHOW_TEXT
+        )
+
+      let textNode = walker.nextNode()
+
+      while (textNode) {
+        const owner = textNode.parentElement
+
+        if (
+          normalize(textNode.textContent) &&
+          owner &&
+          !owner.closest(
+            '[data-sei-protocolistas-hidden]'
+          ) &&
+          window.getComputedStyle(owner)
+            .display !== 'none'
+        ) {
+          return true
+        }
+
+        textNode = walker.nextNode()
+      }
+
+      return false
+    }
+
+    hiddenSections.forEach(hiddenSection => {
+      let candidate =
+        hiddenSection.parentElement
+
+      while (
+        candidate &&
+        candidate.tagName !== 'FORM' &&
+        candidate.tagName !== 'BODY' &&
+        candidate.tagName !== 'HTML'
+      ) {
+        if (
+          candidate.querySelector(
+            protectedControls
+          ) ||
+          hasVisibleContent(candidate)
+        ) {
+          break
+        }
+
+        candidate.setAttribute(
+          'data-sei-protocolistas-collapsed',
+          'campos-automaticos-vazios'
+        )
+
+        ;[
+          ['display', 'none'],
+          ['height', '0'],
+          ['margin', '0'],
+          ['min-height', '0'],
+          ['padding', '0']
+        ].forEach(([property, value]) =>
+          candidate.style.setProperty(
+            property,
+            value,
+            'important'
+          )
+        )
+
+        candidate = candidate.parentElement
+      }
+    })
+  }
+
+  function getAccessibleDocuments () {
+    const documents = new Set()
+
+    function collect (targetWindow) {
+      try {
+        if (!targetWindow?.document) {
+          return
+        }
+
+        documents.add(targetWindow.document)
+
+        for (
+          let index = 0;
+          index < targetWindow.frames.length;
+          index += 1
+        ) {
+          collect(targetWindow.frames[index])
+        }
+      } catch (error) {
+        // Ignora frames que não pertencem ao SEI.
+      }
+    }
+
+    try {
+      collect(window.top || window)
+    } catch (error) {
+      collect(window)
+    }
+
+    return Array.from(documents)
+  }
+
+  function hideQuickRequestToolbar () {
+    const rqButton = getAccessibleDocuments()
+      .map(targetDocument =>
+        targetDocument.querySelector(
+          '#sp-fast-proc-rq'
+        )
+      )
+      .find(Boolean)
+
+    if (!rqButton) {
+      return false
+    }
+
+    let toolbar = rqButton.parentElement
+
+    while (
+      toolbar &&
+      toolbar.tagName !== 'BODY' &&
+      toolbar.tagName !== 'HTML'
+    ) {
+      const iconLinks = Array.from(
+        toolbar.querySelectorAll('a')
+      ).filter(anchor =>
+        anchor.querySelector('img')
+      )
+
+      if (iconLinks.length >= 8) {
+        break
+      }
+
+      toolbar = toolbar.parentElement
+    }
+
+    if (
+      !toolbar ||
+      toolbar.tagName === 'BODY' ||
+      toolbar.tagName === 'HTML'
+    ) {
+      return false
+    }
+
+    toolbar.setAttribute(
+      'data-sei-protocolistas-hidden',
+      'barra-processo-apos-requerimento-rapido'
+    )
+
+    ;[
+      ['display', 'none'],
+      ['height', '0'],
+      ['margin', '0'],
+      ['min-height', '0'],
+      ['padding', '0']
+    ].forEach(([property, value]) =>
+      toolbar.style.setProperty(
+        property,
+        value,
+        'important'
+      )
+    )
+
+    return true
+  }
+
+  function clearForArchiving () {
+    const checkbox = findField(
+      [
+        '#chkParaArquivamento',
+        'input[type="checkbox"][id*="Arquivamento"]',
+        'input[type="checkbox"][name*="Arquivamento"]'
+      ],
+      'Para arquivamento'
+    )
+
+    if (!checkbox) {
+      return false
+    }
+
+    if (checkbox.checked) {
+      checkbox.checked = false
+      dispatchFieldEvents(checkbox)
+    }
+
+    hideSelectedDocumentField(
+      'Para arquivamento',
+      [
+        '#chkParaArquivamento',
+        'input[type="checkbox"][id*="Arquivamento"]',
+        'input[type="checkbox"][name*="Arquivamento"]'
+      ]
+    )
+
+    return !checkbox.checked
+  }
+
+  function hideAutomaticDocumentFields (
+    digitalizado,
+    conference,
+    restrito,
+    informacaoPessoal
+  ) {
+    const archivingCleared =
+      clearForArchiving()
+
+    if (
+      digitalizado &&
+      conference &&
+      archivingCleared
+    ) {
+      hideDocumentFieldGroup(
+        [
+          'Formato',
+          'Tipo de Conferência',
+          'Para arquivamento'
+        ],
+        [
+          '#optNatoDigital',
+          '#optDigitalizado',
+          'input[type="radio"][name*="Formato"]',
+          '#selTipoConferencia',
+          'select[name*="TipoConferencia"]',
+          'select[id*="TipoConferencia"]',
+          '#chkParaArquivamento',
+          'input[type="checkbox"]' +
+            '[id*="Arquivamento"]',
+          'input[type="checkbox"]' +
+            '[name*="Arquivamento"]'
+        ]
+      )
+    }
+
+    if (restrito && informacaoPessoal) {
+      hideAccessLevelFieldset()
+    }
+
+    collapseEmptyAutomaticFieldAncestors()
+  }
+
+  function highlightExternalDocumentSave () {
+    const saveButton =
+      document.querySelector(
+        '#divInfraBarraComandosSuperior ' +
+        '#btnSalvar'
+      )
+
+    if (!saveButton) {
+      return false
+    }
+
+    if (saveButton.matches('input')) {
+      saveButton.value = '⚡ SALVAR'
+    } else {
+      saveButton.textContent = '⚡ SALVAR'
+    }
+
+    saveButton.setAttribute(
+      'aria-label',
+      'Salvar documento externo'
+    )
+    saveButton.setAttribute(
+      'title',
+      'Salvar documento externo'
+    )
+
+    ;[
+      ['align-items', 'center'],
+      ['background', '#061a39'],
+      ['border', '2px solid #e0ae28'],
+      ['border-radius', '6px'],
+      ['box-shadow', '0 3px 10px rgb(0 0 0 / 35%)'],
+      ['color', '#fff'],
+      ['cursor', 'pointer'],
+      ['display', 'inline-flex'],
+      ['font-size', '14px'],
+      ['font-weight', '700'],
+      ['justify-content', 'center'],
+      ['min-height', '40px'],
+      ['padding', '8px 16px'],
+      ['white-space', 'nowrap']
+    ].forEach(([property, value]) =>
+      saveButton.style.setProperty(
+        property,
+        value,
+        'important'
+      )
+    )
+
+    return true
+  }
+
+  function compactDocumentHeader () {
+    if (
+      document.querySelector(
+        '#sp-documento-header-row'
+      )
+    ) {
+      return
+    }
+
+    const heading = Array.from(
+      document.querySelectorAll(
+        'h1, h2, h3, .infraTitulo'
+      )
+    ).find(item =>
+      normalize(item.textContent) ===
+        'registrar documento externo'
+    )
+
+    const commandBar =
+      document.querySelector(
+        '#divInfraBarraComandosSuperior'
+      )
+
+    if (
+      !heading ||
+      !commandBar ||
+      !heading.parentElement
+    ) {
+      return
+    }
+
+    const formerParent =
+      commandBar.parentElement
+
+    const row =
+      document.createElement('div')
+
+    row.id = 'sp-documento-header-row'
+    row.style.cssText = [
+      'align-items:center',
+      'box-sizing:border-box',
+      'display:flex',
+      'flex-wrap:nowrap',
+      'gap:16px',
+      'justify-content:space-between',
+      'margin:4px 0 8px',
+      'min-height:0',
+      'min-width:0',
+      'overflow:visible'
+    ].join(';')
+
+    heading.parentElement.insertBefore(
+      row,
+      heading
+    )
+
+    row.appendChild(heading)
+    row.appendChild(commandBar)
+
+    const fitHeaderToVisibleArea = () => {
+      const viewportWidth =
+        document.documentElement.clientWidth ||
+        window.innerWidth
+
+      const rowLeft =
+        row.getBoundingClientRect().left
+
+      const safeRightGap = 24
+      const availableWidth = Math.max(
+        0,
+        Math.floor(
+          viewportWidth -
+          rowLeft -
+          safeRightGap
+        )
+      )
+
+      row.style.setProperty(
+        'width',
+        `${availableWidth}px`,
+        'important'
+      )
+      row.style.setProperty(
+        'max-width',
+        `${availableWidth}px`,
+        'important'
+      )
+    }
+
+    fitHeaderToVisibleArea()
+    window.addEventListener(
+      'resize',
+      fitHeaderToVisibleArea
+    )
+
+    heading.style.setProperty(
+      'margin',
+      '0',
+      'important'
+    )
+    heading.style.setProperty(
+      'flex',
+      '0 0 auto',
+      'important'
+    )
+    heading.style.setProperty(
+      'width',
+      'auto',
+      'important'
+    )
+    heading.style.setProperty(
+      'white-space',
+      'nowrap',
+      'important'
+    )
+
+    commandBar.style.setProperty(
+      'height',
+      'auto',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'flex',
+      '0 0 auto',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'margin',
+      '0 0 0 auto',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'min-height',
+      '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'max-width',
+      '100%',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'padding',
+      '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'text-align',
+      'right',
+      'important'
+    )
+
+    if (
+      formerParent &&
+      formerParent !== row &&
+      !formerParent.textContent.trim() &&
+      !formerParent.querySelector(
+        'input, select, textarea, button, a, img'
+      )
+    ) {
+      formerParent.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+    }
+  }
+
   function fillField (
     element,
     value
@@ -541,7 +1443,17 @@ async function autopreencherDocumentoExterno (BaseName) {
         '#divInfraBarraComandosInferior'
       )
 
-    if (commandBar?.parentElement) {
+    const headerRow =
+      commandBar?.closest(
+        '#sp-documento-header-row'
+      )
+
+    if (headerRow?.parentElement) {
+      headerRow.parentElement.insertBefore(
+        status,
+        headerRow.nextSibling
+      )
+    } else if (commandBar?.parentElement) {
       commandBar.parentElement.insertBefore(
         status,
         commandBar.nextSibling
@@ -550,6 +1462,10 @@ async function autopreencherDocumentoExterno (BaseName) {
       document.body.prepend(status)
     }
   }
+
+  compactDocumentHeader()
+  highlightExternalDocumentSave()
+  hideUnusedDocumentFields()
 
   const stored = await storageGet([
     CONTEXT_KEY,
@@ -589,19 +1505,30 @@ async function autopreencherDocumentoExterno (BaseName) {
   const warnings = []
 
   if (!requerimentoRapido) {
-    if (!chooseRestrito()) {
+    const restrito =
+      chooseRestrito()
+
+    if (!restrito) {
       warnings.push(
         'nível de acesso Restrito'
       )
     }
 
-    if (
-      !await chooseInformacaoPessoal()
-    ) {
+    const informacaoPessoal =
+      await chooseInformacaoPessoal()
+
+    if (!informacaoPessoal) {
       warnings.push(
         'hipótese Informação Pessoal'
       )
     }
+
+    hideAutomaticDocumentFields(
+      false,
+      false,
+      restrito,
+      informacaoPessoal
+    )
 
     const message =
       'SEI Protocolistas definiu Restrito + Informação Pessoal. Confira antes de salvar.'
@@ -678,6 +1605,8 @@ async function autopreencherDocumentoExterno (BaseName) {
 
   await wait(400)
 
+  hideUnusedDocumentFields()
+
   /*
    * 2. Formato:
    *    Digitalizado nesta Unidade.
@@ -718,6 +1647,8 @@ async function autopreencherDocumentoExterno (BaseName) {
    */
   await wait(500)
 
+  hideUnusedDocumentFields()
+
   const conference = await waitFor(() =>
     findField(
       [
@@ -729,9 +1660,10 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
   )
 
-  if (
-    !chooseDocumentOriginal(conference)
-  ) {
+  const documentoOriginal =
+    chooseDocumentOriginal(conference)
+
+  if (!documentoOriginal) {
     warnings.push(
       'tipo de conferência Documento Original'
     )
@@ -766,7 +1698,10 @@ async function autopreencherDocumentoExterno (BaseName) {
   /*
    * 4. Restrito.
    */
-  if (!chooseRestrito()) {
+  const restrito =
+    chooseRestrito()
+
+  if (!restrito) {
     warnings.push(
       'nível de acesso Restrito'
     )
@@ -777,13 +1712,23 @@ async function autopreencherDocumentoExterno (BaseName) {
    */
   await wait(400)
 
-  if (
-    !await chooseInformacaoPessoal()
-  ) {
+  const informacaoPessoal =
+    await chooseInformacaoPessoal()
+
+  if (!informacaoPessoal) {
     warnings.push(
       'hipótese legal Informação Pessoal'
     )
   }
+
+  hideAutomaticDocumentFields(
+    digitalizado,
+    documentoOriginal,
+    restrito,
+    informacaoPessoal
+  )
+
+  hideQuickRequestToolbar()
 
   /*
    * Finaliza a pendência sem salvar o documento.

@@ -75,6 +75,75 @@
       .trim()
   }
 
+  function matchesProcessTypeQuery (optionText, queryText) {
+    const optionTerms = normalize(optionText).split(' ').filter(Boolean)
+    const queryTerms = normalize(queryText).split(' ').filter(Boolean)
+    let optionIndex = 0
+
+    if (!queryTerms.length) {
+      return false
+    }
+
+    return queryTerms.every((queryTerm) => {
+      const matchingIndex = optionTerms.findIndex(
+        (optionTerm, index) =>
+          index >= optionIndex &&
+          optionTerm.includes(queryTerm)
+      )
+
+      if (matchingIndex === -1) {
+        return false
+      }
+
+      optionIndex = matchingIndex + 1
+      return true
+    })
+  }
+
+  function processTypeNavigationKey (event) {
+    const supportedKeys = [
+      'ArrowDown',
+      'ArrowUp',
+      'Enter',
+      'Escape'
+    ]
+
+    if (supportedKeys.includes(event?.key)) {
+      return event.key
+    }
+
+    if (supportedKeys.includes(event?.code)) {
+      return event.code
+    }
+
+    const legacyKey = Number(event?.keyCode || event?.which)
+
+    return {
+      13: 'Enter',
+      27: 'Escape',
+      38: 'ArrowUp',
+      40: 'ArrowDown'
+    }[legacyKey] || ''
+  }
+
+  function nextProcessTypeOptionIndex (
+    currentIndex,
+    optionCount,
+    direction
+  ) {
+    if (!optionCount) {
+      return -1
+    }
+
+    if (currentIndex === -1) {
+      return direction === 1 ? 0 : optionCount - 1
+    }
+
+    return (
+      currentIndex + direction + optionCount
+    ) % optionCount
+  }
+
   function getAction() {
     return new URLSearchParams(window.location.search).get('acao') || ''
   }
@@ -543,7 +612,7 @@
     grid.appendChild(wrapper)
   }
 
-  function readDraftFromForm(form) {
+  function readDraftFromForm(form, initialData = {}) {
     const selectedOption =
       form.elements.tipoProcesso.selectedOptions[0]
 
@@ -565,6 +634,15 @@
         cleanValue(form.elements.telefone.value),
       email:
         cleanValue(form.elements.email.value),
+      destino:
+        cleanValue(form.elements.destino.value),
+      attendanceId: cleanValue(initialData.attendanceId),
+      procedureId: cleanValue(initialData.procedureId),
+      areaId: cleanValue(initialData.areaId),
+      areaLabel: cleanValue(initialData.areaLabel),
+      objectiveId: cleanValue(initialData.objectiveId),
+      objectiveLabel: cleanValue(initialData.objectiveLabel),
+      operator: initialData.operator || null,
       duda:
         cleanValue(form.elements.duda.value),
       placa:
@@ -698,7 +776,7 @@
     const typeLabel = createElement(
       'label',
       {
-        htmlFor: 'sp-tipo-processo'
+        htmlFor: 'sp-tipo-processo-pesquisa'
       },
       'Tipo do processo'
     )
@@ -717,11 +795,31 @@
       id: 'sp-tipo-processo-pesquisa',
       className: 'sp-clique-type-search',
       type: 'search',
+      role: 'combobox',
+      'aria-autocomplete': 'list',
+      'aria-controls': 'sp-tipo-processo-opcoes',
+      'aria-expanded': 'false',
+      required: 'required',
       autocomplete: 'off',
       placeholder: 'Pesquisar por parte do nome: taxas, perícia, ofício...'
     })
 
     const typeSelect = createProcessTypeSelect()
+    const typeSearchBox = createElement('div', {
+      className: 'sp-clique-type-search-box'
+    })
+    const typeSuggestions = createElement('div', {
+      id: 'sp-tipo-processo-opcoes',
+      className: 'sp-clique-type-options',
+      role: 'listbox'
+    })
+
+    typeSuggestions.hidden = true
+
+    typeSelect.hidden = true
+    typeSelect.tabIndex = -1
+    typeSelect.removeAttribute('required')
+    typeSelect.setAttribute('aria-hidden', 'true')
 
     const typeOptions = Array.from(
       typeSelect.querySelectorAll('option')
@@ -729,49 +827,147 @@
       (option) => option.value
     )
 
-    typeSearch.addEventListener('input', () => {
-      const query = normalize(typeSearch.value)
-      let visibleCount = 0
+    const matchingTypeOptions = () => {
+      const query = typeSearch.value
 
-      typeOptions.forEach((option) => {
-        const optionText = normalize(
+      if (!normalize(query)) {
+        return []
+      }
+
+      return typeOptions.filter((option) =>
+        matchesProcessTypeQuery(option.textContent, query)
+      )
+    }
+
+    const selectTypeOption = (option) => {
+      if (!option) {
+        typeSelect.value = ''
+        return false
+      }
+
+      typeSelect.value = option.value
+      typeSearch.value = option.textContent
+      typeSelect.dispatchEvent(
+        new Event('change', {
+          bubbles: true
+        })
+      )
+
+      return true
+    }
+
+    let visibleTypeOptions = []
+    let activeTypeOptionIndex = -1
+
+    const hideTypeSuggestions = () => {
+      typeSuggestions.hidden = true
+      typeSearch.setAttribute('aria-expanded', 'false')
+      typeSearch.removeAttribute('aria-activedescendant')
+      activeTypeOptionIndex = -1
+    }
+
+    const highlightTypeSuggestion = (index) => {
+      const suggestions = Array.from(typeSuggestions.children)
+
+      activeTypeOptionIndex = index
+
+      const activeSuggestion = suggestions[index]
+
+      if (activeSuggestion?.id) {
+        typeSearch.setAttribute(
+          'aria-activedescendant',
+          activeSuggestion.id
+        )
+      }
+
+      suggestions.forEach((suggestion, suggestionIndex) => {
+        const active = suggestionIndex === index
+        suggestion.classList.toggle(
+          'sp-clique-type-option--active',
+          active
+        )
+        suggestion.setAttribute(
+          'aria-selected',
+          String(active)
+        )
+      })
+
+      suggestions[index]?.scrollIntoView({ block: 'nearest' })
+    }
+
+    const renderTypeSuggestions = () => {
+      visibleTypeOptions = matchingTypeOptions().slice(0, 10)
+      activeTypeOptionIndex = -1
+      typeSuggestions.textContent = ''
+
+      visibleTypeOptions.forEach((option, optionIndex) => {
+        const suggestion = createElement(
+          'button',
+          {
+            id: `sp-tipo-processo-opcao-${optionIndex}`,
+            className: 'sp-clique-type-option',
+            type: 'button',
+            role: 'option',
+            'aria-selected': 'false'
+          },
           option.textContent
         )
 
-        const matches =
-          !query ||
-          optionText.includes(query)
+        suggestion.addEventListener('mousedown', (event) => {
+          event.preventDefault()
+        })
 
-        option.hidden = !matches
-        option.disabled = !matches
+        suggestion.addEventListener('click', () => {
+          selectTypeOption(option)
+          hideTypeSuggestions()
+          typeSearch.focus()
+        })
 
-        if (matches) {
-          visibleCount += 1
-        }
+        typeSuggestions.appendChild(suggestion)
       })
 
-      Array.from(
-        typeSelect.querySelectorAll('optgroup')
-      ).forEach((group) => {
-        const hasVisibleOption = Array.from(
-          group.querySelectorAll('option')
-        ).some(
-          (option) => !option.hidden
-        )
+      typeSuggestions.hidden = visibleTypeOptions.length === 0
+      typeSearch.setAttribute(
+        'aria-expanded',
+        String(visibleTypeOptions.length > 0)
+      )
 
-        group.hidden = !hasVisibleOption
-      })
+      return visibleTypeOptions
+    }
 
-      typeSelect.value = ''
+    const synchronizeSelectedType = () => {
+      const typedName = normalize(typeSearch.value)
+      const exactOption = typeOptions.find((option) =>
+        normalize(option.textContent) === typedName
+      )
 
-      if (query) {
-        typeSelect.size = Math.min(
-          Math.max(visibleCount, 2),
-          8
-        )
+      if (exactOption) {
+        selectTypeOption(exactOption)
       } else {
-        typeSelect.size = 1
+        typeSelect.value = ''
       }
+    }
+
+    typeSearch.addEventListener(
+      'input',
+      () => {
+        synchronizeSelectedType()
+        renderTypeSuggestions()
+      }
+    )
+
+    typeSearch.addEventListener('change', () => {
+      synchronizeSelectedType()
+
+      if (!typeSelect.value) {
+        const matches = matchingTypeOptions()
+
+        if (matches.length === 1) {
+          selectTypeOption(matches[0])
+        }
+      }
+
+      hideTypeSuggestions()
     })
 
     typeSelect.addEventListener('change', () => {
@@ -784,74 +980,76 @@
       ) {
         typeSearch.value =
           selectedOption.textContent
-
-        typeSelect.size = 1
       }
     })
 
     typeSearch.addEventListener('keydown', (event) => {
-      if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
+      const navigationKey = processTypeNavigationKey(event)
+
+      if (navigationKey === 'Escape') {
+        event.stopPropagation()
+        hideTypeSuggestions()
         return
       }
 
-      event.preventDefault()
-      event.stopPropagation()
+      if (
+        navigationKey === 'ArrowDown' ||
+        navigationKey === 'ArrowUp'
+      ) {
+        if (
+          typeSuggestions.hidden ||
+          !visibleTypeOptions.length
+        ) {
+          renderTypeSuggestions()
+        }
 
-      const availableOptions =
-        typeOptions.filter(
-          (option) => !option.hidden
-        )
-
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        if (!availableOptions.length) {
+        if (!visibleTypeOptions.length) {
           return
         }
 
-        const currentIndex =
-          availableOptions.findIndex(
-            (option) => option.value === typeSelect.value
-          )
+        event.preventDefault()
+        event.stopPropagation()
 
-        const nextIndex =
-          event.key === 'ArrowDown'
-            ? Math.min(currentIndex + 1, availableOptions.length - 1)
-            : Math.max(currentIndex <= 0 ? 0 : currentIndex - 1, 0)
-
-        const nextOption = availableOptions[nextIndex]
-
-        typeSelect.value = nextOption.value
-        typeSearch.value = nextOption.textContent
-        typeSelect.dispatchEvent(
-          new Event('change', {
-            bubbles: true
-          })
+        const direction = navigationKey === 'ArrowDown' ? 1 : -1
+        const nextIndex = nextProcessTypeOptionIndex(
+          activeTypeOptionIndex,
+          visibleTypeOptions.length,
+          direction
         )
 
+        highlightTypeSuggestion(nextIndex)
         return
       }
 
-      if (availableOptions.length === 1) {
-        typeSelect.value =
-          availableOptions[0].value
-
-        typeSearch.value =
-          availableOptions[0].textContent
-
-        typeSelect.size = 1
-
-        typeSelect.dispatchEvent(
-          new Event('change', {
-            bubbles: true
-          })
-        )
-      } else {
-        typeSelect.focus()
+      if (navigationKey !== 'Enter') {
+        return
       }
+
+      synchronizeSelectedType()
+
+      const selectedSuggestion =
+        visibleTypeOptions[activeTypeOptionIndex]
+      const matches = matchingTypeOptions()
+      const option = selectedSuggestion ||
+        (matches.length === 1 ? matches[0] : null)
+
+      if (option) {
+        event.preventDefault()
+        event.stopPropagation()
+        selectTypeOption(option)
+        hideTypeSuggestions()
+      }
+    }, true)
+
+    typeSearch.addEventListener('blur', () => {
+      window.setTimeout(hideTypeSuggestions, 120)
     })
+
+    typeSearchBox.append(typeSearch, typeSuggestions)
 
     typeWrapper.append(
       typeLabel,
-      typeSearch,
+      typeSearchBox,
       typeSelect
     )
 
@@ -874,19 +1072,45 @@
         placeholder: 'CPF do interessado'
       },
       {
-        name: 'telefone',
-        label: 'Telefone',
-        maxLength: 25,
-        autocomplete: 'tel',
-        placeholder: 'Telefone com DDD'
-      },
-      {
         name: 'email',
         label: 'E-mail',
         type: 'email',
         autocomplete: 'email',
         placeholder: 'E-mail do interessado'
       },
+      {
+        name: 'destino',
+        label: 'Unidade de destino',
+        placeholder: 'Unidade indicada no FAST MAIL'
+      },
+      {
+        name: 'telefone',
+        label: 'Telefone',
+        maxLength: 25,
+        autocomplete: 'tel',
+        placeholder: 'Telefone com DDD'
+      }
+    ].forEach((field) => addField(grid, field))
+
+    const optionalDetails = createElement('details', {
+      className: 'sp-clique-optional'
+    })
+
+    optionalDetails.appendChild(
+      createElement(
+        'summary',
+        {
+          className: 'sp-clique-optional-summary'
+        },
+        'Mais informações — DUDA, placa, processo, ofício e outros'
+      )
+    )
+
+    const optionalGrid = createElement('div', {
+      className: 'sp-clique-grid sp-clique-grid--optional'
+    })
+
+    ;[
       {
         name: 'duda',
         label: 'DUDA',
@@ -917,18 +1141,50 @@
         maxLength: 200,
         placeholder: 'Outras informações'
       }
-    ].forEach((field) => addField(grid, field))
+    ].forEach((field) => addField(optionalGrid, field))
 
-    if (initialData.email) {
-      const emailField = grid.querySelector('input[name="email"]')
+    optionalDetails.appendChild(optionalGrid)
 
-      if (emailField) {
-        emailField.value = cleanValue(initialData.email)
-        dispatchFieldEvents(emailField)
-      }
+    const initialFields = {
+      nome: initialData.name,
+      cpf: initialData.cpf,
+      email: initialData.email,
+      destino: initialData.destination
     }
 
-    dataSection.appendChild(grid)
+    Object.entries(initialFields).forEach(([name, value]) => {
+      const field = grid.querySelector(`input[name="${name}"]`)
+      if (!field || !value) return
+      field.value = cleanValue(value)
+      dispatchFieldEvents(field)
+    })
+
+    if (initialData.source === 'fast-mail') {
+      const processSelect = grid.querySelector('#sp-tipo-processo')
+      const processSearch = grid.querySelector('#sp-tipo-processo-pesquisa')
+      const expectedNames = [initialData.seiProcessName, initialData.procedureName]
+        .map(processName)
+        .filter(Boolean)
+      const option = Array.from(processSelect?.options || []).find((item) =>
+        expectedNames.includes(processName(item.dataset.processLabel || item.textContent))
+      )
+
+      if (option) {
+        processSelect.value = option.value
+        processSearch.value = option.textContent
+        processSelect.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+
+      ['cpf'].forEach((name) => {
+        const field = grid.querySelector(`input[name="${name}"]`)
+        if (field && !cleanValue(field.value)) {
+          field.classList.add('sp-clique-prefill-missing')
+          field.placeholder = 'Não informado no FAST MAIL — preencha para continuar'
+        }
+      })
+    }
+
+    dataSection.append(grid, optionalDetails)
 
     const message = createElement('div', {
       className: 'sp-clique-message',
@@ -994,7 +1250,7 @@
       continueButton.textContent = 'Processando...'
 
       try {
-        const draft = readDraftFromForm(form)
+        const draft = readDraftFromForm(form, initialData)
 
         if (!draft.tipoProcesso) {
           throw new Error(
@@ -1290,7 +1546,7 @@
         document.body.appendChild(createPanel())
 
         document
-          .querySelector('#sp-tipo-processo')
+          .querySelector('#sp-tipo-processo-pesquisa')
           ?.focus()
       }
     })
@@ -1344,6 +1600,158 @@
         'input, textarea, select'
       )
     )
+  }
+
+  function hasVisibleFormControl(container) {
+    return Array.from(
+      container.querySelectorAll(
+        'input, select, textarea, button'
+      )
+    ).some((control) => {
+      if (
+        control.hidden ||
+        control.closest('[aria-hidden="true"]')
+      ) {
+        return false
+      }
+
+      const style = window.getComputedStyle(control)
+
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden'
+      )
+    })
+  }
+
+  function collapseEmptyFieldAncestors(element) {
+    let parent = element?.parentElement
+
+    while (
+      parent &&
+      parent !== document.body &&
+      parent.tagName !== 'FORM'
+    ) {
+      if (hasVisibleFormControl(parent)) {
+        break
+      }
+
+      const nextParent = parent.parentElement
+
+      parent.style.setProperty(
+        'display',
+        'none',
+        'important'
+      )
+      parent.style.setProperty(
+        'height',
+        '0',
+        'important'
+      )
+      parent.style.setProperty(
+        'min-height',
+        '0',
+        'important'
+      )
+      parent.style.setProperty(
+        'margin',
+        '0',
+        'important'
+      )
+      parent.style.setProperty(
+        'padding',
+        '0',
+        'important'
+      )
+      parent.setAttribute('aria-hidden', 'true')
+
+      parent = nextParent
+    }
+  }
+
+  function hideSmallestFieldContainer(element, maximumControls = 1) {
+    if (!element) {
+      return false
+    }
+
+    let candidate = element
+    let parent = element.parentElement
+
+    while (
+      parent &&
+      parent !== document.body &&
+      parent.tagName !== 'FORM'
+    ) {
+      const controls = parent.querySelectorAll(
+        'input, select, textarea, button'
+      )
+
+      if (controls.length > maximumControls) {
+        break
+      }
+
+      candidate = parent
+      parent = parent.parentElement
+    }
+
+    candidate.style.setProperty(
+      'display',
+      'none',
+      'important'
+    )
+
+    candidate.setAttribute('aria-hidden', 'true')
+    collapseEmptyFieldAncestors(candidate)
+
+    return true
+  }
+
+  function hideUnusedProcessFields() {
+    const automaticProtocol =
+      findFirst([
+        '#optProtocoloAutomatico',
+        'input[type="radio"][id*="ProtocoloAutomatico"]',
+        'input[type="radio"][id*="Automatico"][name*="Protocolo"]'
+      ]) ||
+      Array.from(
+        document.querySelectorAll('label')
+      ).find(
+        (item) =>
+          normalize(item.textContent) === 'automatico'
+      )?.control
+
+    if (automaticProtocol) {
+      automaticProtocol.checked = true
+      dispatchFieldEvents(automaticProtocol)
+
+      const protocolGroup =
+        automaticProtocol.closest('fieldset')
+
+      if (protocolGroup) {
+        protocolGroup.style.setProperty(
+          'display',
+          'none',
+          'important'
+        )
+        protocolGroup.setAttribute('aria-hidden', 'true')
+        collapseEmptyFieldAncestors(protocolGroup)
+      } else {
+        hideSmallestFieldContainer(
+          automaticProtocol,
+          2
+        )
+      }
+    }
+
+    const priority =
+      findFirst([
+        '#selGrauPrioridade',
+        '#selPrioridade',
+        'select[id*="Prioridade"]',
+        'select[name*="Prioridade"]'
+      ]) || findFieldByLabel('Prioridade')
+
+    hideSmallestFieldContainer(priority)
   }
 
   function fillField(element, value) {
@@ -1568,37 +1976,109 @@
     return true
   }
 
-  function findSaveButton() {
-    const direct = findFirst([
-      '#btnSalvar',
-      'button[id*="Salvar"]',
-      'input[id*="Salvar"]',
-      'input[name*="Salvar"]',
-      'input[type="submit"]'
-    ])
-
-    if (direct && direct.offsetParent !== null) {
-      return direct
+  function closeInterestedSuggestions (interestedField) {
+    if (!interestedField) {
+      return
     }
 
+    interestedField.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        code: 'Escape',
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true
+      })
+    )
+
+    try {
+      if (
+        window.jQuery?.fn?.autocomplete &&
+        window.jQuery(interestedField).data('ui-autocomplete')
+      ) {
+        window.jQuery(interestedField).autocomplete('close')
+      }
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Não foi possível fechar o autocomplete pelo jQuery:',
+        error
+      )
+    }
+
+    interestedField.blur()
+
+    document.querySelectorAll(
+      '.ui-autocomplete, ' +
+        'ul[id*="Interessado"], ' +
+        'div[id*="Interessado"][role="listbox"]'
+    ).forEach((suggestions) => {
+      if (!suggestions.closest('.sp-clique-backdrop')) {
+        suggestions.style.display = 'none'
+      }
+    })
+  }
+
+  function findSaveButton() {
     return Array.from(
       document.querySelectorAll(
         'button, input[type="button"], ' +
           'input[type="submit"], a'
       )
-    ).find((element) => {
-      if (element.offsetParent === null) {
-        return false
-      }
+    )
+      .filter((element) => {
+        if (element.offsetParent === null) {
+          return false
+        }
 
-      const text = normalize(
-        element.textContent ||
-          element.value ||
-          element.title
-      )
+        const text = normalize(
+          element.textContent ||
+            element.value ||
+            element.title
+        )
 
-      return text === 'salvar'
-    })
+        return text === 'salvar'
+      })
+      .sort(
+        (first, second) =>
+          first.getBoundingClientRect().top -
+          second.getBoundingClientRect().top
+      )[0] || null
+  }
+
+  function highlightPrimarySaveButton() {
+    const saveButton = findSaveButton()
+
+    if (!saveButton) {
+      return false
+    }
+
+    saveButton.classList.add(
+      'sp-clique-save-primary'
+    )
+    saveButton.setAttribute(
+      'aria-label',
+      'Salvar processo'
+    )
+    saveButton.setAttribute(
+      'title',
+      'Salvar processo'
+    )
+
+    if (saveButton.matches('input')) {
+      saveButton.value = '⚡ SALVAR'
+    } else {
+      /*
+       * O SEI separa a letra do atalho de teclado em
+       * um elemento próprio. Ao destacar o botão com
+       * flex, isso faria o rótulo aparecer como
+       * "S alvar". O texto é unificado sem alterar o
+       * evento nativo do controle.
+       */
+      saveButton.textContent = 'SALVAR'
+    }
+
+    return true
   }
 
   function buildOutput(draft) {
@@ -1627,6 +2107,9 @@
   }
 
   async function fillProcessForm() {
+    hideUnusedProcessFields()
+    highlightPrimarySaveButton()
+
     const stored = await storageGet(STORAGE_KEY)
     const draft = stored[STORAGE_KEY]
 
@@ -1700,6 +2183,8 @@
     if (interestedSelected) {
       await wait(250)
       clickAddInterested(interested)
+      await wait(250)
+      closeInterestedSuggestions(interested)
     }
 
     chooseRestrito()
@@ -1728,6 +2213,14 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    closeInterestedSuggestions(interested)
+
+    const saveButton = findSaveButton()
+
+    if (saveButton) {
+      saveButton.focus({ preventScroll: true })
+    }
   }
 
   async function openFromFastMailHandoff() {
@@ -1760,8 +2253,21 @@
     if (!document.querySelector('.sp-clique-backdrop')) {
       document.body.appendChild(
         createPanel({
+          source: 'fast-mail',
           modalidade: 'email',
-          email: handoff.email
+          attendanceId: handoff.attendanceId,
+          email: handoff.email,
+          name: handoff.name,
+          cpf: handoff.cpf,
+          procedureId: handoff.procedureId,
+          procedureName: handoff.procedureName,
+          seiProcessName: handoff.seiProcessName,
+          destination: handoff.destination,
+          areaId: handoff.areaId,
+          areaLabel: handoff.areaLabel,
+          objectiveId: handoff.objectiveId,
+          objectiveLabel: handoff.objectiveLabel,
+          operator: handoff.operator
         })
       )
     }
@@ -1769,7 +2275,7 @@
     await storageRemove(FAST_MAIL_HANDOFF_KEY)
 
     document
-      .querySelector('#sp-tipo-processo')
+      .querySelector('#sp-tipo-processo-pesquisa')
       ?.focus()
 
     return true

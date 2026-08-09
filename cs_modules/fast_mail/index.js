@@ -11,16 +11,21 @@
   const ATTENDANCE_KEY = 'centralProtocolistaAtendimento'
   const FAST_PROC_HANDOFF_KEY = 'fastMailFastProcHandoff'
   const EMAIL_RESULT_KEY = 'fastMailProcessoFinalizado'
+  const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
+  const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
   const HISTORY_SEPARATOR = '----- HISTÓRICO DE MENSAGENS ANTERIORES -----'
   const DAF_FORM_URL = 'https://www.detran.rj.gov.br/images/formularios/DA0032_devolutaxa.pdf'
   const RESIDENCE_DECLARATION_URL = 'https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf'
   const GENERAL_REQUEST_URL = 'https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf'
+  const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
+  const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
   let currentOperator = null
+  let processResultAutofillRunning = false
 
   function processTypeById (procedureId) {
     return catalogProcesses.find((item) => item.id === procedureId) || null
@@ -60,7 +65,82 @@
     if (result?.then) result.then(resolve, reject)
   })
 
+  const runtimeMessage = (message) => new Promise((resolve, reject) => {
+    const result = api.runtime.sendMessage(message, (response) => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else if (response?.ok === false) reject(new Error(response.error || 'Falha na comunicação da extensão.'))
+      else resolve(response || {})
+    })
+    if (result?.then) result.then(resolve, reject)
+  })
+
   const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+  function dispatchFieldEvents (field) {
+    ['input', 'change', 'keyup', 'blur'].forEach((eventName) => {
+      field.dispatchEvent(new Event(eventName, { bubbles: true }))
+    })
+  }
+
+  function findLoginField (selectors) {
+    for (const doc of allDocuments()) {
+      for (const selector of selectors) {
+        const field = doc.querySelector(selector)
+        if (field && isVisible(field)) return field
+      }
+    }
+    return null
+  }
+
+  async function autoLoginWebmail () {
+    const passwordField = findLoginField([
+      'input[type="password"]',
+      'input[name*="password" i]',
+      'input[id*="password" i]',
+      'input[name*="senha" i]',
+      'input[id*="senha" i]'
+    ])
+
+    if (!passwordField) return false
+
+    const userField = findLoginField([
+      'input[type="email"]',
+      'input[autocomplete="username"]',
+      'input[name*="username" i]',
+      'input[id*="username" i]',
+      'input[name*="usuario" i]',
+      'input[id*="usuario" i]'
+    ])
+
+    if (!userField) return false
+
+    const stored = await storageGet(WEBMAIL_CREDENTIALS_KEY)
+    const credentials = stored[WEBMAIL_CREDENTIALS_KEY]
+    if (!credentials?.remember || !credentials.user || !credentials.password) return false
+
+    const attemptKey = 'seiProtocolistasWebmailLoginAttempt'
+    const previousAttempt = Number(sessionStorage.getItem(attemptKey) || 0)
+    if (Date.now() - previousAttempt < 30000) return true
+    sessionStorage.setItem(attemptKey, String(Date.now()))
+
+    userField.focus()
+    userField.value = credentials.user
+    dispatchFieldEvents(userField)
+    passwordField.focus()
+    passwordField.value = credentials.password
+    dispatchFieldEvents(passwordField)
+
+    const form = passwordField.closest('form') || userField.closest('form')
+    const submit = form?.querySelector('button[type="submit"],input[type="submit"],button:not([type])')
+    await sleep(150)
+
+    if (submit) clickElement(submit)
+    else if (form?.requestSubmit) form.requestSubmit()
+    else form?.submit?.()
+
+    return true
+  }
 
   function allDocuments () {
     const documents = [document]
@@ -751,10 +831,14 @@
     }
   }
 
-  async function insertPendingProcessResponse () {
+  async function insertPendingProcessResponse (automatic = false) {
+    if (automatic && processResultAutofillRunning) return
+
     const button = document.querySelector('#spfm-insert-process-response')
     const status = document.querySelector('#spfm-process-response-status')
     const originalText = button?.textContent || 'INSERIR RESPOSTA DO PROCESSO'
+
+    if (automatic) processResultAutofillRunning = true
 
     if (button) {
       button.disabled = true
@@ -765,15 +849,27 @@
       const payload = await pendingProcessResult()
       if (!payload) throw new Error('Não há dados de processo para este e-mail.')
 
-      const editor = findMessageBodyEditor()
+      const editor = automatic
+        ? await waitFor(findMessageBodyEditor, 7000)
+        : findMessageBodyEditor()
       if (!editor) throw new Error('Não localizei o corpo editável do e-mail.')
 
-      insertProcessCompletedResponse(
-        editor,
-        buildProcessCompletedResponseHtml(payload)
-      )
+      if (automatic) {
+        const subjectField = await waitFor(findSubjectField, 7000)
+        if (!subjectField) throw new Error('Não localizei o assunto editável do e-mail.')
+      }
 
-      finalizeSubjectWithProcessResult(payload)
+      if (!finalizeSubjectWithProcessResult(payload)) {
+        throw new Error('Não foi possível atualizar automaticamente o assunto do e-mail.')
+      }
+
+      if (!editor.querySelector?.('[data-sei-protocolistas="process-completed-response"]')) {
+        insertProcessCompletedResponse(
+          editor,
+          buildProcessCompletedResponseHtml(payload)
+        )
+      }
+
       renderAttendanceCompletedState(payload)
 
       await storageRemove(EMAIL_RESULT_KEY)
@@ -790,7 +886,17 @@
         button.disabled = false
         button.textContent = originalText
       }
+    } finally {
+      if (automatic) processResultAutofillRunning = false
     }
+  }
+
+  async function autoInsertPendingProcessResponse () {
+    const payload = await pendingProcessResult()
+    if (!payload) return
+
+    await updateProcessResponseButton()
+    await insertPendingProcessResponse(true)
   }
 
 
@@ -1143,20 +1249,74 @@
         throw new Error('Não identifiquei o e-mail do remetente.')
       }
 
+      const name = cleanValue(document.querySelector('#spfm-requester-name')?.value)
+      const cpf = String(document.querySelector('#spfm-requester-cpf')?.value || '').replace(/\D/g, '')
+      const procedureId = document.querySelector('#spfm-procedure')?.value || ''
+      const processType = processTypeById(procedureId)
+      const area = document.querySelector('#spfm-area')
+      const objective = document.querySelector('#spfm-objective')
+      const destination = selectedDestination()
+
+      if (!name) throw new Error('Digite o nome do requerente.')
+      if (!processType) throw new Error('Selecione o procedimento.')
+
+      const attendanceId = globalThis.crypto?.randomUUID?.() ||
+        `atendimento-${Date.now()}-${Math.random().toString(16).slice(2)}`
+
       const handoff = {
+        attendanceId,
         source: 'fast-mail',
         mode: 'email',
         email,
+        name,
+        cpf,
+        procedureId,
+        procedureName: processType.name || '',
+        seiProcessName: processType.seiNames?.[0] || processType.name || '',
+        destination,
+        areaId: area?.value || '',
+        areaLabel: area?.selectedOptions?.[0]?.textContent || '',
+        objectiveId: objective?.value || '',
+        objectiveLabel: objective?.selectedOptions?.[0]?.textContent || '',
+        operator: currentOperator
+          ? {
+              number: currentOperator.number,
+              email: currentOperator.email,
+              source: currentOperator.source
+            }
+          : null,
         createdAt: Date.now(),
         expiresAt: Date.now() + (15 * 60 * 1000)
       }
 
-      await storageSet({
-        [FAST_PROC_HANDOFF_KEY]: handoff
-      })
+      const seiWindow = window.open('about:blank', '_blank')
+      if (!seiWindow) throw new Error('Autorize pop-ups para abrir o SEI.')
+
+      try {
+        await storageSet({
+          [FAST_PROC_HANDOFF_KEY]: handoff,
+          [ATTENDANCE_KEY]: {
+            ...handoff,
+            updatedAt: Date.now()
+          }
+        })
+        await runtimeMessage({
+          type: REGISTER_ORIGIN_MESSAGE,
+          attendanceId,
+          email,
+          url: location.href,
+          createdAt: handoff.createdAt,
+          expiresAt: Date.now() + (60 * 60 * 1000)
+        })
+        seiWindow.location.replace(SEI_LOGIN_URL)
+        seiWindow.opener = null
+      } catch (error) {
+        seiWindow.close()
+        throw error
+      }
 
       if (button) {
-        button.textContent = 'PRONTO — VÁ AO SEI E CLIQUE EM INICIAR PROCESSO'
+        button.textContent = 'SEI ABERTO — PREPARANDO FAST PROC'
       }
     } catch (error) {
       if (button) {
@@ -1377,7 +1537,9 @@
     panel.querySelector('#spfm-triagem').addEventListener('click', prepareTriagem)
     panel.querySelector('#spfm-missing-toggle').addEventListener('click', toggleMissingDocuments)
     panel.querySelector('#spfm-insert-requirement').addEventListener('click', insertMissingDocumentsRequirement)
-    panel.querySelector('#spfm-insert-process-response').addEventListener('click', insertPendingProcessResponse)
+    panel.querySelector('#spfm-insert-process-response').addEventListener('click', () => {
+      insertPendingProcessResponse(false)
+    })
     panel.querySelector('#spfm-requester-cpf').addEventListener('input', (event) => {
       event.target.value = formatCpf(event.target.value)
     })
@@ -1426,7 +1588,9 @@
 
     if (operator) await storageSet({ [OPERATOR_KEY]: operator })
 
-    await updateProcessResponseButton()
+    if (IS_COMPOSE_WINDOW) {
+      await autoInsertPendingProcessResponse()
+    }
 
     if (senderEmail) {
       const stored = await storageGet(ATTENDANCE_KEY)
@@ -1473,6 +1637,8 @@
   }
 
   async function initialize () {
+    if (await autoLoginWebmail()) return
+
     await scan()
 
     if (!IS_COMPOSE_WINDOW) {
@@ -1485,12 +1651,19 @@
     await loadPanelAttendance()
     updateMissingDocumentsVisibility()
     await scan()
-    await updateProcessResponseButton()
+    await autoInsertPendingProcessResponse()
 
     // O Bcc é obrigatório em todas as respostas: prepara automaticamente.
     window.setTimeout(() => prepareBcc(), 700)
     window.setInterval(scan, 2500)
   }
+
+  api.runtime.onMessage.addListener((message) => {
+    if (message?.type !== PROCESS_RESULT_READY_MESSAGE) return
+    autoInsertPendingProcessResponse().catch((error) => {
+      console.error('[SEI Protocolistas] Falha ao inserir automaticamente o retorno do processo:', error)
+    })
+  })
 
   initialize()
 })()

@@ -23,11 +23,13 @@ O projeto está na fase de validação dos fluxos de abertura rápida e inclusã
 legado que ainda precisa ser validado permanece no repositório, mas as opções fora do escopo inicial
 estão ocultas e desativadas por padrão.
 
-A versão `0.3.2` consolida a linha de base funcional da **Central Protocolista**, do **FAST MAIL**
+A versão `0.4.1` integra a **Central Protocolista**, o **FAST MAIL**
 no webmail institucional e do **FAST PROC** no SEI-RJ. O catálogo local organiza os procedimentos
 prioritários por área, a triagem prepara exigências e respostas, e o retorno do SEI ao e-mail
-reaproveita o endereço do atendimento. A abertura automática do SEI e o transporte completo de
-todos os dados entre FAST MAIL e FAST PROC permanecem como próximas etapas.
+reaproveita o endereço do atendimento. O botão **ABRIR PROCESSO** transporta os dados disponíveis,
+abre o SEI, retoma o login quando necessário, localiza **Iniciar Processo** e apresenta o FAST PROC
+preenchido para revisão. Ao final, o card do processo devolve o foco à conversa original no Webmail
+e disponibiliza os dados da resposta. O salvamento e a confirmação final permanecem manuais.
 
 A Central pode ser aberta pelo ícone da extensão. Preferências e credenciais ficam armazenadas
 localmente no navegador; não devem ser exportadas nem enviadas ao repositório.

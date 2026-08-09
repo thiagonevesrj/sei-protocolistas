@@ -8,6 +8,8 @@
   const MAX_ACTIVE_CONTEXT_AGE = 2 * 60 * 60 * 1000
   const MAX_REGISTRY_AGE = 180 * 24 * 60 * 60 * 1000
   const MAX_PENDING_AGE = 15 * 60 * 1000
+  const QUICK_REQUEST_LABEL = 'REQUERIMENTO RÁPIDO'
+  const QUICK_REQUEST_LOADING_LABEL = 'ABRINDO...'
 
   const browserApi =
     window.currentBrowser ||
@@ -477,11 +479,27 @@
 
     text.className =
       'sp-fast-proc-rq__text'
-    text.textContent = 'RQ'
+    text.textContent = QUICK_REQUEST_LABEL
 
     button.append(bolt, text)
 
     return button
+  }
+
+  function resetRqButton (button) {
+    if (!button?.isConnected) {
+      return
+    }
+
+    button.disabled = false
+
+    button.classList.remove(
+      'sp-fast-proc-rq--loading'
+    )
+
+    button.querySelector(
+      '.sp-fast-proc-rq__text'
+    ).textContent = QUICK_REQUEST_LABEL
   }
 
   function clickNativeElement(element) {
@@ -576,6 +594,17 @@
     const button =
       createRqButton()
 
+    browserApi.storage?.onChanged
+      ?.addListener((changes, areaName) => {
+        if (
+          areaName === 'local' &&
+          changes[PENDING_KEY] &&
+          !changes[PENDING_KEY].newValue
+        ) {
+          resetRqButton(button)
+        }
+      })
+
     button.addEventListener(
       'click',
       async () => {
@@ -587,7 +616,8 @@
 
         button.querySelector(
           '.sp-fast-proc-rq__text'
-        ).textContent = '...'
+        ).textContent =
+          QUICK_REQUEST_LOADING_LABEL
 
         try {
           const now = Date.now()
@@ -624,6 +654,11 @@
           clickNativeElement(
             includeLink
           )
+
+          window.setTimeout(
+            () => resetRqButton(button),
+            12000
+          )
         } catch (error) {
           console.error(
             '[FAST PROC RQ] Falha ao abrir Requerimento:',
@@ -636,15 +671,7 @@
             }`
           )
 
-          button.disabled = false
-
-          button.classList.remove(
-            'sp-fast-proc-rq--loading'
-          )
-
-          button.querySelector(
-            '.sp-fast-proc-rq__text'
-          ).textContent = 'RQ'
+          resetRqButton(button)
         }
       }
     )
