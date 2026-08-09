@@ -100,6 +100,50 @@
     })
   }
 
+  function processTypeNavigationKey (event) {
+    const supportedKeys = [
+      'ArrowDown',
+      'ArrowUp',
+      'Enter',
+      'Escape'
+    ]
+
+    if (supportedKeys.includes(event?.key)) {
+      return event.key
+    }
+
+    if (supportedKeys.includes(event?.code)) {
+      return event.code
+    }
+
+    const legacyKey = Number(event?.keyCode || event?.which)
+
+    return {
+      13: 'Enter',
+      27: 'Escape',
+      38: 'ArrowUp',
+      40: 'ArrowDown'
+    }[legacyKey] || ''
+  }
+
+  function nextProcessTypeOptionIndex (
+    currentIndex,
+    optionCount,
+    direction
+  ) {
+    if (!optionCount) {
+      return -1
+    }
+
+    if (currentIndex === -1) {
+      return direction === 1 ? 0 : optionCount - 1
+    }
+
+    return (
+      currentIndex + direction + optionCount
+    ) % optionCount
+  }
+
   function getAction() {
     return new URLSearchParams(window.location.search).get('acao') || ''
   }
@@ -818,6 +862,7 @@
     const hideTypeSuggestions = () => {
       typeSuggestions.hidden = true
       typeSearch.setAttribute('aria-expanded', 'false')
+      typeSearch.removeAttribute('aria-activedescendant')
       activeTypeOptionIndex = -1
     }
 
@@ -825,6 +870,15 @@
       const suggestions = Array.from(typeSuggestions.children)
 
       activeTypeOptionIndex = index
+
+      const activeSuggestion = suggestions[index]
+
+      if (activeSuggestion?.id) {
+        typeSearch.setAttribute(
+          'aria-activedescendant',
+          activeSuggestion.id
+        )
+      }
 
       suggestions.forEach((suggestion, suggestionIndex) => {
         const active = suggestionIndex === index
@@ -846,10 +900,11 @@
       activeTypeOptionIndex = -1
       typeSuggestions.textContent = ''
 
-      visibleTypeOptions.forEach((option) => {
+      visibleTypeOptions.forEach((option, optionIndex) => {
         const suggestion = createElement(
           'button',
           {
+            id: `sp-tipo-processo-opcao-${optionIndex}`,
             className: 'sp-clique-type-option',
             type: 'button',
             role: 'option',
@@ -929,13 +984,22 @@
     })
 
     typeSearch.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
+      const navigationKey = processTypeNavigationKey(event)
+
+      if (navigationKey === 'Escape') {
+        event.stopPropagation()
         hideTypeSuggestions()
         return
       }
 
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        if (typeSuggestions.hidden) {
+      if (
+        navigationKey === 'ArrowDown' ||
+        navigationKey === 'ArrowUp'
+      ) {
+        if (
+          typeSuggestions.hidden ||
+          !visibleTypeOptions.length
+        ) {
           renderTypeSuggestions()
         }
 
@@ -944,18 +1008,20 @@
         }
 
         event.preventDefault()
+        event.stopPropagation()
 
-        const direction = event.key === 'ArrowDown' ? 1 : -1
-        const nextIndex = activeTypeOptionIndex === -1
-          ? (direction === 1 ? 0 : visibleTypeOptions.length - 1)
-          : (activeTypeOptionIndex + direction + visibleTypeOptions.length) %
-            visibleTypeOptions.length
+        const direction = navigationKey === 'ArrowDown' ? 1 : -1
+        const nextIndex = nextProcessTypeOptionIndex(
+          activeTypeOptionIndex,
+          visibleTypeOptions.length,
+          direction
+        )
 
         highlightTypeSuggestion(nextIndex)
         return
       }
 
-      if (event.key !== 'Enter') {
+      if (navigationKey !== 'Enter') {
         return
       }
 
@@ -969,10 +1035,11 @@
 
       if (option) {
         event.preventDefault()
+        event.stopPropagation()
         selectTypeOption(option)
         hideTypeSuggestions()
       }
-    })
+    }, true)
 
     typeSearch.addEventListener('blur', () => {
       window.setTimeout(hideTypeSuggestions, 120)

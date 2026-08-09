@@ -376,6 +376,11 @@ function testProcessTypeUsesOneSearchableField () {
   assert.ok(source.includes("role: 'listbox'"))
   assert.ok(source.includes('renderTypeSuggestions'))
   assert.ok(source.includes('visibleTypeOptions[activeTypeOptionIndex]'))
+  assert.ok(source.includes('function processTypeNavigationKey'))
+  assert.ok(source.includes('function nextProcessTypeOptionIndex'))
+  assert.ok(source.includes("'aria-activedescendant'"))
+  assert.ok(source.includes('event.stopPropagation()'))
+  assert.ok(source.includes('    }, true)'))
   assert.ok(source.includes('typeSelect.hidden = true'))
   assert.ok(source.includes('matchingTypeOptions'))
   assert.ok(source.includes(".querySelector('#sp-tipo-processo-pesquisa')"))
@@ -404,6 +409,45 @@ function testProcessTypeUsesOneSearchableField () {
     context.result('Devolução de Taxas', 'tax dev'),
     false
   )
+
+  const navigationStart = source.indexOf(
+    '  function processTypeNavigationKey'
+  )
+  const navigationEnd = source.indexOf(
+    '\n  function getAction()',
+    navigationStart
+  )
+  const navigationSource = source.slice(
+    navigationStart,
+    navigationEnd
+  )
+  const navigationContext = {
+    navigationKey: null,
+    nextIndex: null
+  }
+
+  vm.runInNewContext(
+    `${navigationSource}\n` +
+      'navigationKey = processTypeNavigationKey;\n' +
+      'nextIndex = nextProcessTypeOptionIndex;',
+    navigationContext
+  )
+
+  assert.strictEqual(
+    navigationContext.navigationKey({ key: 'ArrowDown' }),
+    'ArrowDown'
+  )
+  assert.strictEqual(
+    navigationContext.navigationKey({ keyCode: 40 }),
+    'ArrowDown'
+  )
+  assert.strictEqual(
+    navigationContext.navigationKey({ which: 13 }),
+    'Enter'
+  )
+  assert.strictEqual(navigationContext.nextIndex(-1, 2, 1), 0)
+  assert.strictEqual(navigationContext.nextIndex(0, 2, 1), 1)
+  assert.strictEqual(navigationContext.nextIndex(1, 2, -1), 0)
 }
 
 function testInterestedAutocompleteIsReleased () {
