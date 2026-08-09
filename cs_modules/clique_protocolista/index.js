@@ -75,6 +75,31 @@
       .trim()
   }
 
+  function matchesProcessTypeQuery (optionText, queryText) {
+    const optionTerms = normalize(optionText).split(' ').filter(Boolean)
+    const queryTerms = normalize(queryText).split(' ').filter(Boolean)
+    let optionIndex = 0
+
+    if (!queryTerms.length) {
+      return false
+    }
+
+    return queryTerms.every((queryTerm) => {
+      const matchingIndex = optionTerms.findIndex(
+        (optionTerm, index) =>
+          index >= optionIndex &&
+          optionTerm.includes(queryTerm)
+      )
+
+      if (matchingIndex === -1) {
+        return false
+      }
+
+      optionIndex = matchingIndex + 1
+      return true
+    })
+  }
+
   function getAction() {
     return new URLSearchParams(window.location.search).get('acao') || ''
   }
@@ -707,7 +732,7 @@
     const typeLabel = createElement(
       'label',
       {
-        htmlFor: 'sp-tipo-processo'
+        htmlFor: 'sp-tipo-processo-pesquisa'
       },
       'Tipo do processo'
     )
@@ -726,19 +751,26 @@
       id: 'sp-tipo-processo-pesquisa',
       className: 'sp-clique-type-search',
       type: 'search',
-      list: 'sp-tipo-processo-opcoes',
       role: 'combobox',
       'aria-autocomplete': 'list',
       'aria-controls': 'sp-tipo-processo-opcoes',
+      'aria-expanded': 'false',
       required: 'required',
       autocomplete: 'off',
       placeholder: 'Pesquisar por parte do nome: taxas, perícia, ofício...'
     })
 
     const typeSelect = createProcessTypeSelect()
-    const typeSuggestions = createElement('datalist', {
-      id: 'sp-tipo-processo-opcoes'
+    const typeSearchBox = createElement('div', {
+      className: 'sp-clique-type-search-box'
     })
+    const typeSuggestions = createElement('div', {
+      id: 'sp-tipo-processo-opcoes',
+      className: 'sp-clique-type-options',
+      role: 'listbox'
+    })
+
+    typeSuggestions.hidden = true
 
     typeSelect.hidden = true
     typeSelect.tabIndex = -1
@@ -751,23 +783,15 @@
       (option) => option.value
     )
 
-    typeOptions.forEach((option) => {
-      typeSuggestions.appendChild(
-        createElement('option', {
-          value: option.textContent
-        })
-      )
-    })
-
     const matchingTypeOptions = () => {
-      const query = normalize(typeSearch.value)
+      const query = typeSearch.value
 
-      if (!query) {
+      if (!normalize(query)) {
         return []
       }
 
       return typeOptions.filter((option) =>
-        normalize(option.textContent).includes(query)
+        matchesProcessTypeQuery(option.textContent, query)
       )
     }
 
@@ -788,6 +812,74 @@
       return true
     }
 
+    let visibleTypeOptions = []
+    let activeTypeOptionIndex = -1
+
+    const hideTypeSuggestions = () => {
+      typeSuggestions.hidden = true
+      typeSearch.setAttribute('aria-expanded', 'false')
+      activeTypeOptionIndex = -1
+    }
+
+    const highlightTypeSuggestion = (index) => {
+      const suggestions = Array.from(typeSuggestions.children)
+
+      activeTypeOptionIndex = index
+
+      suggestions.forEach((suggestion, suggestionIndex) => {
+        const active = suggestionIndex === index
+        suggestion.classList.toggle(
+          'sp-clique-type-option--active',
+          active
+        )
+        suggestion.setAttribute(
+          'aria-selected',
+          String(active)
+        )
+      })
+
+      suggestions[index]?.scrollIntoView({ block: 'nearest' })
+    }
+
+    const renderTypeSuggestions = () => {
+      visibleTypeOptions = matchingTypeOptions().slice(0, 10)
+      activeTypeOptionIndex = -1
+      typeSuggestions.textContent = ''
+
+      visibleTypeOptions.forEach((option) => {
+        const suggestion = createElement(
+          'button',
+          {
+            className: 'sp-clique-type-option',
+            type: 'button',
+            role: 'option',
+            'aria-selected': 'false'
+          },
+          option.textContent
+        )
+
+        suggestion.addEventListener('mousedown', (event) => {
+          event.preventDefault()
+        })
+
+        suggestion.addEventListener('click', () => {
+          selectTypeOption(option)
+          hideTypeSuggestions()
+          typeSearch.focus()
+        })
+
+        typeSuggestions.appendChild(suggestion)
+      })
+
+      typeSuggestions.hidden = visibleTypeOptions.length === 0
+      typeSearch.setAttribute(
+        'aria-expanded',
+        String(visibleTypeOptions.length > 0)
+      )
+
+      return visibleTypeOptions
+    }
+
     const synchronizeSelectedType = () => {
       const typedName = normalize(typeSearch.value)
       const exactOption = typeOptions.find((option) =>
@@ -803,7 +895,10 @@
 
     typeSearch.addEventListener(
       'input',
-      synchronizeSelectedType
+      () => {
+        synchronizeSelectedType()
+        renderTypeSuggestions()
+      }
     )
 
     typeSearch.addEventListener('change', () => {
@@ -816,6 +911,8 @@
           selectTypeOption(matches[0])
         }
       }
+
+      hideTypeSuggestions()
     })
 
     typeSelect.addEventListener('change', () => {
@@ -832,27 +929,61 @@
     })
 
     typeSearch.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideTypeSuggestions()
+        return
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (typeSuggestions.hidden) {
+          renderTypeSuggestions()
+        }
+
+        if (!visibleTypeOptions.length) {
+          return
+        }
+
+        event.preventDefault()
+
+        const direction = event.key === 'ArrowDown' ? 1 : -1
+        const nextIndex = activeTypeOptionIndex === -1
+          ? (direction === 1 ? 0 : visibleTypeOptions.length - 1)
+          : (activeTypeOptionIndex + direction + visibleTypeOptions.length) %
+            visibleTypeOptions.length
+
+        highlightTypeSuggestion(nextIndex)
+        return
+      }
+
       if (event.key !== 'Enter') {
         return
       }
 
       synchronizeSelectedType()
 
-      if (!typeSelect.value) {
-        const matches = matchingTypeOptions()
+      const selectedSuggestion =
+        visibleTypeOptions[activeTypeOptionIndex]
+      const matches = matchingTypeOptions()
+      const option = selectedSuggestion ||
+        (matches.length === 1 ? matches[0] : null)
 
-        if (matches.length === 1) {
-          event.preventDefault()
-          selectTypeOption(matches[0])
-        }
+      if (option) {
+        event.preventDefault()
+        selectTypeOption(option)
+        hideTypeSuggestions()
       }
     })
 
+    typeSearch.addEventListener('blur', () => {
+      window.setTimeout(hideTypeSuggestions, 120)
+    })
+
+    typeSearchBox.append(typeSearch, typeSuggestions)
+
     typeWrapper.append(
       typeLabel,
-      typeSearch,
-      typeSelect,
-      typeSuggestions
+      typeSearchBox,
+      typeSelect
     )
 
     grid.appendChild(typeWrapper)

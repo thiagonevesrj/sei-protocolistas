@@ -370,12 +370,40 @@ function testProcessTypeUsesOneSearchableField () {
   const source = read('cs_modules/clique_protocolista/index.js')
   const styles = read('cs_modules/clique_protocolista/styles.css')
 
-  assert.ok(source.includes("list: 'sp-tipo-processo-opcoes'"))
-  assert.ok(source.includes("const typeSuggestions = createElement('datalist'"))
+  assert.ok(source.includes('function matchesProcessTypeQuery'))
+  assert.ok(source.includes('optionTerm.includes(queryTerm)'))
+  assert.ok(source.includes("className: 'sp-clique-type-options'"))
+  assert.ok(source.includes("role: 'listbox'"))
+  assert.ok(source.includes('renderTypeSuggestions'))
+  assert.ok(source.includes('visibleTypeOptions[activeTypeOptionIndex]'))
   assert.ok(source.includes('typeSelect.hidden = true'))
   assert.ok(source.includes('matchingTypeOptions'))
   assert.ok(source.includes(".querySelector('#sp-tipo-processo-pesquisa')"))
   assert.ok(styles.includes('#sp-tipo-processo[hidden]'))
+  assert.ok(styles.includes('.sp-clique-type-option--active'))
+
+  const normalizeStart = source.indexOf('  function normalize(value)')
+  const matcherEnd = source.indexOf('\n  function getAction()', normalizeStart)
+  const matcherSource = source.slice(normalizeStart, matcherEnd)
+  const context = { result: null }
+
+  vm.runInNewContext(
+    `${matcherSource}\nresult = matchesProcessTypeQuery`,
+    context
+  )
+
+  assert.strictEqual(
+    context.result('Devolução de Taxas', 'dev taxas'),
+    true
+  )
+  assert.strictEqual(
+    context.result('Solicitação Geral - Habilitação', 'sol hab'),
+    true
+  )
+  assert.strictEqual(
+    context.result('Devolução de Taxas', 'tax dev'),
+    false
+  )
 }
 
 function testInterestedAutocompleteIsReleased () {

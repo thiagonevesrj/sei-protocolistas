@@ -394,6 +394,10 @@
   color: #ff5c5c !important;
 }
 /* FAST PROC — pesquisa parcial do tipo de processo */
+.sp-clique-type-search-box {
+  position: relative;
+}
+
 .sp-clique-type-search {
   background: #000000 !important;
   border: 1px solid #93a4b8 !important;
@@ -418,4 +422,46 @@
 
 #sp-tipo-processo[hidden] {
   display: none !important;
+}
+
+.sp-clique-type-options {
+  background: #071a33;
+  border: 1px solid #e0ae28;
+  border-radius: 4px;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 45%);
+  box-sizing: border-box;
+  left: 0;
+  max-height: 230px;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 2147483647;
+}
+
+.sp-clique-type-options[hidden] {
+  display: none !important;
+}
+
+.sp-clique-type-option {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  color: #fff;
+  cursor: pointer;
+  display: block;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.sp-clique-type-option:last-child {
+  border-bottom: 0;
+}
+
+.sp-clique-type-option:hover,
+.sp-clique-type-option--active {
+  background: #14345e;
+  color: #f2c94c;
 }
