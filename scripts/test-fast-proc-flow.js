@@ -386,6 +386,11 @@ function testProcessTypeUsesOneSearchableField () {
   assert.ok(source.includes(".querySelector('#sp-tipo-processo-pesquisa')"))
   assert.ok(styles.includes('#sp-tipo-processo[hidden]'))
   assert.ok(styles.includes('.sp-clique-type-option--active'))
+  assert.ok(styles.includes("[aria-selected='true']"))
+  assert.ok(styles.includes('background: #e0ae28 !important'))
+  assert.ok(styles.includes('border-left: 5px solid #ffffff !important'))
+  assert.ok(styles.includes('color: #071a33 !important'))
+  assert.ok(styles.includes('font-weight: 800 !important'))
 
   const normalizeStart = source.indexOf('  function normalize(value)')
   const matcherEnd = source.indexOf('\n  function getAction()', normalizeStart)
