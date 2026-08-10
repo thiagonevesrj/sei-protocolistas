@@ -372,8 +372,67 @@
       "quickTrigger": "PERICIA",
       "priority": true,
       "responseModel": "divmed",
-      "documentsStatus": "pending-validation",
-      "category": "habilitacao"
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
+          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "medical-report",
+          "label": "Laudo médico",
+          "text": "Laudo médico contendo CID, tipo e grau da deficiência, dentro das condições de validade aplicáveis ao caso."
+        },
+        {
+          "id": "audiometry",
+          "label": "Audiometria, quando deficiência auditiva",
+          "text": "Audiometria, quando a solicitação envolver deficiência auditiva."
+        },
+        {
+          "id": "ophthalmologic-report",
+          "label": "Laudo oftalmológico, quando visão monocular",
+          "text": "Laudo oftalmológico, quando a solicitação envolver visão monocular."
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação válido e com foto."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "cnh-if-any",
+          "label": "CNH, caso possua",
+          "text": "Carteira Nacional de Habilitação, caso o requerente já seja habilitado."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência"
+        },
+        {
+          "id": "representation",
+          "label": "Documentação do representante, quando houver",
+          "text": "Procuração e documentos de identificação ou credenciamento do representante, conforme se trate de advogado, despachante ou outro procurador."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "DIVMED - Perícia Médica",
+        "cards": [
+          "663113e3d9dba6d93db00a8a",
+          "64e29e008682149db2680d4a"
+        ]
+      }
     },
     {
       "id": "isencao-taxa",
@@ -398,8 +457,80 @@
       "quickTrigger": "CNH-ESTR",
       "priority": true,
       "responseModel": "standard",
-      "documentsStatus": "pending-validation",
-      "category": "habilitacao"
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
+          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "duda-206-2",
+          "label": "DUDA 206-2",
+          "text": "DUDA código 206-2 referente ao serviço de averbação de habilitação estrangeira.",
+          "link": "https://www.ib7.bradesco.com.br/ibpfdetranrj/debitoVeiculoRJDudaSelecionarProduto.do?cdProdutoInicial=INI",
+          "linkLabel": "Emitir o DUDA 206-2"
+        },
+        {
+          "id": "duda-payment-proof",
+          "label": "Comprovante de pagamento do DUDA",
+          "text": "Comprovante de pagamento do DUDA código 206-2."
+        },
+        {
+          "id": "rj-residence-no-declaration",
+          "label": "Comprovante de residência no RJ",
+          "text": "Comprovante de residência no Estado do Rio de Janeiro em nome do requerente; para este serviço não é aceita Declaração de Residência."
+        },
+        {
+          "id": "identification",
+          "label": "Documento de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "foreign-license",
+          "label": "Habilitação estrangeira",
+          "text": "Cópia da habilitação estrangeira válida."
+        },
+        {
+          "id": "sworn-translation",
+          "label": "Tradução juramentada",
+          "text": "Tradução juramentada da habilitação estrangeira."
+        },
+        {
+          "id": "passport",
+          "label": "Passaporte, quando aplicável",
+          "text": "Passaporte com identificação e foto e, para estrangeiros, quando o país exigir visto."
+        },
+        {
+          "id": "residence-abroad",
+          "label": "Residência no exterior — brasileiro",
+          "text": "Comprovante de residência no exterior por período não inferior a seis meses na época da expedição da habilitação estrangeira, quando o requerente for brasileiro habilitado no exterior."
+        },
+        {
+          "id": "migration-document",
+          "label": "RNE ou RNM — estrangeiro",
+          "text": "Registro Nacional de Estrangeiro ou Registro Nacional Migratório, quando o requerente for estrangeiro."
+        },
+        {
+          "id": "representation",
+          "label": "Documentação do representante, quando houver",
+          "text": "Procuração e documentos de identificação ou credenciamento do representante, conforme se trate de advogado, despachante ou outro procurador."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "Averbação CNH estrangeira (Brasileiros habilitados no exterior e estrangeiros)",
+        "cardId": "64fe3239f05aa2b4bb34bddd"
+      }
     },
     {
       "id": "oficio-mero-expediente",
@@ -414,7 +545,20 @@
       "documentsStatus": "provisional-route-future-review",
       "category": "oficios",
       "citizenObjective": "Protocolar ofício recebido de outro órgão",
-      "routingNote": "Destino padrão DIJUR, com possibilidade de correção manual no FAST MAIL."
+      "routingNote": "Destino padrão DIJUR, com possibilidade de correção manual no FAST MAIL.",
+      "missingDocuments": [
+        {
+          "id": "official-document",
+          "label": "Ofício ou documento oficial em PDF",
+          "text": "Ofício, decisão judicial com força de ofício, mandado judicial ou outro documento oficial adequado, endereçado ao DETRAN.RJ e anexado ao e-mail em formato PDF."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "COMUNICAÇÃO DE OUTRO ÓRGÃO/ENTIDADE",
+        "card": "Falta de Ofício/Documento endereçado ao DETRAN.RJ",
+        "cardId": "6851ad988d08db37811e2631"
+      }
     },
     {
       "id": "averiguacao-clonagem",
