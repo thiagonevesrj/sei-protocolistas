@@ -543,6 +543,29 @@
       return
     }
 
+    const currentProcessId =
+      extractProcessId()
+
+    let context = null
+    let registry = null
+
+    if (currentProcessId) {
+      const fastProcData =
+        await getFastProcContext(
+          currentProcessId
+        )
+
+      context = fastProcData.context
+      registry = fastProcData.registry
+
+      if (!context) {
+        console.log(
+          '[FAST PROC RQ] Processo não identificado como FAST PROC.'
+        )
+        return
+      }
+    }
+
     const target = await waitFor(
       () => {
         const includeLink =
@@ -566,6 +589,7 @@
       target.includeLink
 
     const processId =
+      currentProcessId ||
       extractProcessIdFromElement(
         includeLink
       )
@@ -577,12 +601,15 @@
       return
     }
 
-    const {
-      context,
-      registry
-    } = await getFastProcContext(
-      processId
-    )
+    if (!context || !registry) {
+      const fastProcData =
+        await getFastProcContext(
+          processId
+        )
+
+      context = fastProcData.context
+      registry = fastProcData.registry
+    }
 
     if (!context) {
       console.log(
