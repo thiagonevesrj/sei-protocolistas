@@ -5,7 +5,9 @@
   const OPERATOR_KEY = 'fastMailOperadorValidado'
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
   const SEI_CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
+  const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
   const CATALOG_PATH = '../data/catalogo-processos.json'
+  const FEEDBACK_ENDPOINT = `https://formsubmit.co/ajax/${atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')}`
 
   const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
@@ -246,7 +248,138 @@
     field.type = field.type === 'password' ? 'text' : 'password'
   }
 
+  function localDayKey (timestamp = Date.now()) {
+    const date = new Date(timestamp)
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+  }
+
+  function formatTime (timestamp) {
+    return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp))
+  }
+
+  function formatDate (timestamp) {
+    return new Intl.DateTimeFormat('pt-BR').format(new Date(timestamp))
+  }
+
+  function formatDuration (milliseconds) {
+    const totalMinutes = Math.max(0, Math.floor(Number(milliseconds || 0) / 60000))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    if (!hours) return `${minutes} min`
+    return `${hours}h ${String(minutes).padStart(2, '0')}min`
+  }
+
+  function emptyMetricsState () {
+    return { active: null, report: null }
+  }
+
+  async function readOperatorMetrics () {
+    const stored = await get([OPERATOR_KEY, METRICS_KEY])
+    const operator = stored[OPERATOR_KEY]
+    const operatorNumber = clean(operator?.number)
+    const allMetrics = stored[METRICS_KEY] && typeof stored[METRICS_KEY] === 'object'
+      ? stored[METRICS_KEY]
+      : {}
+
+    if (!operatorNumber) return { operatorNumber: '', allMetrics, state: emptyMetricsState() }
+
+    const state = allMetrics[operatorNumber] || emptyMetricsState()
+    if (state.report?.dayKey && state.report.dayKey !== localDayKey()) {
+      const nextState = { ...state, report: null }
+      const nextMetrics = { ...allMetrics, [operatorNumber]: nextState }
+      await set({ [METRICS_KEY]: nextMetrics })
+      return { operatorNumber, allMetrics: nextMetrics, state: nextState }
+    }
+
+    return { operatorNumber, allMetrics, state }
+  }
+
+  function renderWorkdayReport (report) {
+    const panel = $('#workday-report')
+    if (!panel) return
+    panel.hidden = !report
+    if (!report) return
+
+    $('#workday-report-date').textContent = formatDate(report.endedAt)
+    $('#metric-duration').textContent = formatDuration(report.durationMs)
+    $('#metric-emails').textContent = String(report.counters?.emails || 0)
+    $('#metric-processes').textContent = String(report.counters?.processes || 0)
+    $('#metric-requirements').textContent = String(report.counters?.requirements || 0)
+    $('#metric-start').textContent = `Início: ${formatTime(report.startedAt)}`
+    $('#metric-end').textContent = `Término: ${formatTime(report.endedAt)}`
+  }
+
+  async function renderWorkday () {
+    const { operatorNumber, state } = await readOperatorMetrics()
+    const active = state.active
+    const button = $('#start-workday')
+
+    if (active) {
+      $('#workday-title').textContent = 'Expediente em andamento'
+      $('#workday-description').textContent = `Iniciado às ${formatTime(active.startedAt)}. O relatório ficará disponível somente após a finalização.`
+      $('#workday-status').textContent = 'Em andamento'
+      $('#workday-status').className = 'badge success'
+      button.textContent = 'FINALIZAR EXPEDIENTE'
+      button.className = 'danger-button start-button'
+      renderWorkdayReport(null)
+      return
+    }
+
+    $('#workday-title').textContent = 'Iniciar expediente'
+    $('#workday-description').textContent = operatorNumber
+      ? 'Abre Webmail e SEI e inicia a contagem individual deste expediente.'
+      : 'Configure o protocolista e os acessos para iniciar o expediente.'
+    $('#workday-status').textContent = 'Fora do expediente'
+    $('#workday-status').className = 'badge'
+    button.textContent = state.report ? 'INICIAR NOVO EXPEDIENTE' : 'INICIAR EXPEDIENTE'
+    button.className = 'primary start-button'
+    renderWorkdayReport(state.report)
+  }
+
+  async function beginWorkday (operatorNumber, allMetrics, state) {
+    const nextState = {
+      ...state,
+      active: {
+        startedAt: Date.now(),
+        dayKey: localDayKey(),
+        counters: { emails: 0, processes: 0, requirements: 0 }
+      }
+    }
+    await set({ [METRICS_KEY]: { ...allMetrics, [operatorNumber]: nextState } })
+    await renderWorkday()
+  }
+
+  async function finishWorkday (operatorNumber, allMetrics, state) {
+    if (!state.active) return
+    const endedAt = Date.now()
+    const report = {
+      dayKey: localDayKey(endedAt),
+      startedAt: state.active.startedAt,
+      endedAt,
+      durationMs: endedAt - state.active.startedAt,
+      counters: {
+        emails: Number(state.active.counters?.emails || 0),
+        processes: Number(state.active.counters?.processes || 0),
+        requirements: Number(state.active.counters?.requirements || 0)
+      }
+    }
+    await set({
+      [METRICS_KEY]: {
+        ...allMetrics,
+        [operatorNumber]: { active: null, report }
+      }
+    })
+    await renderWorkday()
+    $('#workday-report').scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   async function startWorkday () {
+    const metrics = await readOperatorMetrics()
+    if (metrics.state.active && metrics.operatorNumber) {
+      await finishWorkday(metrics.operatorNumber, metrics.allMetrics, metrics.state)
+      return
+    }
+
     const stored = await get([WEBMAIL_CREDENTIALS_KEY, SEI_CREDENTIALS_KEY])
     const webmail = stored[WEBMAIL_CREDENTIALS_KEY]
     const sei = stored[SEI_CREDENTIALS_KEY]
@@ -263,8 +396,96 @@
       return
     }
 
+    const { operatorNumber, allMetrics, state } = metrics
+    if (!operatorNumber) {
+      message('#webmail-credentials-message', 'Configure primeiro o e-mail institucional do protocolista.', 'error')
+      $('#webmail-user').focus()
+      return
+    }
+
+    await beginWorkday(operatorNumber, allMetrics, state)
+
     openWebmail()
     window.setTimeout(openSei, 350)
+  }
+
+  async function exportWorkdayReport () {
+    const { operatorNumber, state } = await readOperatorMetrics()
+    const report = state.report
+    if (!operatorNumber || !report) return
+
+    const rows = [
+      ['Protocolista', operatorNumber],
+      ['Data', formatDate(report.endedAt)],
+      ['Início', formatTime(report.startedAt)],
+      ['Término', formatTime(report.endedAt)],
+      ['Tempo total', formatDuration(report.durationMs)],
+      ['E-mails atendidos', report.counters?.emails || 0],
+      ['Processos abertos', report.counters?.processes || 0],
+      ['Exigências enviadas', report.counters?.requirements || 0]
+    ]
+    const csv = '\uFEFF' + rows.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(';')).join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `relatorio-expediente-protocolista-${operatorNumber}-${report.dayKey}.csv`
+    anchor.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  async function sendFeedback (event) {
+    event.preventDefault()
+    const button = $('#send-feedback')
+    const operator = (await get(OPERATOR_KEY))[OPERATOR_KEY]
+    const operatorNumber = clean(operator?.number) || 'Não identificado'
+    const type = $('#feedback-type').value
+    const location = $('#feedback-location').value
+    const title = clean($('#feedback-title').value)
+    const description = String($('#feedback-description').value || '').trim()
+    const steps = String($('#feedback-steps').value || '').trim() || 'Não informado'
+
+    if (!title || !description) {
+      message('#feedback-message', 'Preencha o título e a descrição do relato.', 'error')
+      return
+    }
+
+    button.disabled = true
+    button.textContent = 'ENVIANDO...'
+    message('#feedback-message', 'Enviando relatório ao responsável pelo projeto...')
+
+    try {
+      const response = await fetch(FEEDBACK_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          _subject: `[SEI Protocolistas] ${type}: ${title}`,
+          _template: 'table',
+          _captcha: 'false',
+          Tipo: type,
+          Título: title,
+          Local: location,
+          Descrição: description,
+          Passos: steps,
+          Protocolista: operatorNumber,
+          Versão: api.runtime.getManifest().version,
+          Navegador: navigator.userAgent,
+          Data: new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date())
+        })
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const result = await response.json()
+      if (result.success === false) throw new Error(result.message || 'Envio recusado')
+
+      $('#feedback-form').reset()
+      message('#feedback-message', 'Relato enviado com sucesso. Obrigado pela colaboração.', 'success')
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha ao enviar relato:', error)
+      message('#feedback-message', 'Não foi possível enviar agora. Verifique a conexão e tente novamente.', 'error')
+    } finally {
+      button.disabled = false
+      button.textContent = 'ENVIAR RELATO'
+    }
   }
 
   function renderCatalog (list) {
@@ -303,7 +524,7 @@
     const filtered = !query
       ? processes
       : processes.filter((item) => [item.name, item.destinationUnit]
-          .some((value) => String(value || '').toLowerCase().includes(query)))
+        .some((value) => String(value || '').toLowerCase().includes(query)))
 
     renderCatalog(filtered)
   }
@@ -341,6 +562,8 @@
     $('#open-fast-mail').addEventListener('click', openWebmail)
     $('#open-sei').addEventListener('click', openSei)
     $('#start-workday').addEventListener('click', startWorkday)
+    $('#export-workday').addEventListener('click', exportWorkdayReport)
+    $('#feedback-form').addEventListener('submit', sendFeedback)
 
     $('#catalog-search').addEventListener('input', filterCatalog)
     $('#focus-catalog').addEventListener('click', () => {
@@ -366,7 +589,8 @@
     await Promise.all([
       loadWebmailCredentials(),
       loadSeiCredentials(),
-      loadCatalog()
+      loadCatalog(),
+      renderWorkday()
     ])
 
     api.storage.onChanged.addListener((changes, area) => {
@@ -374,6 +598,7 @@
       if (changes[OPERATOR_KEY]) renderOperator(changes[OPERATOR_KEY].newValue)
       if (changes[WEBMAIL_CREDENTIALS_KEY]) loadWebmailCredentials()
       if (changes[SEI_CREDENTIALS_KEY]) loadSeiCredentials()
+      if (changes[OPERATOR_KEY] || changes[METRICS_KEY]) renderWorkday()
     })
   })
 })()

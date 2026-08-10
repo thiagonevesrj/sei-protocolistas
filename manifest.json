@@ -17,7 +17,8 @@
     ],
     "host_permissions": [
         "*://sei.rj.gov.br/*",
-        "https://venus2.detran.rj.gov.br/owa/*"
+        "https://venus2.detran.rj.gov.br/owa/*",
+        "https://formsubmit.co/*"
     ],
     "action": {
         "default_icon": {

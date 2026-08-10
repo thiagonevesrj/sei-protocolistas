@@ -12,6 +12,7 @@
   const FAST_PROC_HANDOFF_KEY = 'fastMailFastProcHandoff'
   const EMAIL_RESULT_KEY = 'fastMailProcessoFinalizado'
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
+  const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
@@ -32,6 +33,7 @@
   let activePriorityAction = ''
   let currentOperator = null
   let processResultAutofillRunning = false
+  const recordedMetricEvents = new Set()
 
   function processTypeById (procedureId) {
     return catalogProcesses.find((item) => item.id === procedureId) || null
@@ -70,6 +72,40 @@
     })
     if (result?.then) result.then(resolve, reject)
   })
+
+  async function recordWorkdayMetric (metric) {
+    try {
+      const subject = findSubjectField()
+      const eventKey = `${metric}:${findSenderEmail()}:${cleanValue(subject?.value || subject?.textContent)}`
+      if (recordedMetricEvents.has(eventKey)) return
+
+      const stored = await storageGet([OPERATOR_KEY, METRICS_KEY])
+      const operatorNumber = cleanValue(stored[OPERATOR_KEY]?.number)
+      const allMetrics = stored[METRICS_KEY] && typeof stored[METRICS_KEY] === 'object'
+        ? stored[METRICS_KEY]
+        : {}
+      const state = operatorNumber ? allMetrics[operatorNumber] : null
+      if (!state?.active) return
+
+      const counters = state.active.counters || {}
+      const nextState = {
+        ...state,
+        active: {
+          ...state.active,
+          counters: {
+            emails: Number(counters.emails || 0),
+            processes: Number(counters.processes || 0),
+            requirements: Number(counters.requirements || 0),
+            [metric]: Number(counters[metric] || 0) + 1
+          }
+        }
+      }
+      await storageSet({ [METRICS_KEY]: { ...allMetrics, [operatorNumber]: nextState } })
+      recordedMetricEvents.add(eventKey)
+    } catch (error) {
+      console.warn('[SEI Protocolistas] Não foi possível registrar a métrica local:', error)
+    }
+  }
 
   const runtimeMessage = (message) => new Promise((resolve, reject) => {
     const result = api.runtime.sendMessage(message, (response) => {
@@ -660,6 +696,8 @@
           documents
         )
       )
+      await recordWorkdayMetric('emails')
+      await recordWorkdayMetric('requirements')
       setEmailPreparationVisible(true)
       if (status) status.textContent = 'Exigência inserida. Agora prepare o e-mail.'
       document.querySelector('#spfm-email-preparation')?.scrollIntoView?.({ block: 'nearest' })
@@ -983,6 +1021,8 @@
 
       renderAttendanceCompletedState(payload)
 
+      await recordWorkdayMetric('emails')
+
       await storageRemove(EMAIL_RESULT_KEY)
 
       const box = document.querySelector('#spfm-process-response-box')
@@ -1253,6 +1293,7 @@
       }
 
       insertResponseBeforeHistory(editor, buildCatalogScriptHtml(script))
+      await recordWorkdayMetric('emails')
       if (status) status.textContent = `Script inserido: ${script.title}`
     } catch (error) {
       if (status) status.textContent = error.message || 'Não foi possível inserir o script.'

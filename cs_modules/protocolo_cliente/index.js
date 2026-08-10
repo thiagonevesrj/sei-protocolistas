@@ -3,6 +3,8 @@
 const CARD='sp-protocolo-cliente-card';
 const CONTEXT_KEY='cliqueProtocolistaContexto';
 const EMAIL_RESULT_KEY='fastMailProcessoFinalizado';
+const OPERATOR_KEY='fastMailOperadorValidado';
+const METRICS_KEY='centralProtocolistaMetricsByOperator';
 const RETURN_TO_EMAIL_MESSAGE='sei-protocolistas:return-fast-mail';
 const browserApi=typeof browser==='undefined'?chrome:browser;
 let cardLoading=false;
@@ -20,6 +22,21 @@ const storageSet=items=>new Promise((resolve,reject)=>{
   });
   if(result?.then)result.then(resolve,reject);
 });
+async function recordProcessMetric(button){
+  if(button?.dataset.metricRecorded==='true')return;
+  try{
+    const stored=await storageGet([OPERATOR_KEY,METRICS_KEY]);
+    const operatorNumber=norm(stored[OPERATOR_KEY]?.number);
+    const allMetrics=stored[METRICS_KEY]&&typeof stored[METRICS_KEY]==='object'?stored[METRICS_KEY]:{};
+    const state=operatorNumber?allMetrics[operatorNumber]:null;
+    if(!state?.active)return;
+    const counters=state.active.counters||{};
+    await storageSet({[METRICS_KEY]:{...allMetrics,[operatorNumber]:{...state,active:{...state.active,counters:{emails:Number(counters.emails||0),processes:Number(counters.processes||0)+1,requirements:Number(counters.requirements||0)}}}}});
+    if(button)button.dataset.metricRecorded='true';
+  }catch(error){
+    console.warn('[SEI Protocolistas] Não foi possível registrar a métrica local:',error);
+  }
+}
 const runtimeMessage=message=>new Promise((resolve,reject)=>{
   const result=browserApi.runtime.sendMessage(message,response=>{
     const error=browserApi.runtime?.lastError;
@@ -68,7 +85,7 @@ return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Com
 <section class="card legal"><h2>OBSERVAÇÕES IMPORTANTES</h2><p><strong>Observação:</strong> Sempre que qualquer documento físico ficar retido na abertura do processo, será fornecido ao requerente comprovante descrevendo o documento.</p><p><strong>Importante:</strong> A Administração poderá solicitar a exibição do original de qualquer documento digitalizado ou enviado eletronicamente pelo requerente, conforme o art. 49 do Decreto SEI-RJ nº 48.209, de 19 de setembro de 2022.</p></section>
 <section class="sig"><div></div><span>Assinatura e matrícula do servidor</span></section></main></body></html>`;
 }
-function openPreview(){const w=open('','_blank');if(!w){alert('Autorize pop-ups para o SEI.');return}w.document.write(printHtml(data()));w.document.close();w.focus();}
+async function openPreview(event){const w=open('','_blank');if(!w){alert('Autorize pop-ups para o SEI.');return}await recordProcessMetric(event?.currentTarget);w.document.write(printHtml(data()));w.document.close();w.focus();}
 function message(){const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>/Processo aberto somente na unidade/i.test(e.textContent||''));return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
 async function readContext(){
   try{
@@ -114,6 +131,7 @@ async function prepareEmailResponse(button,context,processData){
       type:RETURN_TO_EMAIL_MESSAGE,
       attendanceId:payload.attendanceId
     });
+    await recordProcessMetric(button);
     button.textContent='E-MAIL ORIGINAL ABERTO';
   }catch(error){
     console.error('[SEI Protocolistas] Falha ao preparar resposta por e-mail:',error);

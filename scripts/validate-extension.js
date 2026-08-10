@@ -78,6 +78,8 @@ const seiLoginSource = readText('cs_modules/core/login/index.js')
 const handoffSource = readText('cs_modules/fast_proc_handoff/index.js')
 const returnCoordinatorSource = readText('background/service-worker.js')
 const protocolSource = readText('cs_modules/protocolo_cliente/index.js')
+const centralSource = readText('central_protocolista/main.js')
+const centralHtml = readText('central_protocolista/index.html')
 const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
 
 if (manifest && packageJson) {
@@ -91,7 +93,8 @@ if (manifest && packageJson) {
 
   const expectedHostPermissions = [
     '*://sei.rj.gov.br/*',
-    'https://venus2.detran.rj.gov.br/owa/*'
+    'https://venus2.detran.rj.gov.br/owa/*',
+    'https://formsubmit.co/*'
   ]
   const hostPermissions = manifest.host_permissions || []
   expect(
@@ -150,7 +153,19 @@ if (manifest && packageJson) {
   expect(handoffEntry?.all_frames === false, 'Manifesto: orquestrador deve executar apenas no frame principal')
 }
 
-[
+expect(centralHtml.includes('FINALIZAR EXPEDIENTE') === false, 'Central: o botão deve alternar o texto pelo estado salvo')
+expect(centralHtml.includes('EXPORTAR MEU RELATÓRIO EM CSV'), 'Central: exportação individual do relatório não encontrada')
+expect(centralHtml.includes('Sugestões e bugs'), 'Central: canal de sugestões e bugs não encontrado')
+expect(centralSource.includes("const METRICS_KEY = 'centralProtocolistaMetricsByOperator'"), 'Central: métricas não estão separadas por protocolista')
+expect(centralSource.includes("button.textContent = 'FINALIZAR EXPEDIENTE'"), 'Central: finalização do expediente não encontrada')
+expect(centralSource.includes('state.report.dayKey !== localDayKey()'), 'Central: limpeza do relatório no dia seguinte não encontrada')
+expect(!centralHtml.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular não pode aparecer na interface')
+expect(!centralSource.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular deve permanecer ofuscado no código da interface')
+expect(fastMailSource.includes("recordWorkdayMetric('emails')"), 'FAST MAIL: contagem de e-mails do expediente não encontrada')
+expect(fastMailSource.includes("recordWorkdayMetric('requirements')"), 'FAST MAIL: contagem de exigências do expediente não encontrada')
+expect(protocolSource.includes('recordProcessMetric'), 'Protocolo: contagem de processos do expediente não encontrada')
+
+;[
   'name',
   'cpf',
   'procedureId',
