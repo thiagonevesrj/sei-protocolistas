@@ -7,8 +7,12 @@ const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
 const RETURN_TO_EMAIL_MESSAGE = 'sei-protocolistas:return-fast-mail'
 const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
 const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
+const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
+const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
 const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
 const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=PreFormAction&a=New&t=IPM.Note'
+const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
+const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
 
 function callApi (target, method, ...args) {
@@ -117,7 +121,7 @@ async function openFeedbackCompose (message) {
 
   try {
     const tab = await callApi(api.tabs, 'create', {
-      url: FEEDBACK_COMPOSE_URL,
+      url: 'about:blank',
       active: false
     })
     await callApi(api.storage.local, 'set', {
@@ -128,6 +132,7 @@ async function openFeedbackCompose (message) {
         openedAt: Date.now()
       }
     })
+    await callApi(api.tabs, 'update', tab.id, { url: FEEDBACK_COMPOSE_URL })
     return { ok: true, tabId: tab.id }
   } catch (error) {
     await callApi(api.storage.local, 'set', {
@@ -141,6 +146,29 @@ async function openFeedbackCompose (message) {
   }
 }
 
+async function openWorkdaySystems () {
+  const webmailTab = await callApi(api.tabs, 'create', {
+    url: WEBMAIL_URL,
+    active: false
+  })
+
+  try {
+    const seiTab = await callApi(api.tabs, 'create', {
+      url: SEI_LOGIN_URL,
+      active: true
+    })
+    return { ok: true, webmailTabId: webmailTab.id, seiTabId: seiTab.id }
+  } catch (error) {
+    await callApi(api.tabs, 'update', webmailTab.id, { active: true })
+    throw error
+  }
+}
+
+function currentTab (sender) {
+  if (!sender.tab?.id) throw new Error('Não foi possível identificar a aba atual.')
+  return { ok: true, tabId: sender.tab.id }
+}
+
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   let task
 
@@ -150,6 +178,10 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     task = returnToFastMail(message)
   } else if (message?.type === SEND_FEEDBACK_MESSAGE) {
     task = openFeedbackCompose(message)
+  } else if (message?.type === OPEN_WORKDAY_SYSTEMS_MESSAGE) {
+    task = openWorkdaySystems()
+  } else if (message?.type === GET_CURRENT_TAB_MESSAGE) {
+    task = Promise.resolve(currentTab(sender))
   } else {
     return undefined
   }

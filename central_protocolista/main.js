@@ -9,6 +9,7 @@
   const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
   const CATALOG_PATH = '../data/catalogo-processos.json'
   const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
+  const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
 
   const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
@@ -435,9 +436,12 @@
     }
 
     await beginWorkday(operatorNumber, allMetrics, state)
-
-    openWebmail()
-    window.setTimeout(openSei, 350)
+    try {
+      await runtimeMessage({ type: OPEN_WORKDAY_SYSTEMS_MESSAGE })
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha ao abrir os sistemas do expediente:', error)
+      message('#webmail-credentials-message', 'O expediente foi iniciado, mas não foi possível abrir Webmail e SEI. Tente novamente.', 'error')
+    }
   }
 
   async function exportWorkdayReport () {

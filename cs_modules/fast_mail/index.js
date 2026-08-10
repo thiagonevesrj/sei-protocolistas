@@ -24,6 +24,7 @@
   const HISTORY_SEPARATOR = '----- HISTÓRICO DE MENSAGENS ANTERIORES -----'
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
+  const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
   const PRIORITY_AREA_ORDER = ['habilitacao', 'veiculos', 'taxas', 'oficios', 'outros']
 
   let catalogProcesses = []
@@ -1953,6 +1954,9 @@
     const stored = await storageGet([FEEDBACK_KEY, OPERATOR_KEY])
     const feedback = stored[FEEDBACK_KEY]
     if (!feedback || ['sent', 'error'].includes(feedback.status)) return false
+
+    const currentTab = await runtimeMessage({ type: GET_CURRENT_TAB_MESSAGE })
+    if (!feedback.webmailTabId || currentTab.tabId !== feedback.webmailTabId) return false
 
     if (!feedback.expiresAt || Date.now() > feedback.expiresAt) {
       await updatePendingFeedback(feedback, {
