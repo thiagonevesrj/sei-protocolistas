@@ -145,7 +145,8 @@ if (manifest && packageJson) {
 })
 expect(fastMailSource.includes('window.open(\'about:blank\''), 'FAST MAIL: deve abrir o SEI a partir do clique do operador')
 expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automática de login obrigatória')
-expect(fastMailSource.includes('spfm-priority-topics'), 'FAST MAIL: assuntos prioritários devem aparecer na tela inicial')
+expect(fastMailSource.includes('spfm-priority-areas'), 'FAST MAIL: áreas prioritárias devem aparecer na tela inicial')
+expect(fastMailSource.includes('spfm-priority-topic'), 'FAST MAIL: seletor de assunto prioritário obrigatório')
 expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
 expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
 expect(
@@ -251,11 +252,13 @@ if (catalog) {
   expect(Array.isArray(priorityTopics) && priorityTopics.length === 12, 'FAST MAIL: 12 assuntos prioritários obrigatórios')
   if (Array.isArray(priorityTopics)) {
     expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
+    const priorityAreaIds = new Set((areas || []).map((area) => area.id))
     priorityTopics.forEach((topic, topicIndex) => {
       const prefix = `FAST MAIL: fastMailPriorityTopics[${topicIndex}]`
       const routes = Array.isArray(topic.variants) && topic.variants.length ? topic.variants : [topic]
       expect(Boolean(topic.id), `${prefix}: id obrigatório`)
       expect(Boolean(topic.label), `${prefix}: label obrigatório`)
+      expect(priorityAreaIds.has(topic.area), `${prefix}: área inexistente ${topic.area}`)
       expect(Number.isInteger(topic.recentUsageCount), `${prefix}: frequência recente obrigatória`)
       expect(typeof topic.canOpenProcess === 'boolean', `${prefix}: canOpenProcess deve ser booleano`)
       if (topic.canOpenProcess) {
@@ -306,6 +309,25 @@ if (catalog) {
       const topic = priorityTopics.find((item) => item.id === topicId)
       expect(topic?.canOpenProcess === false, `FAST MAIL: ${topicId} deve ser somente orientação`)
       expect(!topic?.processId, `FAST MAIL: ${topicId} não pode apontar para o FAST PROC`)
+    })
+
+    const expectedPriorityAreas = {
+      'devolucao-taxas': 'taxas',
+      'desistencia-categoria': 'habilitacao',
+      'pericia-medica-pcd': 'habilitacao',
+      'troca-clinica': 'habilitacao',
+      'rebaixamento-categoria': 'habilitacao',
+      'retorno-categoria': 'habilitacao',
+      'transferencia-prontuario': 'habilitacao',
+      'cnh-estrangeira': 'habilitacao',
+      'cancelamento-venda': 'veiculos',
+      motor: 'veiculos',
+      chassi: 'veiculos',
+      oficios: 'oficios'
+    }
+    Object.entries(expectedPriorityAreas).forEach(([topicId, areaId]) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      expect(topic?.area === areaId, `FAST MAIL: ${topicId} deve aparecer somente em ${areaId}`)
     })
   }
 }
