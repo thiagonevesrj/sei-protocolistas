@@ -245,9 +245,19 @@ if (catalog) {
         const routePrefix = `${prefix}.routes[${routeIndex}]`
         expect(Boolean(route.scriptId), `${routePrefix}: scriptId obrigatório`)
         expect(
+          Array.isArray(route.responseScriptIds) && route.responseScriptIds.includes(route.scriptId),
+          `${routePrefix}: responseScriptIds deve incluir o script principal`
+        )
+        expect(
           scriptCatalog?.scripts?.some((script) => script.id === route.scriptId && script.body),
           `${routePrefix}: script inexistente ou vazio ${route.scriptId}`
         )
+        ;(route.responseScriptIds || []).forEach((scriptId) => {
+          expect(
+            scriptCatalog?.scripts?.some((script) => script.id === scriptId && script.body),
+            `${routePrefix}: resposta relacionada inexistente ou vazia ${scriptId}`
+          )
+        })
       })
     })
   }
