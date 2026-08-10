@@ -93,8 +93,7 @@ if (manifest && packageJson) {
 
   const expectedHostPermissions = [
     '*://sei.rj.gov.br/*',
-    'https://venus2.detran.rj.gov.br/owa/*',
-    'https://formsubmit.co/*'
+    'https://venus2.detran.rj.gov.br/owa/*'
   ]
   const hostPermissions = manifest.host_permissions || []
   expect(
@@ -165,9 +164,11 @@ expect(centralSource.includes("button.textContent = 'FINALIZAR EXPEDIENTE'"), 'C
 expect(centralSource.includes('state.report.dayKey !== localDayKey()'), 'Central: limpeza do relatório no dia seguinte não encontrada')
 expect(!centralHtml.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular não pode aparecer na interface')
 expect(!centralSource.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular deve permanecer ofuscado no código da interface')
-expect(centralSource.includes("const FEEDBACK_SOURCE_URL = 'https://github.com/thiagonevesrj/sei-protocolistas'"), 'Central: canal de relatos precisa informar uma origem HTTPS válida')
-expect(centralSource.includes('_url: FEEDBACK_SOURCE_URL'), 'Central: envio de relatos precisa incluir a origem HTTPS')
-expect(centralSource.includes("result.success === true || String(result.success).toLowerCase() === 'true'"), 'Central: envio só pode indicar sucesso após confirmação explícita do serviço')
+expect(!centralSource.includes('formsubmit.co'), 'Central: FormSubmit não deve permanecer no canal de relatos')
+expect(centralSource.includes('sei-protocolistas:send-feedback-via-webmail'), 'Central: envio de relatos pelo Webmail não encontrado')
+expect(returnCoordinatorSource.includes('openFeedbackCompose'), 'Webmail: abertura da mensagem de relato não encontrada')
+expect(fastMailSource.includes('processPendingFeedback'), 'Webmail: processamento do relato pendente não encontrado')
+expect(fastMailSource.includes('FEEDBACK_DESTINATION'), 'Webmail: destinatário interno do relato não encontrado')
 expect(fastMailSource.includes("recordWorkdayMetric('emails')"), 'FAST MAIL: contagem de e-mails do expediente não encontrada')
 expect(fastMailSource.includes("recordWorkdayMetric('requirements')"), 'FAST MAIL: contagem de exigências do expediente não encontrada')
 expect(protocolSource.includes('recordProcessMetric'), 'Protocolo: contagem de processos do expediente não encontrada')

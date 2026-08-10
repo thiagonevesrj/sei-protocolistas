@@ -13,6 +13,9 @@
   const EMAIL_RESULT_KEY = 'fastMailProcessoFinalizado'
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
   const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
+  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+  const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=PreFormAction&a=New&t=IPM.Note'
+  const FEEDBACK_DESTINATION = atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
@@ -1847,6 +1850,168 @@
     return null
   }
 
+  function findRecipientField () {
+    const selectors = [
+      'input[name="to"]',
+      'textarea[name="to"]',
+      'input[id="to"]',
+      'textarea[id="to"]',
+      'input[name*="recipient" i]',
+      'textarea[name*="recipient" i]',
+      'input[id*="recipient" i]',
+      'textarea[id*="recipient" i]',
+      '[contenteditable="true"][aria-label*="para" i]',
+      '[contenteditable="true"][title*="para" i]'
+    ]
+
+    for (const doc of allDocuments()) {
+      for (const selector of selectors) {
+        const field = Array.from(doc.querySelectorAll(selector)).find(isVisible)
+        if (field) return field
+      }
+
+      const labels = Array.from(doc.querySelectorAll('label,td,span,div'))
+        .filter((element) => isVisible(element) && /^Para\.{0,3}:?$/i.test(elementText(element)))
+
+      for (const label of labels) {
+        const forId = label.getAttribute?.('for')
+        const linked = forId ? doc.getElementById(forId) : null
+        if (linked && isVisible(linked)) return linked
+
+        const row = label.closest('tr,div,td')
+        const field = row?.querySelector('input,textarea,[contenteditable="true"]')
+        if (field && isVisible(field)) return field
+      }
+    }
+
+    return null
+  }
+
+  function findSendButton () {
+    for (const doc of allDocuments()) {
+      const candidates = Array.from(doc.querySelectorAll(
+        'button,input[type="button"],input[type="submit"],a,span'
+      )).filter((element) => {
+        if (!isVisible(element)) return false
+        return /^(Enviar|Send)$/i.test(elementText(element))
+      })
+
+      if (candidates.length) return candidates[0]
+    }
+
+    return null
+  }
+
+  function setMessageBodyText (field, text) {
+    field.focus()
+    field.textContent = text
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+    field.dispatchEvent(new Event('change', { bubbles: true }))
+    field.blur()
+  }
+
+  function feedbackReportText (feedback) {
+    const reportedAt = new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'medium'
+    }).format(new Date(feedback.reportedAt))
+
+    return [
+      'RELATÓRIO — SEI PROTOCOLISTAS',
+      '',
+      `Tipo: ${feedback.type}`,
+      `Título: ${feedback.title}`,
+      `Local: ${feedback.location}`,
+      `Protocolista: ${feedback.operatorNumber}`,
+      `E-mail institucional: ${feedback.operatorEmail}`,
+      `Versão da extensão: ${feedback.version}`,
+      `Data e hora: ${reportedAt}`,
+      '',
+      'DESCRIÇÃO',
+      feedback.description,
+      '',
+      'PASSOS PARA REPRODUZIR / DETALHES',
+      feedback.steps,
+      '',
+      'AMBIENTE TÉCNICO',
+      feedback.browser,
+      '',
+      'Relatório enviado pelo canal Sugestões e Bugs da Central do Protocolista.'
+    ].join('\n')
+  }
+
+  async function updatePendingFeedback (feedback, changes) {
+    await storageSet({
+      [FEEDBACK_KEY]: {
+        ...feedback,
+        ...changes
+      }
+    })
+  }
+
+  async function processPendingFeedback () {
+    const stored = await storageGet([FEEDBACK_KEY, OPERATOR_KEY])
+    const feedback = stored[FEEDBACK_KEY]
+    if (!feedback || ['sent', 'error'].includes(feedback.status)) return false
+
+    if (!feedback.expiresAt || Date.now() > feedback.expiresAt) {
+      await updatePendingFeedback(feedback, {
+        status: 'error',
+        error: 'O tempo para envio pelo Webmail expirou.'
+      })
+      return true
+    }
+
+    if (await autoLoginWebmail()) return true
+
+    if (!IS_COMPOSE_WINDOW) {
+      location.replace(FEEDBACK_COMPOSE_URL)
+      return true
+    }
+
+    const operator = findOperator() || stored[OPERATOR_KEY]
+    if (!operator?.email || normalizeEmail(operator.email) !== normalizeEmail(feedback.operatorEmail)) {
+      await updatePendingFeedback(feedback, {
+        status: 'error',
+        error: 'A conta aberta no Webmail não corresponde ao protocolista configurado.'
+      })
+      return true
+    }
+
+    try {
+      const recipient = await waitFor(findRecipientField, 8000)
+      const subject = await waitFor(findSubjectField, 8000)
+      const body = await waitFor(findMessageBodyEditor, 8000)
+      const sendButton = await waitFor(findSendButton, 8000)
+      if (!recipient || !subject || !body || !sendButton) {
+        throw new Error('Não foi possível localizar todos os campos de envio do Webmail.')
+      }
+
+      setFieldValue(recipient, FEEDBACK_DESTINATION)
+      await sleep(500)
+      setFieldValue(subject, `[SEI Protocolistas] ${feedback.type}: ${feedback.title}`)
+      setMessageBodyText(body, feedbackReportText(feedback))
+      await sleep(300)
+
+      await updatePendingFeedback(feedback, {
+        status: 'submitting',
+        submittedAt: Date.now()
+      })
+      if (!clickElement(sendButton)) throw new Error('O botão Enviar do Webmail não respondeu.')
+      await updatePendingFeedback(feedback, {
+        status: 'sent',
+        sentAt: Date.now()
+      })
+      return true
+    } catch (error) {
+      await updatePendingFeedback(feedback, {
+        status: 'error',
+        error: error.message || String(error)
+      })
+      return true
+    }
+  }
+
   function getSubjectPrefix (subject) {
     const match = cleanValue(subject).match(/^((?:RE|ENC|FW|FWD)\s*:\s*)+/i)
     return match ? match[0].replace(/\s+/g, ' ').trim() + ' ' : ''
@@ -2383,6 +2548,7 @@
   }
 
   async function initialize () {
+    if (await processPendingFeedback()) return
     if (await autoLoginWebmail()) return
 
     await scan()

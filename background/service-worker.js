@@ -6,6 +6,9 @@ const ROUTES_KEY = 'fastMailAttendanceRoutes'
 const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
 const RETURN_TO_EMAIL_MESSAGE = 'sei-protocolistas:return-fast-mail'
 const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
+const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
+const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=PreFormAction&a=New&t=IPM.Note'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
 
 function callApi (target, method, ...args) {
@@ -100,6 +103,44 @@ async function returnToFastMail (message) {
   return { ok: true, tabId: tab.id, reopened: tab.id !== route.tabId }
 }
 
+async function openFeedbackCompose (message) {
+  if (!message.feedbackId) throw new Error('Relato não identificado.')
+
+  const stored = await callApi(api.storage.local, 'get', FEEDBACK_KEY)
+  const feedback = stored?.[FEEDBACK_KEY]
+  if (!feedback || feedback.id !== message.feedbackId) {
+    throw new Error('O relatório pendente não foi localizado.')
+  }
+  if (!feedback.expiresAt || Date.now() > feedback.expiresAt) {
+    throw new Error('O relatório expirou. Envie novamente pela Central.')
+  }
+
+  try {
+    const tab = await callApi(api.tabs, 'create', {
+      url: FEEDBACK_COMPOSE_URL,
+      active: false
+    })
+    await callApi(api.storage.local, 'set', {
+      [FEEDBACK_KEY]: {
+        ...feedback,
+        status: 'opening-webmail',
+        webmailTabId: tab.id,
+        openedAt: Date.now()
+      }
+    })
+    return { ok: true, tabId: tab.id }
+  } catch (error) {
+    await callApi(api.storage.local, 'set', {
+      [FEEDBACK_KEY]: {
+        ...feedback,
+        status: 'error',
+        error: error.message || String(error)
+      }
+    })
+    throw error
+  }
+}
+
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   let task
 
@@ -107,6 +148,8 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     task = registerFastMailOrigin(message, sender)
   } else if (message?.type === RETURN_TO_EMAIL_MESSAGE) {
     task = returnToFastMail(message)
+  } else if (message?.type === SEND_FEEDBACK_MESSAGE) {
+    task = openFeedbackCompose(message)
   } else {
     return undefined
   }

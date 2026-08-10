@@ -6,9 +6,9 @@
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
   const SEI_CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
   const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
+  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
   const CATALOG_PATH = '../data/catalogo-processos.json'
-  const FEEDBACK_ENDPOINT = `https://formsubmit.co/ajax/${atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')}`
-  const FEEDBACK_SOURCE_URL = 'https://github.com/thiagonevesrj/sei-protocolistas'
+  const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
 
   const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
@@ -17,6 +17,7 @@
 
   const $ = (selector) => document.querySelector(selector)
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim()
+  const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
   const get = (keys) => new Promise((resolve, reject) => {
     const result = api.storage.local.get(keys, (items) => {
@@ -44,6 +45,35 @@
     })
     if (result?.then) result.then(resolve, reject)
   })
+
+  const runtimeMessage = (payload) => new Promise((resolve, reject) => {
+    const result = api.runtime.sendMessage(payload, (response) => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else if (response?.ok === false) reject(new Error(response.error || 'Falha na comunicação da extensão.'))
+      else resolve(response || {})
+    })
+    if (result?.then) result.then(resolve, reject)
+  })
+
+  function feedbackId () {
+    if (crypto.randomUUID) return crypto.randomUUID()
+    return `feedback-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }
+
+  async function waitForFeedbackResult (id, timeout = 30000) {
+    const startedAt = Date.now()
+
+    while (Date.now() - startedAt < timeout) {
+      const feedback = (await get(FEEDBACK_KEY))[FEEDBACK_KEY]
+      if (!feedback || feedback.id !== id) throw new Error('O relatório pendente não foi localizado.')
+      if (feedback.status === 'sent') return feedback
+      if (feedback.status === 'error') throw new Error(feedback.error || 'O Webmail não aceitou o envio.')
+      await sleep(400)
+    }
+
+    throw new Error('O Webmail demorou para confirmar o envio.')
+  }
 
   function message (selector, text, type = '') {
     const element = $(selector)
@@ -438,8 +468,11 @@
   async function sendFeedback (event) {
     event.preventDefault()
     const button = $('#send-feedback')
-    const operator = (await get(OPERATOR_KEY))[OPERATOR_KEY]
-    const operatorNumber = clean(operator?.number) || 'Não identificado'
+    const stored = await get([OPERATOR_KEY, WEBMAIL_CREDENTIALS_KEY])
+    const operator = stored[OPERATOR_KEY]
+    const credentials = stored[WEBMAIL_CREDENTIALS_KEY]
+    const operatorNumber = clean(operator?.number)
+    const operatorEmail = clean(operator?.email || credentials?.user).toLowerCase()
     const type = $('#feedback-type').value
     const location = $('#feedback-location').value
     const title = clean($('#feedback-title').value)
@@ -451,40 +484,47 @@
       return
     }
 
+    if (!operatorNumber || !extractProtocolista(operatorEmail)) {
+      message('#feedback-message', 'Configure primeiro o e-mail institucional do protocolista.', 'error')
+      return
+    }
+
+    if (!credentials?.remember || !credentials?.user || !credentials?.password) {
+      message('#feedback-message', 'Salve primeiro o acesso do Webmail para enviar o relato.', 'error')
+      return
+    }
+
     button.disabled = true
     button.textContent = 'ENVIANDO...'
     message('#feedback-message', 'Enviando relatório ao responsável pelo projeto...')
 
     try {
-      const response = await fetch(FEEDBACK_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          _subject: `[SEI Protocolistas] ${type}: ${title}`,
-          _template: 'table',
-          _captcha: 'false',
-          _url: FEEDBACK_SOURCE_URL,
-          Tipo: type,
-          Título: title,
-          Local: location,
-          Descrição: description,
-          Passos: steps,
-          Protocolista: operatorNumber,
-          Versão: api.runtime.getManifest().version,
-          Navegador: navigator.userAgent,
-          Data: new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date())
-        })
+      const id = feedbackId()
+      await set({
+        [FEEDBACK_KEY]: {
+          id,
+          status: 'queued',
+          type,
+          title,
+          location,
+          description,
+          steps,
+          operatorNumber,
+          operatorEmail,
+          version: api.runtime.getManifest().version,
+          browser: navigator.userAgent,
+          reportedAt: Date.now(),
+          expiresAt: Date.now() + (2 * 60 * 1000)
+        }
       })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const result = await response.json()
-      const confirmed = result.success === true || String(result.success).toLowerCase() === 'true'
-      if (!confirmed) throw new Error(result.message || 'O serviço não confirmou o envio')
+      await runtimeMessage({ type: SEND_FEEDBACK_MESSAGE, feedbackId: id })
+      await waitForFeedbackResult(id)
 
       $('#feedback-form').reset()
       message('#feedback-message', 'Relato enviado com sucesso. Obrigado pela colaboração.', 'success')
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao enviar relato:', error)
-      message('#feedback-message', 'Não foi possível enviar agora. Verifique a conexão e tente novamente.', 'error')
+      message('#feedback-message', `Não foi possível enviar agora: ${error.message}`, 'error')
     } finally {
       button.disabled = false
       button.textContent = 'ENVIAR RELATO'
