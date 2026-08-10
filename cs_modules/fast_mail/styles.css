@@ -84,6 +84,11 @@
   display: none !important;
 }
 
+/* Mantém fora da tela os campos que não pertencem à rota selecionada. */
+#sei-protocolistas-fast-mail-status [hidden] {
+  display: none !important;
+}
+
 #sei-protocolistas-fast-mail-status .spfm-summary {
   display: grid;
   gap: 2px;
