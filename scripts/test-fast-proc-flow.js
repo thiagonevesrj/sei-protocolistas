@@ -240,6 +240,21 @@ function testHighlightedQuickRequestButton () {
   assert.ok(source.includes('function resetRqButton (button)'))
   assert.ok(source.includes('browserApi.storage?.onChanged'))
   assert.ok(source.includes('!changes[PENDING_KEY].newValue'))
+
+  const processLookup = source.indexOf(
+    'const currentProcessId =\n      extractProcessId()'
+  )
+  const toolbarLookup = source.indexOf(
+    'const target = await waitFor('
+  )
+  const contextGuard = source.indexOf(
+    "if (!context) {\n        console.log(\n          '[FAST PROC RQ] Processo não identificado como FAST PROC.'",
+    processLookup
+  )
+
+  assert.ok(processLookup > -1)
+  assert.ok(contextGuard > processLookup)
+  assert.ok(toolbarLookup > contextGuard)
 }
 
 function testExternalDocumentFieldsAreCollapsed () {
