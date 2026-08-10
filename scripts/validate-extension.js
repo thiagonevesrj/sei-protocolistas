@@ -148,6 +148,8 @@ expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automáti
 expect(fastMailSource.includes('spfm-priority-topics'), 'FAST MAIL: assuntos prioritários devem aparecer na tela inicial')
 expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
 expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
+expect(fastMailSource.includes('Protocolista nº'), 'FAST MAIL: exigência deve usar a assinatura do protocolista')
+expect(!fastMailSource.includes('background:#fff1f1'), 'FAST MAIL: alerta de reenvio não deve usar caixa vermelha')
 expect(fastProcSource.includes("source: 'fast-mail'"), 'FAST PROC: origem do FAST MAIL obrigatória')
 expect(fastProcSource.includes('sp-clique-prefill-missing'), 'FAST PROC: campos ausentes devem ser destacados')
 expect(seiLoginSource.includes('centralProtocolistaSeiCredentials'), 'SEI: credenciais da Central não são reaproveitadas')
