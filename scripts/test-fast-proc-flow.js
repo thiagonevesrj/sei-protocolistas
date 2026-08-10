@@ -208,6 +208,22 @@ function testFastMailHiddenFieldsStayHidden () {
   assert.ok(styles.includes('display: none !important;'))
 }
 
+function testFastMailProgressiveNavigation () {
+  const source = read('cs_modules/fast_mail/index.js')
+  const styles = read('cs_modules/fast_mail/styles.css')
+
+  assert.ok(source.includes('1. ESCOLHA A ÁREA'))
+  assert.ok(source.includes('2. ESCOLHA O ASSUNTO'))
+  assert.ok(source.includes('3. ESCOLHA A AÇÃO'))
+  assert.ok(source.includes('id="spfm-topic-step" class="spfm-step" hidden'))
+  assert.ok(source.includes('id="spfm-action-step" class="spfm-step" hidden'))
+  assert.ok(source.includes('id="spfm-process-setup" class="spfm-process-setup" hidden'))
+  assert.ok(source.includes('priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)'))
+  assert.ok(source.includes('box.hidden = !hasDocumentModel || activePriorityAction !== \'reply\''))
+  assert.ok(styles.includes('.spfm-area-grid'))
+  assert.ok(!source.includes('spfm-topic-button'))
+}
+
 function testUnusedSeiFieldsAreHidden () {
   const source = read('cs_modules/clique_protocolista/index.js')
   const hideFunction = source.indexOf('function hideUnusedProcessFields')
@@ -493,6 +509,7 @@ async function run () {
   await testReturnToOriginalEmail()
   testCompactFastProcLayout()
   testFastMailHiddenFieldsStayHidden()
+  testFastMailProgressiveNavigation()
   testUnusedSeiFieldsAreHidden()
   testAutomaticEmailCompletion()
   testHighlightedQuickRequestButton()
