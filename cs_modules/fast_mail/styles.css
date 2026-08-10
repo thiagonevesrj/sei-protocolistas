@@ -125,16 +125,22 @@
   letter-spacing: 0.08em;
 }
 
-#sei-protocolistas-fast-mail-status .spfm-topic-grid {
+#sei-protocolistas-fast-mail-status .spfm-step {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding-top: 2px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-area-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
 }
 
-#sei-protocolistas-fast-mail-status .spfm-topic-grid .spfm-topic-button {
-  min-height: 38px;
+#sei-protocolistas-fast-mail-status .spfm-area-grid .spfm-area-button {
+  min-height: 34px;
   margin: 0;
-  padding: 6px;
+  padding: 5px 4px;
   color: #e8eef7;
   background: #06172d;
   border: 1px solid rgba(174, 189, 208, 0.24);
@@ -144,7 +150,7 @@
   line-height: 1.15;
 }
 
-#sei-protocolistas-fast-mail-status .spfm-topic-grid .spfm-topic-button.is-active {
+#sei-protocolistas-fast-mail-status .spfm-area-grid .spfm-area-button.is-active {
   color: #071224;
   background: #f1c44f;
   border-color: #f1c44f;
@@ -187,6 +193,24 @@
   display: grid;
   gap: 7px;
   margin-top: 9px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-process-setup {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 9px;
+  background: #030d1b;
+  border: 1px solid rgba(241, 196, 79, 0.42);
+  border-radius: 8px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-process-setup .spfm-fields {
+  margin-top: 0;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-process-setup button {
+  margin-top: 0;
 }
 
 #sei-protocolistas-fast-mail-status .spfm-fields label {
