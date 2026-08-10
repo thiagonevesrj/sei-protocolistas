@@ -145,6 +145,9 @@ if (manifest && packageJson) {
 })
 expect(fastMailSource.includes('window.open(\'about:blank\''), 'FAST MAIL: deve abrir o SEI a partir do clique do operador')
 expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automática de login obrigatória')
+expect(fastMailSource.includes('spfm-priority-topics'), 'FAST MAIL: assuntos prioritários devem aparecer na tela inicial')
+expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
+expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
 expect(fastProcSource.includes("source: 'fast-mail'"), 'FAST PROC: origem do FAST MAIL obrigatória')
 expect(fastProcSource.includes('sp-clique-prefill-missing'), 'FAST PROC: campos ausentes devem ser destacados')
 expect(seiLoginSource.includes('centralProtocolistaSeiCredentials'), 'SEI: credenciais da Central não são reaproveitadas')
@@ -217,6 +220,32 @@ if (catalog) {
       ]
       references.forEach((processId) => {
         expect(processIds.has(processId), `${prefix}: processo inexistente ${processId}`)
+      })
+    })
+  }
+
+  const priorityTopics = catalog.fastMailPriorityTopics
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 9, 'FAST MAIL: 9 assuntos prioritários obrigatórios')
+  if (Array.isArray(priorityTopics)) {
+    expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
+    priorityTopics.forEach((topic, topicIndex) => {
+      const prefix = `FAST MAIL: fastMailPriorityTopics[${topicIndex}]`
+      const routes = Array.isArray(topic.variants) && topic.variants.length ? topic.variants : [topic]
+      expect(Boolean(topic.id), `${prefix}: id obrigatório`)
+      expect(Boolean(topic.label), `${prefix}: label obrigatório`)
+      expect(typeof topic.canOpenProcess === 'boolean', `${prefix}: canOpenProcess deve ser booleano`)
+      if (topic.canOpenProcess) {
+        expect(processIds.has(topic.processId), `${prefix}: processo inexistente ${topic.processId}`)
+      } else {
+        expect(Boolean(topic.blockedReason), `${prefix}: motivo do atendimento somente presencial obrigatório`)
+      }
+      routes.forEach((route, routeIndex) => {
+        const routePrefix = `${prefix}.routes[${routeIndex}]`
+        expect(Boolean(route.scriptId), `${routePrefix}: scriptId obrigatório`)
+        expect(
+          scriptCatalog?.scripts?.some((script) => script.id === route.scriptId && script.body),
+          `${routePrefix}: script inexistente ou vazio ${route.scriptId}`
+        )
       })
     })
   }
