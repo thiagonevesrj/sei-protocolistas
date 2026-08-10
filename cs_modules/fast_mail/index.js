@@ -674,6 +674,9 @@
     const processNumber = escapeHtml(cleanValue(payload?.numero))
     const processType = escapeHtml(cleanValue(payload?.tipo))
     const destination = escapeHtml(cleanValue(payload?.destino))
+    const operatorSignature = currentOperator?.number
+      ? `Protocolista nº ${escapeHtml(currentOperator.number)} — SEI-RJ`
+      : 'Serviço de Protocolo — DETRAN-RJ'
 
     return `
       <div data-sei-protocolistas="process-completed-response" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
@@ -683,7 +686,7 @@
         <p style="margin:0 0 6px 0;"><strong>Tipo de processo:</strong> ${processType || 'Não identificado'}</p>
         <p style="margin:0 0 14px 0;"><strong>Unidade de destino:</strong> ${destination || 'Não identificada'}</p>
         <p style="margin:0 0 14px 0;">O atendimento por e-mail foi concluído. Guarde o número do processo para futuras consultas.</p>
-        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ</p>
+        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>${operatorSignature}</p>
       </div>`
   }
 
@@ -817,10 +820,20 @@
     const destination = document.querySelector('#spfm-destination')
     const destinationField = document.querySelector('#spfm-destination-field')
     const missingBox = document.querySelector('#spfm-missing-box')
+    const priorityReply = document.querySelector('#spfm-priority-reply')
+    const priorityOpen = document.querySelector('#spfm-priority-open')
+    const priorityStatus = document.querySelector('#spfm-priority-status')
 
     if (openButton) openButton.hidden = true
     if (triageButton) triageButton.hidden = true
     if (missingBox) missingBox.hidden = true
+    if (priorityReply) priorityReply.hidden = true
+    if (priorityOpen) priorityOpen.hidden = true
+    if (priorityStatus) {
+      priorityStatus.textContent = payload?.numero
+        ? `Processo ${cleanValue(payload.numero)} criado e resposta preparada.`
+        : 'Processo criado e resposta preparada.'
+    }
 
     if (destinationField) destinationField.hidden = false
     if (destination && payload?.destino) destination.value = cleanValue(payload.destino)
