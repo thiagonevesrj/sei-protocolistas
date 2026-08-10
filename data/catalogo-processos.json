@@ -5,8 +5,21 @@
   "catalogLabel": "Procedimentos prioritários — navegação por área",
   "usageSample": {
     "period": "julho e início de agosto de 2026",
-    "totalProcesses": 265,
-    "source": "Relação de processos abertos pelo protocolista nº 31"
+    "totalProcesses": 268,
+    "source": "Relação de processos abertos pelo protocolista nº 31",
+    "countingNote": "268 números de processo únicos; a contagem anterior de 265 foi descartada."
+  },
+  "nomenclaturePolicy": {
+    "rule": "Usar a nomenclatura própria do SEI sempre que ela existir.",
+    "genericTypes": [
+      "Detran: Solicitação Geral - Habilitação",
+      "Detran: Solicitações Gerais - Veículos"
+    ],
+    "genericUsage": "Somente para assuntos confirmados sem nomenclatura própria no SEI.",
+    "confirmedGenericMappings": {
+      "transferencia-prontuario-habilitacao": "Detran: Solicitação Geral - Habilitação"
+    },
+    "unconfirmedMapping": "Não atribuir tipo próprio ou genérico sem confirmação do operador."
   },
   "processTypes": [
     {

@@ -206,6 +206,15 @@ if (catalog) {
     expect(daf.missingDocuments?.length > 0, 'Catálogo DAF: pendências obrigatórias')
   }
 
+  const transfer = processTypes.find((item) => item.id === 'transferencia-prontuario-habilitacao')
+  expect(Boolean(transfer), 'Catálogo: transferência de prontuário obrigatória')
+  if (transfer) {
+    expect(
+      transfer.seiNames?.includes('Detran: Solicitação Geral - Habilitação'),
+      'Transferência: deve usar Solicitação Geral - Habilitação'
+    )
+  }
+
   const areas = catalog.fastMailNavigation?.areas
   expect(Array.isArray(areas) && areas.length > 0, 'FAST MAIL: áreas de navegação obrigatórias')
   if (Array.isArray(areas)) {
