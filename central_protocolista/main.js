@@ -10,6 +10,11 @@
   const CATALOG_PATH = '../data/catalogo-processos.json'
   const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
   const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
+  const FEEDBACK_SENSITIVE_PATTERNS = [
+    { label: 'e-mail', pattern: /[\w.+-]+@[\w.-]+\.[a-z]{2,}/i },
+    { label: 'CPF', pattern: /\b\d{3}[.\s-]?\d{3}[.\s-]?\d{3}[-\s]?\d{2}\b/ },
+    { label: 'número de processo', pattern: /\b(?:SEI[-\s:]*)?\d{5,6}[./-]\d{5,7}[./-]\d{4}(?:-\d{2})?\b/i }
+  ]
 
   const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
@@ -159,7 +164,8 @@
 
     if (credentials?.remember) {
       $('#webmail-user').value = credentials.user || ''
-      $('#webmail-password').value = credentials.password || ''
+      $('#webmail-password').value = ''
+      $('#webmail-password').placeholder = credentials.password ? 'Senha já salva' : 'Senha'
       $('#remember-webmail-credentials').checked = true
       renderCredentialStatus('#webmail-credentials-status', Boolean(credentials.user && credentials.password))
       await setConfiguredOperatorFromWebmail(credentials.user)
@@ -173,7 +179,8 @@
 
     if (credentials?.remember) {
       $('#sei-user').value = credentials.user || ''
-      $('#sei-password').value = credentials.password || ''
+      $('#sei-password').value = ''
+      $('#sei-password').placeholder = credentials.password ? 'Senha já salva' : 'Senha'
       $('#remember-sei-credentials').checked = true
       renderCredentialStatus('#sei-credentials-status', Boolean(credentials.user && credentials.password))
     } else {
@@ -193,9 +200,15 @@
     event.preventDefault()
 
     const user = clean($('#webmail-user').value).toLowerCase()
-    const password = String($('#webmail-password').value || '')
+    const enteredPassword = String($('#webmail-password').value || '')
     const remember = $('#remember-webmail-credentials').checked
     const operator = extractProtocolista(user)
+    const existing = (await get(WEBMAIL_CREDENTIALS_KEY))[WEBMAIL_CREDENTIALS_KEY]
+    const password = enteredPassword || (
+      remember && existing?.remember && clean(existing.user).toLowerCase() === user
+        ? String(existing.password || '')
+        : ''
+    )
 
     if (!operator) {
       return message(
@@ -218,6 +231,8 @@
       })
       renderCredentialStatus('#webmail-credentials-status', true)
       message('#webmail-credentials-message', 'Acesso do Webmail salvo neste navegador.', 'success')
+      $('#webmail-password').value = ''
+      $('#webmail-password').placeholder = 'Senha já salva'
     } else {
       await remove(WEBMAIL_CREDENTIALS_KEY)
       renderCredentialStatus('#webmail-credentials-status', false)
@@ -232,8 +247,14 @@
     event.preventDefault()
 
     const user = clean($('#sei-user').value)
-    const password = String($('#sei-password').value || '')
+    const enteredPassword = String($('#sei-password').value || '')
     const remember = $('#remember-sei-credentials').checked
+    const existing = (await get(SEI_CREDENTIALS_KEY))[SEI_CREDENTIALS_KEY]
+    const password = enteredPassword || (
+      remember && existing?.remember && clean(existing.user) === user
+        ? String(existing.password || '')
+        : ''
+    )
 
     if (!user) return message('#sei-credentials-message', 'Informe o usuário do SEI.', 'error')
     if (!password) return message('#sei-credentials-message', 'Informe a senha do SEI.', 'error')
@@ -249,6 +270,8 @@
       })
       renderCredentialStatus('#sei-credentials-status', true)
       message('#sei-credentials-message', 'Acesso do SEI salvo neste navegador.', 'success')
+      $('#sei-password').value = ''
+      $('#sei-password').placeholder = 'Senha já salva'
     } else {
       await remove(SEI_CREDENTIALS_KEY)
       renderCredentialStatus('#sei-credentials-status', false)
@@ -259,6 +282,7 @@
   }
 
   async function clearWebmailCredentials () {
+    if (!window.confirm('Apagar as credenciais salvas do Webmail neste navegador?')) return
     await remove(WEBMAIL_CREDENTIALS_KEY)
     $('#webmail-credentials-form').reset()
     $('#webmail-password').type = 'password'
@@ -267,20 +291,12 @@
   }
 
   async function clearSeiCredentials () {
+    if (!window.confirm('Apagar as credenciais salvas do SEI neste navegador?')) return
     await remove(SEI_CREDENTIALS_KEY)
     $('#sei-credentials-form').reset()
     $('#sei-password').type = 'password'
     renderCredentialStatus('#sei-credentials-status', false)
     message('#sei-credentials-message', 'Credenciais do SEI apagadas.', 'success')
-  }
-
-  async function clearAllCredentials () {
-    await remove([WEBMAIL_CREDENTIALS_KEY, SEI_CREDENTIALS_KEY])
-    $('#webmail-credentials-form').reset()
-    $('#sei-credentials-form').reset()
-    renderCredentialStatus('#webmail-credentials-status', false)
-    renderCredentialStatus('#sei-credentials-status', false)
-    message('#clear-all-message', 'Todas as credenciais locais foram removidas.', 'success')
   }
 
   function togglePassword (selector) {
@@ -314,9 +330,30 @@
     return { active: null, report: null }
   }
 
+  async function clearExpiredMetrics () {
+    const stored = await get(METRICS_KEY)
+    const allMetrics = stored[METRICS_KEY]
+    if (!allMetrics || typeof allMetrics !== 'object') return
+
+    const today = localDayKey()
+    let changed = false
+    const nextMetrics = Object.fromEntries(Object.entries(allMetrics).map(([number, rawState]) => {
+      const state = rawState || emptyMetricsState()
+      const active = state.active?.dayKey === today ? state.active : null
+      const report = state.report?.dayKey === today ? state.report : null
+      if (active !== state.active || report !== state.report) changed = true
+      return [number, { active, report }]
+    }))
+
+    if (changed) await set({ [METRICS_KEY]: nextMetrics })
+  }
+
   async function readOperatorMetrics () {
-    const stored = await get([OPERATOR_KEY, METRICS_KEY])
-    const operator = stored[OPERATOR_KEY]
+    const stored = await get([WEBMAIL_CREDENTIALS_KEY, METRICS_KEY])
+    const credentials = stored[WEBMAIL_CREDENTIALS_KEY]
+    const operator = credentials?.remember && credentials?.password
+      ? extractProtocolista(credentials.user)
+      : null
     const operatorNumber = clean(operator?.number)
     const allMetrics = stored[METRICS_KEY] && typeof stored[METRICS_KEY] === 'object'
       ? stored[METRICS_KEY]
@@ -324,15 +361,7 @@
 
     if (!operatorNumber) return { operatorNumber: '', allMetrics, state: emptyMetricsState() }
 
-    const state = allMetrics[operatorNumber] || emptyMetricsState()
-    if (state.report?.dayKey && state.report.dayKey !== localDayKey()) {
-      const nextState = { ...state, report: null }
-      const nextMetrics = { ...allMetrics, [operatorNumber]: nextState }
-      await set({ [METRICS_KEY]: nextMetrics })
-      return { operatorNumber, allMetrics: nextMetrics, state: nextState }
-    }
-
-    return { operatorNumber, allMetrics, state }
+    return { operatorNumber, allMetrics, state: allMetrics[operatorNumber] || emptyMetricsState() }
   }
 
   function renderWorkdayReport (report) {
@@ -498,6 +527,16 @@
       return
     }
 
+    const sensitiveMatch = FEEDBACK_SENSITIVE_PATTERNS.find(({ pattern }) => pattern.test([title, description, steps].join('\n')))
+    if (sensitiveMatch) {
+      message(
+        '#feedback-message',
+        `Remova ${sensitiveMatch.label} de cidadão ou processo antes de enviar o relato.`,
+        'error'
+      )
+      return
+    }
+
     if (!operatorNumber || !extractProtocolista(operatorEmail)) {
       message('#feedback-message', 'Configure primeiro o e-mail institucional do protocolista.', 'error')
       return
@@ -592,33 +631,12 @@
     renderCatalog(filtered)
   }
 
-  function downloadSettings () {
-    const payload = {
-      app: 'SEI Protocolistas',
-      schemaVersion: 3,
-      exportedAt: new Date().toISOString(),
-      note: 'Credenciais e senhas não são exportadas.'
-    }
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `sei-protocolistas-config-${new Date().toISOString().slice(0, 10)}.json`
-    anchor.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-
-    message('#transfer-message', 'Configuração exportada sem credenciais.', 'success')
-  }
-
   function bind () {
     $('#webmail-credentials-form').addEventListener('submit', saveWebmailCredentialsAndOpen)
     $('#sei-credentials-form').addEventListener('submit', saveSeiCredentialsAndOpen)
 
     $('#clear-webmail-credentials').addEventListener('click', clearWebmailCredentials)
     $('#clear-sei-credentials').addEventListener('click', clearSeiCredentials)
-    $('#clear-all-credentials').addEventListener('click', clearAllCredentials)
-
     $('#toggle-webmail-password').addEventListener('click', () => togglePassword('#webmail-password'))
     $('#toggle-sei-password').addEventListener('click', () => togglePassword('#sei-password'))
 
@@ -634,8 +652,6 @@
       setTimeout(() => $('#catalog-search').focus(), 300)
     })
 
-    $('#export-settings').addEventListener('click', downloadSettings)
-
     $('#webmail-user').addEventListener('change', async (event) => {
       const operator = extractProtocolista(event.target.value)
       if (operator) await setConfiguredOperatorFromWebmail(operator.email)
@@ -646,6 +662,7 @@
     $('#extension-version').textContent = `Versão ${api.runtime.getManifest().version}`
     bind()
     await clearExpiredFeedback()
+    await clearExpiredMetrics()
 
     const stored = await get(OPERATOR_KEY)
     renderOperator(stored[OPERATOR_KEY])

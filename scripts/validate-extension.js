@@ -161,7 +161,7 @@ expect(
 )
 expect(centralSource.includes("const METRICS_KEY = 'centralProtocolistaMetricsByOperator'"), 'Central: métricas não estão separadas por protocolista')
 expect(centralSource.includes("button.textContent = 'FINALIZAR EXPEDIENTE'"), 'Central: finalização do expediente não encontrada')
-expect(centralSource.includes('state.report.dayKey !== localDayKey()'), 'Central: limpeza do relatório no dia seguinte não encontrada')
+expect(centralSource.includes('state.report?.dayKey === today'), 'Central: limpeza do relatório no dia seguinte não encontrada')
 expect(!centralHtml.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular não pode aparecer na interface')
 expect(!centralSource.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular deve permanecer ofuscado no código da interface')
 expect(!centralSource.includes('formsubmit.co'), 'Central: FormSubmit não deve permanecer no canal de relatos')
@@ -231,6 +231,11 @@ expect(scriptCatalogBuilderSource.includes('txt-attachment'), 'Importador Trello
 expect(scriptCatalogBuilderSource.includes('destino[\\s_]+do[\\s_]+processo'), 'Importador Trello: DESTINO DO PROCESSO.txt não pode virar resposta')
 expect(scriptCatalogBuilderSource.includes('attachedDestination'), 'Importador Trello: destino anexado deve alimentar o catálogo de processos')
 expect(scriptCatalogBuilderSource.includes('syncProcessDestinations'), 'Importador Trello: destino deve ficar salvo por procedimento')
+expect(!centralHtml.includes('Administração e manutenção'), 'Central: bloco administrativo redundante deve permanecer removido')
+expect(!centralHtml.includes('clear-all-credentials'), 'Central: exclusão geral de credenciais não pode ficar exposta')
+expect(centralSource.includes('clearExpiredMetrics'), 'Central: métricas vencidas devem ser removidas globalmente')
+expect(centralSource.includes('FEEDBACK_SENSITIVE_PATTERNS'), 'Central: relatos devem bloquear dados pessoais aparentes')
+expect(centralSource.includes("placeholder = 'Senha já salva'"), 'Central: senha salva não deve voltar ao campo visível')
 
 let processTypes = []
 let processIds = new Set()
