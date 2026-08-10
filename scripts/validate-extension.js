@@ -40,6 +40,20 @@ function expectFile (relativePath, source) {
   expect(fs.existsSync(fullPath), `${source}: arquivo não encontrado: ${relativePath}`)
 }
 
+function expectIconFiles (icons, source) {
+  if (typeof icons === 'string') {
+    expectFile(icons, source)
+    return
+  }
+
+  expect(icons && typeof icons === 'object', `${source}: configuração de ícones inválida`)
+  if (!icons || typeof icons !== 'object') return
+
+  Object.entries(icons).forEach(([size, iconPath]) => {
+    expectFile(iconPath, `${source}[${size}]`)
+  })
+}
+
 function isAllowedMatch (match) {
   return allowedOrigins.some((origin) => match.startsWith(origin))
 }
@@ -90,7 +104,10 @@ if (manifest && packageJson) {
     expectFile(manifest.action.default_popup, 'manifest.action.default_popup')
   }
   if (manifest.action?.default_icon) {
-    expectFile(manifest.action.default_icon, 'manifest.action.default_icon')
+    expectIconFiles(manifest.action.default_icon, 'manifest.action.default_icon')
+  }
+  if (manifest.icons) {
+    expectIconFiles(manifest.icons, 'manifest.icons')
   }
   expect(
     manifest.background?.service_worker === 'background/service-worker.js',

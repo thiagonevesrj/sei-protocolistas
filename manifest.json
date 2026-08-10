@@ -7,7 +7,10 @@
     "author": "Thiago Neves e colaboradores do SEI++",
     "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
     "icons": {
-        "48": "icons/seipp-new.png"
+        "16": "icons/protocolistas-16.png",
+        "32": "icons/protocolistas-32.png",
+        "48": "icons/protocolistas-48.png",
+        "128": "icons/protocolistas-128.png"
     },
     "permissions": [
         "storage"
@@ -17,7 +20,12 @@
         "https://venus2.detran.rj.gov.br/owa/*"
     ],
     "action": {
-        "default_icon": "icons/seipp-new.png",
+        "default_icon": {
+            "16": "icons/protocolistas-16.png",
+            "32": "icons/protocolistas-32.png",
+            "48": "icons/protocolistas-48.png",
+            "128": "icons/protocolistas-128.png"
+        },
         "default_title": "SEI Protocolistas",
         "default_popup": "browser_action/index.html"
     },
