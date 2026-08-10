@@ -548,6 +548,9 @@
   function buildMissingDocumentsRequirementHtml (name, procedureLabel, documents) {
     const safeName = escapeHtml(cleanValue(name))
     const safeProcedureLabel = escapeHtml(cleanValue(procedureLabel))
+    const operatorSignature = currentOperator?.number
+      ? `Protocolista nº ${escapeHtml(currentOperator.number)} — SEI-RJ`
+      : 'Serviço de Protocolo — DETRAN-RJ'
     const items = documents
       .map((item) => `<li style="margin:0 0 7px 0;">${escapeHtml(item.text)}</li>`)
       .join('')
@@ -568,13 +571,13 @@
         <p style="margin:0 0 12px 0;">Após a análise da documentação encaminhada, identificamos a necessidade do envio dos seguintes documentos para dar continuidade à solicitação de ${safeProcedureLabel}:</p>
         <ul style="margin:0 0 14px 22px;padding:0;">${items}</ul>
         ${links}
-        <div style="margin:16px 0 0 0;padding:12px 14px;background:#fff1f1;border:1px solid #c94b4b;border-left:4px solid #b42318;border-radius:4px;color:#1f1f1f;">
-          <p style="margin:0 0 7px 0;color:#9f1c13;font-weight:700;">ATENÇÃO</p>
+        <div style="margin:16px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #7a8491;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 7px 0;font-weight:700;">ATENÇÃO</p>
           <p style="margin:0 0 7px 0;">Para prosseguirmos com o atendimento, responda a esta mesma mensagem e reenvie, em um único e-mail, <strong>todos os documentos necessários, inclusive aqueles que já foram enviados anteriormente</strong>.</p>
           <p style="margin:0;"><strong>O envio apenas dos documentos indicados como faltantes não será suficiente para a continuidade da solicitação.</strong></p>
         </div>
         <p style="margin:12px 0 0 0;">Não altere o assunto desta mensagem e não encaminhe um novo e-mail para a mesma solicitação.</p>
-        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ</p>
+        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>${operatorSignature}</p>
       </div>`
   }
 
