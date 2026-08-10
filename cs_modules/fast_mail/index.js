@@ -1103,6 +1103,10 @@
 
   function buildCatalogScriptHtml (script) {
     const body = String(script.body || '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/[ \t]+$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
       .split(/\r?\n/)
       .map(formatScriptLine)
       .join('<br>')

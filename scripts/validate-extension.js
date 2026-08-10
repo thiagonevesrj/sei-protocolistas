@@ -150,6 +150,14 @@ expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de 
 expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
 expect(fastMailSource.includes('Protocolista nº'), 'FAST MAIL: exigência deve usar a assinatura do protocolista')
 expect(!fastMailSource.includes('background:#fff1f1'), 'FAST MAIL: alerta de reenvio não deve usar caixa vermelha')
+expect(
+  fastMailSource.includes("replace(/[\\u200B-\\u200D\\uFEFF]/g, '')"),
+  'FAST MAIL: respostas do Trello devem remover caracteres invisíveis'
+)
+expect(
+  fastMailSource.includes("replace(/\\n{3,}/g, '\\n\\n')"),
+  'FAST MAIL: respostas do Trello devem reduzir excesso de linhas vazias'
+)
 expect(fastProcSource.includes("source: 'fast-mail'"), 'FAST PROC: origem do FAST MAIL obrigatória')
 expect(fastProcSource.includes('sp-clique-prefill-missing'), 'FAST PROC: campos ausentes devem ser destacados')
 expect(seiLoginSource.includes('centralProtocolistaSeiCredentials'), 'SEI: credenciais da Central não são reaproveitadas')
