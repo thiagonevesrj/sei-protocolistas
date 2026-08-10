@@ -22,6 +22,7 @@
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
+  let priorityTopics = []
   let responseScripts = []
   let responseScriptPhases = []
   let currentOperator = null
@@ -919,11 +920,13 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const payload = await response.json()
       catalogProcesses = Array.isArray(payload.processTypes) ? payload.processTypes : []
+      priorityTopics = Array.isArray(payload.fastMailPriorityTopics) ? payload.fastMailPriorityTopics : []
       catalogNavigation = payload.fastMailNavigation && Array.isArray(payload.fastMailNavigation.areas)
         ? payload.fastMailNavigation
         : { areas: [] }
       renderProcedureOptions()
       renderAreaOptions()
+      renderPriorityTopics()
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao carregar catálogo no FAST MAIL:', error)
       const select = document.querySelector('#spfm-procedure')
@@ -1088,10 +1091,8 @@
       </div>`
   }
 
-  async function insertSelectedResponseScript () {
-    const status = document.querySelector('#spfm-script-status')
+  async function insertResponseScript (script, status = document.querySelector('#spfm-script-status')) {
     try {
-      const script = selectedResponseScript()
       if (!script) throw new Error('Selecione um script.')
 
       const editor = findMessageBodyEditor()
@@ -1107,6 +1108,10 @@
     }
   }
 
+  async function insertSelectedResponseScript () {
+    await insertResponseScript(selectedResponseScript())
+  }
+
   function toggleResponseScriptCatalog () {
     const catalog = document.querySelector('#spfm-script-catalog')
     const button = document.querySelector('#spfm-script-toggle')
@@ -1115,6 +1120,129 @@
     catalog.hidden = !catalog.hidden
     button.textContent = catalog.hidden ? 'BUSCAR SCRIPT' : 'FECHAR SCRIPTS'
     if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
+  }
+
+  function selectedPriorityTopic () {
+    const selected = document.querySelector('.spfm-topic-button.is-active')
+    return priorityTopics.find((topic) => topic.id === selected?.dataset.topicId) || null
+  }
+
+  function selectedPriorityVariant (topic) {
+    const variantId = document.querySelector('#spfm-topic-variant')?.value || ''
+    return topic?.variants?.find((variant) => variant.id === variantId) || null
+  }
+
+  function selectedPriorityRoute () {
+    const topic = selectedPriorityTopic()
+    const variant = selectedPriorityVariant(topic)
+    if (!topic) return null
+
+    return {
+      ...topic,
+      ...(variant || {}),
+      topicId: topic.id,
+      topicLabel: topic.label,
+      variantLabel: variant?.label || ''
+    }
+  }
+
+  function renderPriorityRoute () {
+    const topic = selectedPriorityTopic()
+    const variantField = document.querySelector('#spfm-topic-variant-field')
+    const variantSelect = document.querySelector('#spfm-topic-variant')
+    const replyButton = document.querySelector('#spfm-priority-reply')
+    const openButton = document.querySelector('#spfm-priority-open')
+    const status = document.querySelector('#spfm-priority-status')
+    if (!variantField || !variantSelect || !replyButton || !openButton || !status) return
+
+    const currentVariant = variantSelect.value
+    const variants = Array.isArray(topic?.variants) ? topic.variants : []
+    variantSelect.innerHTML = ''
+    variants.forEach((variant) => {
+      const option = document.createElement('option')
+      option.value = variant.id
+      option.textContent = variant.label
+      variantSelect.appendChild(option)
+    })
+    if (variants.some((variant) => variant.id === currentVariant)) {
+      variantSelect.value = currentVariant
+    }
+    variantField.hidden = variants.length === 0
+
+    const route = selectedPriorityRoute()
+    replyButton.disabled = !route?.scriptId
+    openButton.disabled = !route?.canOpenProcess || !route?.processId
+    status.textContent = !route
+      ? 'Escolha o assunto do e-mail.'
+      : route.canOpenProcess
+        ? 'Documentação incompleta: responder. Documentação completa: abrir no FAST PROC.'
+        : route.blockedReason || 'Este atendimento deve ser respondido por e-mail.'
+
+    if (route?.processId) syncRouteWithProcedure(route.processId)
+    else syncRouteWithProcedure('')
+  }
+
+  function selectPriorityTopic (topicId) {
+    document.querySelectorAll('.spfm-topic-button').forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.topicId === topicId)
+    })
+    renderPriorityRoute()
+  }
+
+  function renderPriorityTopics () {
+    const container = document.querySelector('#spfm-priority-topics')
+    if (!container) return
+
+    container.innerHTML = ''
+    priorityTopics.forEach((topic) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'spfm-topic-button'
+      button.dataset.topicId = topic.id
+      button.textContent = topic.label
+      button.addEventListener('click', () => selectPriorityTopic(topic.id))
+      container.appendChild(button)
+    })
+    renderPriorityRoute()
+  }
+
+  function openPriorityResponses () {
+    const route = selectedPriorityRoute()
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    const phase = document.querySelector('#spfm-script-phase')
+    const search = document.querySelector('#spfm-script-search')
+    const result = document.querySelector('#spfm-script-result')
+    const status = document.querySelector('#spfm-priority-status')
+    if (!route || !catalog || !toggleButton || !phase || !search || !result) {
+      if (status) status.textContent = 'Escolha primeiro o assunto do e-mail.'
+      return
+    }
+
+    catalog.hidden = false
+    toggleButton.textContent = 'FECHAR RESPOSTAS'
+    phase.value = ''
+    search.value = route.searchQuery || route.topicLabel || ''
+    renderResponseScriptResults()
+
+    const mappedScriptAvailable = Array.from(result.options).some((option) => option.value === route.scriptId)
+    if (mappedScriptAvailable) result.value = route.scriptId
+    renderSelectedResponseScript()
+    if (status) status.textContent = 'Escolha a fase e confira a resposta antes de inserir.'
+    catalog.scrollIntoView?.({ block: 'nearest' })
+  }
+
+  async function openPriorityProcess () {
+    const route = selectedPriorityRoute()
+    const button = document.querySelector('#spfm-priority-open')
+    const status = document.querySelector('#spfm-priority-status')
+    if (!route?.canOpenProcess || !route?.processId) {
+      if (status) status.textContent = route?.blockedReason || 'Este atendimento não admite abertura por e-mail.'
+      return
+    }
+
+    syncRouteWithProcedure(route.processId)
+    await openProcessInSei(button)
   }
 
   function renderProcedureOptions (processIds = null) {
@@ -1420,8 +1548,8 @@
     }
   }
 
-  async function openProcessInSei () {
-    const button = document.querySelector('#spfm-open-process')
+  async function openProcessInSei (buttonOverride = null) {
+    const button = buttonOverride || document.querySelector('#spfm-open-process')
     const originalText = button?.textContent || 'ABRIR PROCESSO'
 
     if (button) {
@@ -1663,6 +1791,20 @@
           <span id="spfm-email">Abra uma mensagem</span>
         </div>
 
+        <section class="spfm-priority-workflow">
+          <div class="spfm-section-title">QUAL É O ASSUNTO DO E-MAIL?</div>
+          <div id="spfm-priority-topics" class="spfm-topic-grid"></div>
+          <label id="spfm-topic-variant-field" hidden>
+            <span>Qual é o caso?</span>
+            <select id="spfm-topic-variant"></select>
+          </label>
+          <div class="spfm-decision-grid">
+            <button id="spfm-priority-reply" type="button" disabled>RESPONDER E-MAIL</button>
+            <button id="spfm-priority-open" type="button" disabled>ABRIR NO FAST PROC</button>
+          </div>
+          <div id="spfm-priority-status" class="spfm-mini-status">Escolha o assunto do e-mail.</div>
+        </section>
+
         <button id="spfm-script-toggle" class="spfm-secondary" type="button">BUSCAR SCRIPT</button>
         <div id="spfm-script-catalog" class="spfm-script-catalog" hidden>
           <label>
@@ -1735,7 +1877,7 @@
           <div id="spfm-process-response-status" class="spfm-mini-status"></div>
         </div>
 
-        <button id="spfm-open-process" type="button">ABRIR PROCESSO</button>
+        <button id="spfm-open-process" type="button" hidden>ABRIR PROCESSO</button>
         <button id="spfm-triagem" type="button">PREPARAR TRIAGEM</button>
       </div>
     `
@@ -1743,12 +1885,15 @@
     document.documentElement.appendChild(panel)
 
     panel.querySelector('#spfm-collapse').addEventListener('click', () => togglePanel(panel))
+    panel.querySelector('#spfm-topic-variant').addEventListener('change', renderPriorityRoute)
+    panel.querySelector('#spfm-priority-reply').addEventListener('click', openPriorityResponses)
+    panel.querySelector('#spfm-priority-open').addEventListener('click', openPriorityProcess)
     panel.querySelector('#spfm-script-toggle').addEventListener('click', toggleResponseScriptCatalog)
     panel.querySelector('#spfm-script-phase').addEventListener('change', renderResponseScriptResults)
     panel.querySelector('#spfm-script-search').addEventListener('input', renderResponseScriptResults)
     panel.querySelector('#spfm-script-result').addEventListener('change', renderSelectedResponseScript)
     panel.querySelector('#spfm-insert-script').addEventListener('click', insertSelectedResponseScript)
-    panel.querySelector('#spfm-open-process').addEventListener('click', openProcessInSei)
+    panel.querySelector('#spfm-open-process').addEventListener('click', () => openProcessInSei())
     panel.querySelector('#spfm-triagem').addEventListener('click', prepareTriagem)
     panel.querySelector('#spfm-missing-toggle').addEventListener('click', toggleMissingDocuments)
     panel.querySelector('#spfm-insert-requirement').addEventListener('click', insertMissingDocumentsRequirement)
