@@ -76,6 +76,15 @@
     throw new Error('O Webmail demorou para confirmar o envio.')
   }
 
+  async function clearExpiredFeedback () {
+    const feedback = (await get(FEEDBACK_KEY))[FEEDBACK_KEY]
+    if (!feedback) return
+
+    const finished = ['sent', 'error'].includes(feedback.status)
+    const expired = !feedback.expiresAt || Date.now() > feedback.expiresAt
+    if (finished || expired) await remove(FEEDBACK_KEY)
+  }
+
   function message (selector, text, type = '') {
     const element = $(selector)
     if (!element) return
@@ -636,6 +645,7 @@
   document.addEventListener('DOMContentLoaded', async () => {
     $('#extension-version').textContent = `Versão ${api.runtime.getManifest().version}`
     bind()
+    await clearExpiredFeedback()
 
     const stored = await get(OPERATOR_KEY)
     renderOperator(stored[OPERATOR_KEY])
