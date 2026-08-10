@@ -103,6 +103,81 @@
   font-size: 10px;
 }
 
+#sei-protocolistas-fast-mail-status .spfm-priority-workflow {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 9px;
+  background: #030d1b;
+  border: 1px solid rgba(241, 196, 79, 0.42);
+  border-radius: 8px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-section-title {
+  color: #f1c44f;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-topic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-topic-grid .spfm-topic-button {
+  min-height: 38px;
+  margin: 0;
+  padding: 6px;
+  color: #e8eef7;
+  background: #06172d;
+  border: 1px solid rgba(174, 189, 208, 0.24);
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-topic-grid .spfm-topic-button.is-active {
+  color: #071224;
+  background: #f1c44f;
+  border-color: #f1c44f;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-priority-workflow label {
+  display: grid;
+  gap: 4px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-priority-workflow label > span {
+  color: #aebdd0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-decision-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-decision-grid button {
+  min-height: 42px;
+  margin-top: 0 !important;
+  padding: 7px 5px !important;
+  font-size: 10px !important;
+  line-height: 1.1;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-decision-grid #spfm-priority-open {
+  color: #f1c44f;
+  background: #06172d;
+  border: 1px solid rgba(241, 196, 79, 0.58);
+}
+
 #sei-protocolistas-fast-mail-status .spfm-fields {
   display: grid;
   gap: 7px;
