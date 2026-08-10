@@ -279,7 +279,7 @@ if (catalog) {
   }
 
   const priorityTopics = catalog.fastMailPriorityTopics
-  expect(Array.isArray(priorityTopics) && priorityTopics.length === 14, 'FAST MAIL: 14 assuntos principais obrigatórios')
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 16, 'FAST MAIL: 16 assuntos principais obrigatórios')
   if (Array.isArray(priorityTopics)) {
     expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
     const priorityAreaIds = new Set((areas || []).map((area) => area.id))
@@ -324,6 +324,8 @@ if (catalog) {
       'rebaixamento-categoria': 'rebaixamento-categoria-cnh',
       'retorno-categoria': 'retorno-categoria-cnh-rebaixada',
       'transferencia-prontuario': 'transferencia-prontuario-habilitacao',
+      'generico-habilitacao': 'solicitacao-geral-habilitacao',
+      'generico-veiculos': 'solicitacoes-gerais-veiculos',
       'cnh-estrangeira': 'averbacao-cnh-estrangeira',
       oficios: 'oficio-mero-expediente'
     }
@@ -349,12 +351,14 @@ if (catalog) {
       'rebaixamento-categoria': 'habilitacao',
       'retorno-categoria': 'habilitacao',
       'transferencia-prontuario': 'habilitacao',
+      'generico-habilitacao': 'habilitacao',
       'cnh-estrangeira': 'habilitacao',
       'cancelamento-comunicacao-venda': 'veiculos',
       'comunicacao-venda': 'veiculos',
       'intencao-venda': 'veiculos',
       motor: 'veiculos',
       chassi: 'veiculos',
+      'generico-veiculos': 'veiculos',
       oficios: 'oficios'
     }
     Object.entries(expectedPriorityAreas).forEach(([topicId, areaId]) => {
@@ -375,6 +379,22 @@ if (catalog) {
       const topic = priorityTopics.find((item) => item.id === topicId)
       expect(topic?.corePriority === true, `FAST MAIL: ${topicId} deve ser prioridade central`)
       expect(topic?.corePriorityRank === index + 1, `FAST MAIL: ordem central incorreta para ${topicId}`)
+    })
+
+    const genericTopics = {
+      'generico-habilitacao': 'trello-64e2a0fc88d682bd3ad5edb5',
+      'generico-veiculos': 'trello-64dfa7d9de9f8501856b0f8c'
+    }
+    Object.entries(genericTopics).forEach(([topicId, scriptId]) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      const script = scriptCatalog?.scripts?.find((item) => item.id === scriptId)
+      const processType = processTypes.find((item) => item.id === topic?.processId)
+      const documentIds = new Set((processType?.missingDocuments || []).map((item) => item.id))
+      expect(topic?.scriptId === scriptId, `FAST MAIL: ${topicId} deve usar o script genérico do Trello`)
+      expect(documentIds.has('general-request'), `FAST MAIL: ${topicId} deve oferecer Requerimento Geral`)
+      expect(documentIds.has('residence'), `FAST MAIL: ${topicId} deve oferecer Declaração de Residência`)
+      expect(script?.body?.includes('DETRAN_0049_requerimento_geral.pdf'), `FAST MAIL: ${topicId} deve incluir link do Requerimento Geral`)
+      expect(script?.body?.includes('DETRAN0034_declararesid.pdf'), `FAST MAIL: ${topicId} deve incluir link da Declaração de Residência`)
     })
   }
 

@@ -568,8 +568,25 @@
       "quickTrigger": "GERAL-VEIC",
       "priority": true,
       "responseModel": "standard",
-      "documentsStatus": "pending-validation",
-      "category": "veiculos"
+      "documentsStatus": "trello-current-card",
+      "category": "veiculos",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido, com a exposição dos fatos e da solicitação, e assinado à caneta ou por certificação digital.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante ou Declaração de Residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Na ausência de comprovante em nome do requerente, utilize a Declaração de Residência disponível abaixo:"
+        }
+      ]
     },
     {
       "id": "cancelamento-comunicacao-venda",
@@ -969,6 +986,19 @@
       ]
     },
     {
+      "id": "generico-habilitacao",
+      "label": "Genérico — Habilitação",
+      "area": "habilitacao",
+      "recentUsageCount": 0,
+      "searchQuery": "genérico habilitação",
+      "processId": "solicitacao-geral-habilitacao",
+      "canOpenProcess": true,
+      "scriptId": "trello-64e2a0fc88d682bd3ad5edb5",
+      "responseScriptIds": [
+        "trello-64e2a0fc88d682bd3ad5edb5"
+      ]
+    },
+    {
       "id": "cancelamento-comunicacao-venda",
       "label": "Cancelamento de comunicação de venda",
       "area": "veiculos",
@@ -1037,6 +1067,19 @@
       "scriptId": "trello-64fe0e22f7f7bdae92a13bcd",
       "responseScriptIds": [
         "trello-64fe0e22f7f7bdae92a13bcd"
+      ]
+    },
+    {
+      "id": "generico-veiculos",
+      "label": "Genérico — Veículos",
+      "area": "veiculos",
+      "recentUsageCount": 0,
+      "searchQuery": "genérico veículos",
+      "processId": "solicitacoes-gerais-veiculos",
+      "canOpenProcess": true,
+      "scriptId": "trello-64dfa7d9de9f8501856b0f8c",
+      "responseScriptIds": [
+        "trello-64dfa7d9de9f8501856b0f8c"
       ]
     },
     {

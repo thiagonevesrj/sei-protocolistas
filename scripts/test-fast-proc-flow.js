@@ -224,6 +224,8 @@ function testFastMailProgressiveNavigation () {
   assert.ok(source.includes('priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)'))
   assert.ok(source.includes("if (areaId === 'taxas')"))
   assert.ok(source.includes("selectPriorityTopic('devolucao-taxas')"))
+  assert.ok(read('data/catalogo-processos.json').includes('Genérico — Habilitação'))
+  assert.ok(read('data/catalogo-processos.json').includes('Genérico — Veículos'))
   assert.ok(source.includes('box.hidden = !hasDocumentModel || activePriorityAction !== \'missing\''))
   assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-priority-status"'))
   assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-email-preparation"'))
