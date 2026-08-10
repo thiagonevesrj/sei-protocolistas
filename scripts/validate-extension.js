@@ -156,6 +156,10 @@ if (manifest && packageJson) {
 expect(centralHtml.includes('FINALIZAR EXPEDIENTE') === false, 'Central: o botão deve alternar o texto pelo estado salvo')
 expect(centralHtml.includes('EXPORTAR MEU RELATÓRIO EM CSV'), 'Central: exportação individual do relatório não encontrada')
 expect(centralHtml.includes('Sugestões e bugs'), 'Central: canal de sugestões e bugs não encontrado')
+expect(
+  centralHtml.indexOf('Sugestões e bugs') < centralHtml.indexOf('Catálogo operacional'),
+  'Central: sugestões e bugs devem aparecer antes do catálogo operacional'
+)
 expect(centralSource.includes("const METRICS_KEY = 'centralProtocolistaMetricsByOperator'"), 'Central: métricas não estão separadas por protocolista')
 expect(centralSource.includes("button.textContent = 'FINALIZAR EXPEDIENTE'"), 'Central: finalização do expediente não encontrada')
 expect(centralSource.includes('state.report.dayKey !== localDayKey()'), 'Central: limpeza do relatório no dia seguinte não encontrada')
