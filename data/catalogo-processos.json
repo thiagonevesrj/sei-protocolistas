@@ -430,6 +430,123 @@
       "category": "veiculos"
     }
   ],
+  "fastMailPriorityTopics": [
+    {
+      "id": "devolucao-taxas",
+      "label": "Devolução de taxas",
+      "searchQuery": "devolução taxas",
+      "processId": "devolucao-taxas",
+      "canOpenProcess": true,
+      "variants": [
+        {
+          "id": "pessoa-fisica",
+          "label": "Pessoa física",
+          "scriptId": "trello-65f46ef5033efcda96e556ae"
+        },
+        {
+          "id": "grt-pessoa-fisica",
+          "label": "GRT — pessoa física",
+          "scriptId": "trello-6772d4710e4af6b3c2bd2fbb"
+        },
+        {
+          "id": "pessoa-juridica",
+          "label": "Pessoa jurídica",
+          "scriptId": "trello-663cc82584cc25ecb03205aa"
+        },
+        {
+          "id": "multa",
+          "label": "Ressarcimento de multa",
+          "scriptId": "trello-69fb4efa3dec966bbbcc52ac"
+        }
+      ]
+    },
+    {
+      "id": "desistencia-categoria",
+      "label": "Desistência de categoria",
+      "searchQuery": "desistência categoria",
+      "processId": "desistencia-categoria-primeira-habilitacao",
+      "canOpenProcess": true,
+      "scriptId": "trello-677290e1915209e347b75be7"
+    },
+    {
+      "id": "pericia-medica-pcd",
+      "label": "Perícia médica — CNH PCD",
+      "searchQuery": "perícia médica",
+      "processId": "solicitacao-pericia-medica",
+      "canOpenProcess": true,
+      "variants": [
+        {
+          "id": "pcd-geral",
+          "label": "Incluir/alterar anotação PCD",
+          "scriptId": "trello-64e29e008682149db2680d4a"
+        },
+        {
+          "id": "visao-audicao",
+          "label": "Visão monocular/deficiência auditiva",
+          "scriptId": "trello-663113e3d9dba6d93db00a8a"
+        }
+      ]
+    },
+    {
+      "id": "transferencia-prontuario",
+      "label": "Transferência de prontuário",
+      "searchQuery": "transferência prontuário",
+      "processId": "transferencia-prontuario-habilitacao",
+      "canOpenProcess": true,
+      "scriptId": "trello-68b6010614930008a05c012e"
+    },
+    {
+      "id": "cancelamento-venda",
+      "label": "Cancelar comunicação/intenção",
+      "searchQuery": "venda",
+      "canOpenProcess": false,
+      "blockedReason": "Abertura somente presencial conforme o script vigente.",
+      "variants": [
+        {
+          "id": "comunicacao-venda",
+          "label": "Comunicação de venda",
+          "scriptId": "trello-64fe1b1b82cbce3912ecf28c"
+        },
+        {
+          "id": "intencao-venda",
+          "label": "Intenção de venda",
+          "scriptId": "trello-64fe1f0adc906e4ee29b4c09"
+        }
+      ]
+    },
+    {
+      "id": "motor",
+      "label": "Regularização/troca de motor",
+      "searchQuery": "motor",
+      "canOpenProcess": false,
+      "blockedReason": "Abertura somente presencial conforme o script vigente.",
+      "scriptId": "trello-683f34d2e0adb2ad31bb2f55"
+    },
+    {
+      "id": "chassi",
+      "label": "Remarcação de chassi",
+      "searchQuery": "chassi",
+      "canOpenProcess": false,
+      "blockedReason": "Abertura somente presencial conforme o script vigente.",
+      "scriptId": "trello-64fe0e22f7f7bdae92a13bcd"
+    },
+    {
+      "id": "cnh-estrangeira",
+      "label": "Averbação de CNH estrangeira",
+      "searchQuery": "CNH estrangeira",
+      "processId": "averbacao-cnh-estrangeira",
+      "canOpenProcess": true,
+      "scriptId": "trello-64fe3239f05aa2b4bb34bddd"
+    },
+    {
+      "id": "oficios",
+      "label": "Ofícios de outros órgãos",
+      "searchQuery": "ofício",
+      "processId": "oficio-mero-expediente",
+      "canOpenProcess": true,
+      "scriptId": "trello-6851ad988d08db37811e2631"
+    }
+  ],
   "fastMailNavigation": {
     "areas": [
       {
