@@ -15,15 +15,15 @@
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
+  const SCRIPT_CATALOG_PATH = 'data/catalogo-scripts.json'
   const HISTORY_SEPARATOR = '----- HISTÓRICO DE MENSAGENS ANTERIORES -----'
-  const DAF_FORM_URL = 'https://www.detran.rj.gov.br/images/formularios/DA0032_devolutaxa.pdf'
-  const RESIDENCE_DECLARATION_URL = 'https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf'
-  const GENERAL_REQUEST_URL = 'https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf'
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
+  let responseScripts = []
+  let responseScriptPhases = []
   let currentOperator = null
   let processResultAutofillRunning = false
 
@@ -184,7 +184,7 @@
   function normalizeEmail (value) {
     return String(value || '')
       .replace(/^mailto:/i, '')
-      .replace(/[\[\]<>]/g, '')
+      .replace(/[[\]<>]/g, '')
       .split('?')[0]
       .trim()
       .toLowerCase()
@@ -498,7 +498,6 @@
     return filled
   }
 
-
   function escapeHtml (value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -583,6 +582,10 @@
       throw new Error('A exigência já foi inserida nesta resposta.')
     }
 
+    insertResponseBeforeHistory(editor, responseHtml)
+  }
+
+  function insertResponseBeforeHistory (editor, responseHtml) {
     const oldHtml = editor.innerHTML || ''
     const separator = `<div data-sei-protocolistas="history-separator" style="margin:22px 0 14px 0;padding-top:10px;border-top:1px solid #a7a7a7;color:#666;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;">${HISTORY_SEPARATOR}</div>`
 
@@ -662,7 +665,6 @@
     }
   }
 
-
   function buildProcessCompletedResponseHtml (payload) {
     const name = escapeHtml(cleanValue(payload?.requerente) || 'requerente')
     const processNumber = escapeHtml(cleanValue(payload?.numero))
@@ -717,7 +719,7 @@
   function compactDateForSubject (value) {
     const raw = cleanValue(value)
 
-    const direct = raw.match(/\b(\d{2})[\/.-](\d{2})[\/.-](\d{4})\b/)
+    const direct = raw.match(/\b(\d{2})[/.-](\d{2})[/.-](\d{4})\b/)
     if (direct) return `${direct[1]}${direct[2]}${direct[3]}`
 
     const now = new Date()
@@ -899,7 +901,6 @@
     await insertPendingProcessResponse(true)
   }
 
-
   function cleanValue (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
   }
@@ -928,6 +929,192 @@
       const select = document.querySelector('#spfm-procedure')
       if (select) select.innerHTML = '<option value="">Catálogo indisponível</option>'
     }
+  }
+
+  function normalizeSearchText (value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  }
+
+  function scriptSearchText (script) {
+    if (!script._searchText) {
+      script._searchText = normalizeSearchText([
+        script.title,
+        script.phaseLabel,
+        script.group,
+        script.body
+      ].join(' '))
+    }
+    return script._searchText
+  }
+
+  function filteredResponseScripts () {
+    const phase = document.querySelector('#spfm-script-phase')?.value || ''
+    const query = normalizeSearchText(document.querySelector('#spfm-script-search')?.value)
+    const terms = query.split(' ').filter(Boolean)
+
+    return responseScripts.filter((script) => {
+      if (!script.body) return false
+      if (phase && script.phase !== phase) return false
+      const haystack = scriptSearchText(script)
+      return terms.every((term) => haystack.includes(term))
+    })
+  }
+
+  function selectedResponseScript () {
+    const scriptId = document.querySelector('#spfm-script-result')?.value || ''
+    return responseScripts.find((script) => script.id === scriptId) || null
+  }
+
+  function renderSelectedResponseScript () {
+    const script = selectedResponseScript()
+    const preview = document.querySelector('#spfm-script-preview')
+    const insertButton = document.querySelector('#spfm-insert-script')
+    if (!preview || !insertButton) return
+
+    preview.textContent = script
+      ? `${script.phaseLabel} › ${script.group}\n${script.title}`
+      : 'Selecione um resultado para conferir.'
+    insertButton.disabled = !script
+  }
+
+  function renderResponseScriptResults () {
+    const select = document.querySelector('#spfm-script-result')
+    const count = document.querySelector('#spfm-script-count')
+    if (!select) return
+
+    const currentValue = select.value
+    const matches = filteredResponseScripts()
+    const visibleMatches = matches.slice(0, 60)
+
+    select.innerHTML = '<option value="">Selecione o script</option>'
+    visibleMatches.forEach((script) => {
+      const option = document.createElement('option')
+      option.value = script.id
+      option.textContent = `${script.title} — ${script.group}`
+      select.appendChild(option)
+    })
+
+    if (visibleMatches.some((script) => script.id === currentValue)) {
+      select.value = currentValue
+    }
+
+    if (count) {
+      count.textContent = matches.length > visibleMatches.length
+        ? `${matches.length} encontrados — refine a busca para ver todos`
+        : `${matches.length} script${matches.length === 1 ? '' : 's'} encontrado${matches.length === 1 ? '' : 's'}`
+    }
+    renderSelectedResponseScript()
+  }
+
+  function renderResponseScriptPhases () {
+    const select = document.querySelector('#spfm-script-phase')
+    if (!select) return
+
+    select.innerHTML = '<option value="">Todas as fases</option>'
+    responseScriptPhases.forEach((phase) => {
+      const option = document.createElement('option')
+      option.value = phase.id
+      option.textContent = phase.label
+      select.appendChild(option)
+    })
+    select.value = responseScriptPhases.some((phase) => phase.id === 'orientacao')
+      ? 'orientacao'
+      : ''
+  }
+
+  async function loadResponseScriptCatalog () {
+    const status = document.querySelector('#spfm-script-status')
+    try {
+      const response = await fetch(api.runtime.getURL(SCRIPT_CATALOG_PATH))
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const payload = await response.json()
+      responseScripts = Array.isArray(payload.scripts) ? payload.scripts : []
+      responseScriptPhases = Array.isArray(payload.phases) ? payload.phases : []
+      renderResponseScriptPhases()
+      renderResponseScriptResults()
+      const available = responseScripts.filter((script) => script.body).length
+      const empty = responseScripts.length - available
+      if (status) {
+        status.textContent = empty
+          ? `${available} respostas disponíveis; ${empty} cartão sem conteúdo.`
+          : `${available} respostas disponíveis.`
+      }
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha ao carregar scripts:', error)
+      if (status) status.textContent = 'Catálogo de scripts indisponível.'
+    }
+  }
+
+  function formatScriptLine (line) {
+    const links = []
+    let tokenized = String(line || '').replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)|(https?:\/\/[^\s<>]+)/g,
+      (match, label, markdownUrl, bareUrl) => {
+        const url = markdownUrl || bareUrl
+        const text = label || bareUrl
+        const token = `SPFMLINKTOKEN${links.length}END`
+        links.push({ token, url, text })
+        return token
+      }
+    )
+
+    tokenized = tokenized.replace(/^\s*#{1,6}\s*/, '')
+    let html = escapeHtml(tokenized)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+
+    links.forEach((link) => {
+      html = html.replace(
+        link.token,
+        `<a href="${escapeHtml(link.url)}">${escapeHtml(link.text)}</a>`
+      )
+    })
+    return html
+  }
+
+  function buildCatalogScriptHtml (script) {
+    const body = String(script.body || '')
+      .split(/\r?\n/)
+      .map(formatScriptLine)
+      .join('<br>')
+
+    return `
+      <div data-sei-protocolistas="catalog-script" data-script-id="${escapeHtml(script.id)}" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
+        ${body}
+      </div>`
+  }
+
+  async function insertSelectedResponseScript () {
+    const status = document.querySelector('#spfm-script-status')
+    try {
+      const script = selectedResponseScript()
+      if (!script) throw new Error('Selecione um script.')
+
+      const editor = findMessageBodyEditor()
+      if (!editor) throw new Error('Não localizei o corpo editável do e-mail.')
+      if (editor.querySelector?.('[data-sei-protocolistas="catalog-script"]')) {
+        throw new Error('Já existe um script inserido nesta resposta.')
+      }
+
+      insertResponseBeforeHistory(editor, buildCatalogScriptHtml(script))
+      if (status) status.textContent = `Script inserido: ${script.title}`
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Não foi possível inserir o script.'
+    }
+  }
+
+  function toggleResponseScriptCatalog () {
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const button = document.querySelector('#spfm-script-toggle')
+    if (!catalog || !button) return
+
+    catalog.hidden = !catalog.hidden
+    button.textContent = catalog.hidden ? 'BUSCAR SCRIPT' : 'FECHAR SCRIPTS'
+    if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
   }
 
   function renderProcedureOptions (processIds = null) {
@@ -1177,7 +1364,6 @@
 
   function buildTriagemSubject () {
     const name = cleanValue(document.querySelector('#spfm-requester-name')?.value).toUpperCase()
-    const procedureId = document.querySelector('#spfm-procedure')?.value || ''
     const destination = selectedDestination() || 'UNDEFINED'
 
     if (!name) throw new Error('Digite o nome do requerente.')
@@ -1477,6 +1663,30 @@
           <span id="spfm-email">Abra uma mensagem</span>
         </div>
 
+        <button id="spfm-script-toggle" class="spfm-secondary" type="button">BUSCAR SCRIPT</button>
+        <div id="spfm-script-catalog" class="spfm-script-catalog" hidden>
+          <label>
+            <span>Fase do atendimento</span>
+            <select id="spfm-script-phase">
+              <option value="">Carregando fases...</option>
+            </select>
+          </label>
+          <label>
+            <span>Buscar por assunto ou palavra</span>
+            <input id="spfm-script-search" type="search" autocomplete="off" placeholder="Ex.: motor, IPVA, processo aberto">
+          </label>
+          <div id="spfm-script-count" class="spfm-mini-status"></div>
+          <label>
+            <span>Resposta padrão</span>
+            <select id="spfm-script-result">
+              <option value="">Selecione o script</option>
+            </select>
+          </label>
+          <div id="spfm-script-preview" class="spfm-script-preview">Selecione um resultado para conferir.</div>
+          <button id="spfm-insert-script" type="button" disabled>INSERIR RESPOSTA</button>
+          <div id="spfm-script-status" class="spfm-mini-status"></div>
+        </div>
+
         <div class="spfm-fields">
           <label>
             <span>Nome do requerente</span>
@@ -1533,6 +1743,11 @@
     document.documentElement.appendChild(panel)
 
     panel.querySelector('#spfm-collapse').addEventListener('click', () => togglePanel(panel))
+    panel.querySelector('#spfm-script-toggle').addEventListener('click', toggleResponseScriptCatalog)
+    panel.querySelector('#spfm-script-phase').addEventListener('change', renderResponseScriptResults)
+    panel.querySelector('#spfm-script-search').addEventListener('input', renderResponseScriptResults)
+    panel.querySelector('#spfm-script-result').addEventListener('change', renderSelectedResponseScript)
+    panel.querySelector('#spfm-insert-script').addEventListener('click', insertSelectedResponseScript)
     panel.querySelector('#spfm-open-process').addEventListener('click', openProcessInSei)
     panel.querySelector('#spfm-triagem').addEventListener('click', prepareTriagem)
     panel.querySelector('#spfm-missing-toggle').addEventListener('click', toggleMissingDocuments)
@@ -1648,6 +1863,7 @@
 
     createPanel()
     await loadCatalog()
+    await loadResponseScriptCatalog()
     await loadPanelAttendance()
     updateMissingDocumentsVisibility()
     await scan()

@@ -55,6 +55,7 @@ function expectUniqueValues (values, source) {
 const manifest = readJson('manifest.json')
 const packageJson = readJson('package.json')
 const catalog = readJson('data/catalogo-processos.json')
+const scriptCatalog = readJson('data/catalogo-scripts.json')
 const responseModels = readJson('data/modelos-resposta.json')
 const fastMailSource = readText('cs_modules/fast_mail/index.js')
 const fastProcSource = readText('cs_modules/clique_protocolista/index.js')
@@ -238,6 +239,35 @@ if (responseModels) {
 
   processTypes.forEach((processType) => {
     expect(modelIds.has(processType.responseModel), `Catálogo: modelo inexistente ${processType.responseModel}`)
+  })
+}
+
+if (scriptCatalog) {
+  expect(scriptCatalog.schemaVersion === 1, 'Catálogo de scripts: schemaVersion deve ser 1')
+  expect(scriptCatalog.originalActiveCards === 181, 'Catálogo de scripts: origem deve conter 181 cartões ativos')
+  expect(scriptCatalog.activeScripts === 176, 'Catálogo de scripts: deve conter 176 scripts vigentes')
+  expect(scriptCatalog.actionableScripts === 175, 'Catálogo de scripts: deve conter 175 respostas com conteúdo')
+  expect(
+    Array.isArray(scriptCatalog.emptyCards) && scriptCatalog.emptyCards.length === 1,
+    'Catálogo de scripts: deve registrar o cartão ativo sem conteúdo'
+  )
+  expect(
+    Array.isArray(scriptCatalog.retiredDuplicateCards) && scriptCatalog.retiredDuplicateCards.length === 5,
+    'Catálogo de scripts: deve aposentar as 5 versões antigas confirmadas'
+  )
+  expect(Array.isArray(scriptCatalog.scripts), 'Catálogo de scripts: scripts deve ser uma lista')
+
+  const scripts = Array.isArray(scriptCatalog.scripts) ? scriptCatalog.scripts : []
+  expect(scripts.length === 176, 'Catálogo de scripts: quantidade operacional incorreta')
+  expectUniqueValues(scripts.map((script) => script.id), 'Catálogo de scripts')
+  scripts.forEach((script, index) => {
+    const prefix = `Catálogo de scripts: scripts[${index}]`
+    expect(Boolean(script.id), `${prefix}: id obrigatório`)
+    expect(Boolean(script.title), `${prefix}: title obrigatório`)
+    expect(Boolean(script.phase), `${prefix}: phase obrigatória`)
+    expect(Boolean(script.group), `${prefix}: group obrigatório`)
+    expect(typeof script.body === 'string', `${prefix}: body deve ser texto`)
+    expect(Boolean(script.source?.cardId), `${prefix}: origem do Trello obrigatória`)
   })
 }
 
