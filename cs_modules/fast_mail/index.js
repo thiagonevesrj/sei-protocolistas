@@ -554,9 +554,6 @@
     const safeName = escapeHtml(cleanValue(name))
     const greeting = safeName ? `Olá, ${safeName}.` : 'Olá.'
     const safeProcedureLabel = escapeHtml(cleanValue(procedureLabel))
-    const operatorSignature = currentOperator?.number
-      ? `Protocolista nº ${escapeHtml(currentOperator.number)} — SEI-RJ`
-      : 'Serviço de Protocolo — DETRAN-RJ'
     const items = documents
       .map((item) => `<li style="margin:0 0 7px 0;">${escapeHtml(item.text)}</li>`)
       .join('')
@@ -583,7 +580,7 @@
           <p style="margin:0;"><strong>O envio apenas dos documentos indicados como faltantes não será suficiente para a continuidade da solicitação.</strong></p>
         </div>
         <p style="margin:12px 0 0 0;">Não altere o assunto desta mensagem e não encaminhe um novo e-mail para a mesma solicitação.</p>
-        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>${operatorSignature}</p>
+        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ</p>
       </div>`
   }
 
@@ -672,23 +669,45 @@
   }
 
   function buildProcessCompletedResponseHtml (payload) {
-    const name = escapeHtml(cleanValue(payload?.requerente) || 'requerente')
+    const name = escapeHtml(cleanValue(payload?.requerente))
+    const greeting = name ? `Olá, ${name}.` : 'Olá.'
     const processNumber = escapeHtml(cleanValue(payload?.numero))
+    const processDate = escapeHtml(cleanValue(payload?.data))
     const processType = escapeHtml(cleanValue(payload?.tipo))
     const destination = escapeHtml(cleanValue(payload?.destino))
-    const operatorSignature = currentOperator?.number
-      ? `Protocolista nº ${escapeHtml(currentOperator.number)} — SEI-RJ`
-      : 'Serviço de Protocolo — DETRAN-RJ'
 
     return `
       <div data-sei-protocolistas="process-completed-response" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
-        <p style="margin:0 0 14px 0;">Olá, ${name}.</p>
-        <p style="margin:0 0 14px 0;">Informamos que sua solicitação foi protocolada e encaminhada para análise.</p>
-        <p style="margin:0 0 6px 0;"><strong>Número do processo:</strong> ${processNumber || 'Não identificado'}</p>
-        <p style="margin:0 0 6px 0;"><strong>Tipo de processo:</strong> ${processType || 'Não identificado'}</p>
-        <p style="margin:0 0 14px 0;"><strong>Unidade de destino:</strong> ${destination || 'Não identificada'}</p>
-        <p style="margin:0 0 14px 0;">O atendimento por e-mail foi concluído. Guarde o número do processo para futuras consultas.</p>
-        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>${operatorSignature}</p>
+        <p style="margin:0 0 14px 0;">${greeting}</p>
+        <p style="margin:0 0 14px 0;">Informamos que sua solicitação foi registrada no Sistema Eletrônico de Informações do Estado do Rio de Janeiro — SEI-RJ e encaminhada à unidade responsável para análise.</p>
+
+        <p style="margin:18px 0 10px 0;font-weight:700;">DADOS DO PROCESSO</p>
+        <div style="margin:0 0 16px 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 6px 0;"><strong>Número do processo:</strong> ${processNumber || 'Não identificado'}</p>
+          <p style="margin:0 0 6px 0;"><strong>Data de abertura:</strong> ${processDate || 'Não identificada'}</p>
+          <p style="margin:0 0 6px 0;"><strong>Tipo do processo:</strong> ${processType || 'Não identificado'}</p>
+          <p style="margin:0;"><strong>Unidade de destino:</strong> ${destination || 'Não identificada'}</p>
+        </div>
+
+        <p style="margin:18px 0 10px 0;font-weight:700;">ACOMPANHAMENTO</p>
+        <p style="margin:0 0 12px 0;">Guarde o número completo do processo para acompanhar o andamento da sua solicitação.</p>
+        <p style="margin:0 0 6px 0;">A consulta pode ser realizada pelo portal:</p>
+        <p style="margin:0 0 12px 0;"><a href="https://portalsei.rj.gov.br/pesquisaprocessualmunicipios">https://portalsei.rj.gov.br/pesquisaprocessualmunicipios</a></p>
+        <ol style="margin:0 0 16px 22px;padding:0;">
+          <li style="margin:0 0 5px 0;">Acesse o endereço acima;</li>
+          <li style="margin:0 0 5px 0;">Digite o número completo do processo, incluindo “SEI-”;</li>
+          <li style="margin:0 0 5px 0;">No campo “Municípios”, selecione “ERJ”;</li>
+          <li style="margin:0 0 5px 0;">Digite o código de verificação exibido;</li>
+          <li style="margin:0;">Clique em “Pesquisar processos” e, depois, no número azul do processo.</li>
+        </ol>
+
+        <div style="margin:18px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #7a8491;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 7px 0;font-weight:700;">IMPORTANTE</p>
+          <p style="margin:0 0 9px 0;">O protocolo confirma o recebimento e o encaminhamento da solicitação, mas não representa a aprovação do pedido. A análise será realizada pela unidade de destino indicada acima.</p>
+          <p style="margin:0;">A Administração poderá solicitar a apresentação dos documentos originais enviados eletronicamente, conforme o art. 49 do Decreto SEI-RJ nº 48.209, de 19 de setembro de 2022.</p>
+        </div>
+
+        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ</p>
       </div>`
   }
 

@@ -268,6 +268,21 @@ function testAutomaticEmailCompletion () {
   const bodyInsertion = source.indexOf('insertProcessCompletedResponse(', subjectUpdate)
 
   assert.ok(automaticFunction > -1)
+  const completedResponse = source.slice(
+    source.indexOf('function buildProcessCompletedResponseHtml'),
+    source.indexOf('function insertProcessCompletedResponse')
+  )
+  assert.ok(completedResponse.includes('DADOS DO PROCESSO'))
+  assert.ok(completedResponse.includes('Data de abertura:'))
+  assert.ok(completedResponse.includes('ACOMPANHAMENTO'))
+  assert.ok(completedResponse.includes('portalsei.rj.gov.br/pesquisaprocessualmunicipios'))
+  assert.ok(completedResponse.includes('não representa a aprovação do pedido'))
+  assert.ok(completedResponse.includes('art. 49 do Decreto SEI-RJ nº 48.209'))
+  assert.ok(completedResponse.includes('Serviço de Protocolo<br>DETRAN-RJ'))
+  assert.ok(!completedResponse.includes('Protocolista nº'))
+  assert.ok(completedResponse.includes(
+    'const greeting = name ? `Olá, ' + '$' + "{name}.` : 'Olá.'"
+  ))
   assert.ok(runtimeListener > automaticFunction)
   assert.ok(source.includes('await insertPendingProcessResponse(true)'))
   assert.ok(subjectUpdate > -1 && bodyInsertion > subjectUpdate)
