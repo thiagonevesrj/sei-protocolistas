@@ -56,6 +56,7 @@ const manifest = readJson('manifest.json')
 const packageJson = readJson('package.json')
 const catalog = readJson('data/catalogo-processos.json')
 const scriptCatalog = readJson('data/catalogo-scripts.json')
+const curatedResponses = readJson('data/respostas-curadas.json')
 const responseModels = readJson('data/modelos-resposta.json')
 const fastMailSource = readText('cs_modules/fast_mail/index.js')
 const fastProcSource = readText('cs_modules/clique_protocolista/index.js')
@@ -63,6 +64,7 @@ const seiLoginSource = readText('cs_modules/core/login/index.js')
 const handoffSource = readText('cs_modules/fast_proc_handoff/index.js')
 const returnCoordinatorSource = readText('background/service-worker.js')
 const protocolSource = readText('cs_modules/protocolo_cliente/index.js')
+const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
 
 if (manifest && packageJson) {
   expect(
@@ -149,6 +151,9 @@ expect(fastMailSource.includes('spfm-priority-areas'), 'FAST MAIL: áreas priori
 expect(fastMailSource.includes('spfm-priority-topic'), 'FAST MAIL: seletor de assunto prioritário obrigatório')
 expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
 expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
+expect(fastMailSource.includes('CURATED_RESPONSES_PATH'), 'FAST MAIL: respostas curadas devem prevalecer sobre exportações antigas')
+expect(fastMailSource.includes('PREPARAR E-MAIL'), 'FAST MAIL: botão PREPARAR E-MAIL obrigatório no fluxo de resposta')
+expect(fastMailSource.includes('spfm-email-preparation'), 'FAST MAIL: área de preparação do e-mail obrigatória')
 expect(
   fastMailSource.includes("phase.value = mappedScript?.phase || ''"),
   'FAST MAIL: assunto prioritário deve abrir na fase da resposta principal'
@@ -170,6 +175,8 @@ expect(handoffSource.includes('procedimento_escolher_tipo'), 'SEI: navegação a
 expect(returnCoordinatorSource.includes('fastMailAttendanceRoutes'), 'Retorno: mapa de abas por atendimento obrigatório')
 expect(returnCoordinatorSource.includes("api.tabs, 'update'"), 'Retorno: aba original deve receber foco')
 expect(protocolSource.includes('sei-protocolistas:return-fast-mail'), 'PROTOCOLO CLIENTE: comando de retorno obrigatório')
+expect(scriptCatalogBuilderSource.includes('txt-attachment'), 'Importador Trello: scripts em anexos .txt devem prevalecer sobre a descrição')
+expect(scriptCatalogBuilderSource.includes('destino[\\s_]+do[\\s_]+processo'), 'Importador Trello: DESTINO DO PROCESSO.txt não pode virar resposta')
 
 let processTypes = []
 let processIds = new Set()
@@ -249,7 +256,7 @@ if (catalog) {
   }
 
   const priorityTopics = catalog.fastMailPriorityTopics
-  expect(Array.isArray(priorityTopics) && priorityTopics.length === 12, 'FAST MAIL: 12 assuntos prioritários obrigatórios')
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 14, 'FAST MAIL: 14 assuntos principais obrigatórios')
   if (Array.isArray(priorityTopics)) {
     expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
     const priorityAreaIds = new Set((areas || []).map((area) => area.id))
@@ -305,7 +312,7 @@ if (catalog) {
       expect(processType?.missingDocuments?.length > 0, `FAST MAIL: ${topicId} deve ter checklist`)
     })
 
-    ;['cancelamento-venda', 'motor', 'chassi'].forEach((topicId) => {
+    ;['cancelamento-comunicacao-venda', 'comunicacao-venda', 'intencao-venda', 'motor', 'chassi'].forEach((topicId) => {
       const topic = priorityTopics.find((item) => item.id === topicId)
       expect(topic?.canOpenProcess === false, `FAST MAIL: ${topicId} deve ser somente orientação`)
       expect(!topic?.processId, `FAST MAIL: ${topicId} não pode apontar para o FAST PROC`)
@@ -320,7 +327,9 @@ if (catalog) {
       'retorno-categoria': 'habilitacao',
       'transferencia-prontuario': 'habilitacao',
       'cnh-estrangeira': 'habilitacao',
-      'cancelamento-venda': 'veiculos',
+      'cancelamento-comunicacao-venda': 'veiculos',
+      'comunicacao-venda': 'veiculos',
+      'intencao-venda': 'veiculos',
       motor: 'veiculos',
       chassi: 'veiculos',
       oficios: 'oficios'
@@ -329,7 +338,35 @@ if (catalog) {
       const topic = priorityTopics.find((item) => item.id === topicId)
       expect(topic?.area === areaId, `FAST MAIL: ${topicId} deve aparecer somente em ${areaId}`)
     })
+
+    const expectedCorePriority = [
+      'devolucao-taxas',
+      'desistencia-categoria',
+      'pericia-medica-pcd',
+      'transferencia-prontuario',
+      'cancelamento-comunicacao-venda',
+      'comunicacao-venda',
+      'intencao-venda'
+    ]
+    expectedCorePriority.forEach((topicId, index) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      expect(topic?.corePriority === true, `FAST MAIL: ${topicId} deve ser prioridade central`)
+      expect(topic?.corePriorityRank === index + 1, `FAST MAIL: ordem central incorreta para ${topicId}`)
+    })
   }
+
+  const formPolicy = catalog.formPolicy
+  expect(formPolicy?.default === 'Requerimento Geral', 'Catálogo: Requerimento Geral deve ser o padrão')
+  expect(Object.keys(formPolicy?.specificForms || {}).length === 6, 'Catálogo: seis requerimentos específicos confirmados obrigatórios')
+  Object.keys(formPolicy?.specificForms || {}).forEach((processId) => {
+    expect(processIds.has(processId), `Catálogo: formulário específico aponta para processo inexistente ${processId}`)
+  })
+
+  const clinic = processTypes.find((item) => item.id === 'troca-retirada-clinica')
+  const clinicDocumentIds = (clinic?.missingDocuments || []).map((document) => document.id)
+  expect(clinic?.documentsStatus === 'operator-confirmed-2026-08-10', 'Troca de clínica: fonte real deve estar confirmada')
+  expect(clinicDocumentIds.join(',') === 'general-request,identification,cpf,residence,renach,workplace-declaration', 'Troca de clínica: checklist deve seguir o script real')
+  expect(!JSON.stringify(clinic).includes('HAB0135'), 'Troca de clínica: link inexistente da declaração de trabalho deve ser removido')
 }
 
 if (responseModels) {
@@ -379,6 +416,29 @@ if (scriptCatalog) {
     expect(typeof script.body === 'string', `${prefix}: body deve ser texto`)
     expect(Boolean(script.source?.cardId), `${prefix}: origem do Trello obrigatória`)
   })
+}
+
+if (curatedResponses && scriptCatalog) {
+  expect(curatedResponses.schemaVersion === 1, 'Respostas curadas: schemaVersion deve ser 1')
+  expect(Array.isArray(curatedResponses.scripts), 'Respostas curadas: scripts deve ser uma lista')
+  const curatedScripts = Array.isArray(curatedResponses.scripts) ? curatedResponses.scripts : []
+  expectUniqueValues(curatedScripts.map((script) => script.id), 'Respostas curadas')
+  curatedScripts.forEach((script, index) => {
+    const prefix = `Respostas curadas: scripts[${index}]`
+    expect(scriptCatalog.scripts.some((catalogScript) => catalogScript.id === script.id), `${prefix}: script original inexistente`)
+    expect(Boolean(script.title), `${prefix}: title obrigatório`)
+    expect(Boolean(script.validation), `${prefix}: validation obrigatória`)
+    expect(Array.isArray(script.bodyLines) && script.bodyLines.join('\n').trim().length > 0, `${prefix}: bodyLines obrigatório`)
+  })
+
+  const clinicResponse = curatedScripts.find((script) => script.id === 'trello-64fe3bd5d6087d02fc82d184')
+  const clinicBody = clinicResponse?.bodyLines?.join('\n') || ''
+  expect(clinicBody.includes('Requerimento Geral'), 'Troca de clínica: resposta deve usar Requerimento Geral')
+  expect(clinicBody.includes('Formulário RENACH'), 'Troca de clínica: RENACH deve ser obrigatório')
+  expect(clinicBody.includes('100 DPI'), 'Troca de clínica: regra de 100 DPI obrigatória')
+  expect(clinicBody.includes('2,9 MB'), 'Troca de clínica: limite de 2,9 MB obrigatório')
+  expect(!clinicBody.includes('FORMULÁRIO DE TROCA DE CLÍNICA'), 'Troca de clínica: formulário incorreto não pode retornar')
+  expect(!clinicBody.includes('HAB0135'), 'Troca de clínica: link inexistente não pode retornar')
 }
 
 [

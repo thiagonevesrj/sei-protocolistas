@@ -276,6 +276,10 @@
   margin-top: 9px;
 }
 
+#sei-protocolistas-fast-mail-status .spfm-email-preparation[hidden] {
+  display: none !important;
+}
+
 #sei-protocolistas-fast-mail-status .spfm-secondary {
   color: #f1c44f !important;
   background: #030d1b !important;

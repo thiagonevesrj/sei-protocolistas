@@ -16,6 +16,7 @@
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
   const SCRIPT_CATALOG_PATH = 'data/catalogo-scripts.json'
+  const CURATED_RESPONSES_PATH = 'data/respostas-curadas.json'
   const HISTORY_SEPARATOR = '----- HISTÓRICO DE MENSAGENS ANTERIORES -----'
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
@@ -942,6 +943,7 @@
       catalogProcesses = Array.isArray(payload.processTypes) ? payload.processTypes : []
       priorityTopics = Array.isArray(payload.fastMailPriorityTopics)
         ? payload.fastMailPriorityTopics.slice().sort((a, b) =>
+          Number(a.corePriorityRank || Number.MAX_SAFE_INTEGER) - Number(b.corePriorityRank || Number.MAX_SAFE_INTEGER) ||
           Number(b.recentUsageCount || 0) - Number(a.recentUsageCount || 0)
         )
         : []
@@ -978,6 +980,23 @@
       ].join(' '))
     }
     return script._searchText
+  }
+
+  function normalizeOfficialLinks (body) {
+    return String(body || '')
+      .replace(/\\_/g, '_')
+      .replace(
+        /https:\/\/(?:www5\.)?detran\.rj\.gov\.br\/(?:_include\/on_line\/formularios\/|images\/formularios\/)DETRAN(?:\\|_)?0049(?:\\|_)?requerimento(?:\\|_)?geral\.pdf/gi,
+        'https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf'
+      )
+      .replace(
+        /https:\/\/www\.detran\.rj\.gov\.br\/(?:_include\/on_line\/formularios\/|images\/formularios\/)DETRAN0034(?:\\|_)?declararesid\.pdf/gi,
+        'https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf'
+      )
+      .replace(
+        /https:\/\/www\.detran\.rj\.gov\.br\/_monta_aplicacoes\.asp\?cod=16&tipo=lista_ciretrans/gi,
+        'https://www.detran.rj.gov.br/consultas/consultas-drv/lista-de-ciretrans-sats.html'
+      )
   }
 
   function filteredResponseScripts () {
@@ -1059,10 +1078,25 @@
   async function loadResponseScriptCatalog () {
     const status = document.querySelector('#spfm-script-status')
     try {
-      const response = await fetch(api.runtime.getURL(SCRIPT_CATALOG_PATH))
+      const [response, curatedResponse] = await Promise.all([
+        fetch(api.runtime.getURL(SCRIPT_CATALOG_PATH)),
+        fetch(api.runtime.getURL(CURATED_RESPONSES_PATH))
+      ])
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      if (!curatedResponse.ok) throw new Error(`HTTP ${curatedResponse.status}`)
       const payload = await response.json()
-      responseScripts = Array.isArray(payload.scripts) ? payload.scripts : []
+      const curatedPayload = await curatedResponse.json()
+      const curatedScripts = new Map((curatedPayload.scripts || []).map((script) => [script.id, script]))
+      responseScripts = (Array.isArray(payload.scripts) ? payload.scripts : []).map((script) => {
+        const curated = curatedScripts.get(script.id)
+        if (!curated) return script
+        return {
+          ...script,
+          title: curated.title || script.title,
+          body: normalizeOfficialLinks(Array.isArray(curated.bodyLines) ? curated.bodyLines.join('\n') : curated.body),
+          curation: curated.validation || 'curated'
+        }
+      }).map((script) => ({ ...script, body: normalizeOfficialLinks(script.body) }))
       responseScriptPhases = Array.isArray(payload.phases) ? payload.phases : []
       renderResponseScriptPhases()
       renderResponseScriptResults()
@@ -1156,12 +1190,14 @@
       const identityFields = document.querySelector('#spfm-identity-fields')
       if (processSetup) processSetup.hidden = false
       if (identityFields) identityFields.hidden = false
+      setEmailPreparationVisible(true)
       setManualRouteFieldsVisible(true)
       syncRouteWithProcedure('')
       const missingBox = document.querySelector('#spfm-missing-box')
       if (missingBox) missingBox.hidden = true
     } else {
       activePriorityAction = ''
+      setEmailPreparationVisible(false)
     }
     button.textContent = catalog.hidden ? 'OUTRO ATENDIMENTO' : 'FECHAR OUTRO ATENDIMENTO'
     if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
@@ -1180,6 +1216,11 @@
       if (objectiveField) objectiveField.hidden = true
       if (procedureField) procedureField.hidden = true
     }
+  }
+
+  function setEmailPreparationVisible (visible) {
+    const emailPreparation = document.querySelector('#spfm-email-preparation')
+    if (emailPreparation) emailPreparation.hidden = !visible
   }
 
   function renderPriorityAreas () {
@@ -1272,6 +1313,7 @@
     if (processSetup) processSetup.hidden = true
     if (identityFields) identityFields.hidden = true
     if (missingBox) missingBox.hidden = true
+    setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
     if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
     renderPriorityRoute()
@@ -1296,6 +1338,7 @@
     if (identityFields) identityFields.hidden = true
     if (missingBox) missingBox.hidden = true
     if (actionStep) actionStep.hidden = true
+    setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
     if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
 
@@ -1310,12 +1353,23 @@
 
     select.innerHTML = '<option value="">Selecione o assunto</option>'
     const visibleTopics = priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)
-    visibleTopics.forEach((topic) => {
-      const option = document.createElement('option')
-      option.value = topic.id
-      option.textContent = topic.label
-      select.appendChild(option)
-    })
+    const coreTopics = visibleTopics.filter((topic) => topic.corePriority)
+    const otherTopics = visibleTopics.filter((topic) => !topic.corePriority)
+
+    const appendTopics = (topics, label = '') => {
+      const parent = label ? document.createElement('optgroup') : select
+      if (label) parent.label = label
+      topics.forEach((topic) => {
+        const option = document.createElement('option')
+        option.value = topic.id
+        option.textContent = topic.label
+        parent.appendChild(option)
+      })
+      if (label) select.appendChild(parent)
+    }
+
+    appendTopics(coreTopics, coreTopics.length && otherTopics.length ? 'PRINCIPAIS' : '')
+    appendTopics(otherTopics, coreTopics.length && otherTopics.length ? 'OUTROS' : '')
     select.disabled = visibleTopics.length === 0
     topicStep.hidden = !selectedPriorityAreaId
     renderPriorityRoute()
@@ -1347,6 +1401,7 @@
     const identityFields = document.querySelector('#spfm-identity-fields')
     if (processSetup) processSetup.hidden = true
     if (identityFields) identityFields.hidden = false
+    setEmailPreparationVisible(true)
     toggleButton.textContent = 'FECHAR RESPOSTAS'
     priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
     const mappedScript = responseScripts.find((script) => script.id === route.scriptId)
@@ -1379,6 +1434,7 @@
     if (missingBox) missingBox.hidden = true
     if (processSetup) processSetup.hidden = false
     if (identityFields) identityFields.hidden = false
+    setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
     if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
     syncRouteWithProcedure(route.processId)
@@ -1790,7 +1846,7 @@
 
   async function prepareTriagem () {
     const button = document.querySelector('#spfm-triagem')
-    const originalText = button?.textContent || 'PREPARAR TRIAGEM'
+    const originalText = button?.textContent || 'PREPARAR E-MAIL'
 
     if (button) {
       button.disabled = true
@@ -1994,6 +2050,10 @@
           </div>
         </section>
 
+        <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
+          <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
+        </section>
+
         <section id="spfm-process-setup" class="spfm-process-setup" hidden>
           <div class="spfm-section-title">DADOS PARA ABRIR O PROCESSO</div>
           <div class="spfm-fields">
@@ -2022,7 +2082,6 @@
             <div id="spfm-route-status" class="spfm-mini-status">Escolha uma das áreas principais.</div>
           </div>
           <button id="spfm-open-process" type="button">ABRIR NO FAST PROC</button>
-          <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR TRIAGEM</button>
         </section>
 
         <div id="spfm-missing-box" class="spfm-missing-box" hidden>

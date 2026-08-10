@@ -318,7 +318,8 @@
         {
             "resources": [
                 "data/catalogo-processos.json",
-                "data/catalogo-scripts.json"
+                "data/catalogo-scripts.json",
+                "data/respostas-curadas.json"
             ],
             "matches": [
                 "https://venus2.detran.rj.gov.br/*"

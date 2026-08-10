@@ -21,6 +21,25 @@
     },
     "unconfirmedMapping": "Não atribuir tipo próprio ou genérico sem confirmação do operador."
   },
+  "formPolicy": {
+    "default": "Requerimento Geral",
+    "defaultLink": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
+    "specificForms": {
+      "desistencia-categoria-primeira-habilitacao": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/req_desistencia_categoria_1hab.pdf",
+      "devolucao-taxas": "https://www.detran.rj.gov.br/images/formularios/DA0032_devolutaxa.pdf",
+      "cancelamento-comunicacao-venda": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/DRV0033_cancela_comunicacao_venda.pdf",
+      "certidao-identificacao-civil": "https://www.detran.rj.gov.br/images/formularios/Formul%C3%A1rio_solicita%C3%A7%C3%A3o_certidao_dic_05-02-25.pdf",
+      "averiguacao-clonagem": "https://www.detran.rj.gov.br/images/formularios/requerimento_troca_placa.pdf",
+      "transferencia-prontuario-habilitacao": "https://www.detran.rj.gov.br/images/formularios/requerimento_transferencia_prontuario.pdf"
+    },
+    "compoundForms": {
+      "legalizacao-veiculo-leilao": [
+        "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/DRV0079_legalizar_veiculo_leilao.pdf",
+        "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf"
+      ]
+    },
+    "rule": "Usar Requerimento Geral por padrão. Usar formulário específico somente nos procedimentos confirmados; nunca anexar o PDF, apenas inserir o link oficial no corpo do e-mail."
+  },
   "processTypes": [
     {
       "id": "devolucao-taxas",
@@ -45,7 +64,7 @@
           "id": "general-request",
           "label": "Requerimento Geral",
           "text": "Requerimento Geral devidamente preenchido, datado e assinado pelo requerente.",
-          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
           "linkLabel": "Acessar o Requerimento Geral"
         },
         {
@@ -170,7 +189,7 @@
           "id": "general-request",
           "label": "Requerimento Geral",
           "text": "Requerimento Geral preenchido com a exposição dos fatos e a solicitação, assinado à caneta ou por certificação digital.",
-          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
           "linkLabel": "Acessar o Requerimento Geral"
         },
         {
@@ -258,7 +277,7 @@
           "id": "general-request",
           "label": "Requerimento Geral",
           "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
-          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
           "linkLabel": "Acessar o Requerimento Geral"
         },
         {
@@ -327,7 +346,7 @@
           "id": "general-request",
           "label": "Requerimento Geral",
           "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
-          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
           "linkLabel": "Acessar o Requerimento Geral"
         },
         {
@@ -388,36 +407,21 @@
       "quickTrigger": "TROCA-CLIN",
       "priority": true,
       "responseModel": "standard",
-      "documentsStatus": "trello-current-card",
+      "documentsStatus": "operator-confirmed-2026-08-10",
       "category": "habilitacao",
       "citizenObjective": "Solicitar troca ou retirada de clínica",
       "missingDocuments": [
         {
-          "id": "clinic-change-form",
-          "label": "Formulário de Troca de Clínica",
-          "text": "Formulário de Troca de Clínica devidamente preenchido e assinado à caneta ou por certificação digital."
-        },
-        {
-          "id": "supporting-document",
-          "label": "Documento que comprove a solicitação, quando houver",
-          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver."
-        },
-        {
-          "id": "renach",
-          "label": "Formulário RENACH, caso possua",
-          "text": "Formulário RENACH, caso o requerente o possua."
-        },
-        {
-          "id": "workplace-declaration",
-          "label": "Declaração do local de trabalho, quando aplicável",
-          "text": "Declaração emitida pelo trabalho contendo o endereço laboral do condutor ou candidato, quando aplicável.",
-          "link": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/HAB0135_comprovacao_local_trabalho.pdf",
-          "linkLabel": "Acessar a Declaração de Comprovação do Local de Trabalho"
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral com a exposição dos fatos e da solicitação, devidamente preenchido e assinado.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
         },
         {
           "id": "identification",
-          "label": "Documento oficial de identificação",
-          "text": "Documento oficial de identificação do requerente."
+          "label": "Documento de Identidade",
+          "text": "Documento de Identidade do requerente."
         },
         {
           "id": "cpf",
@@ -426,15 +430,21 @@
         },
         {
           "id": "residence",
-          "label": "Comprovante de residência",
-          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "label": "Comprovante de Residência",
+          "text": "Comprovante de Residência do requerente.",
           "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
-          "linkLabel": "Acessar a Declaração de Residência"
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Caso não possua comprovante de residência em seu nome, utilize a Declaração de Residência disponível abaixo:"
         },
         {
-          "id": "representation",
-          "label": "Documentação do representante, quando houver",
-          "text": "Procuração e documentos de identificação ou credenciamento do representante, conforme se trate de advogado, despachante ou outro procurador."
+          "id": "renach",
+          "label": "Formulário RENACH",
+          "text": "Formulário RENACH do condutor ou candidato."
+        },
+        {
+          "id": "workplace-declaration",
+          "label": "Declaração do trabalho, quando aplicável",
+          "text": "Declaração emitida pelo trabalho contendo o endereço laboral do condutor ou candidato, quando aplicável."
         }
       ],
       "source": {
@@ -442,7 +452,8 @@
         "list": "HAB02 - TRIAGEM",
         "card": "Troca de clínica",
         "cardId": "64fe3bd5d6087d02fc82d184",
-        "lastActivity": "2026-07-14"
+        "lastActivity": "2026-07-14",
+        "bodyReference": "Script real confirmado pelo operador em 2026-08-10"
       }
     },
     {
@@ -602,7 +613,7 @@
           "id": "general-request",
           "label": "Requerimento Geral",
           "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
-          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
           "linkLabel": "Acessar o Requerimento Geral"
         },
         {
@@ -687,7 +698,7 @@
           "id": "general-request",
           "label": "Requerimento Geral",
           "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
-          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
           "linkLabel": "Acessar o Requerimento Geral"
         },
         {
@@ -802,6 +813,8 @@
       "id": "devolucao-taxas",
       "label": "Devolução de taxas",
       "area": "taxas",
+      "corePriority": true,
+      "corePriorityRank": 1,
       "recentUsageCount": 86,
       "searchQuery": "devolução taxas",
       "processId": "devolucao-taxas",
@@ -854,6 +867,8 @@
       "id": "desistencia-categoria",
       "label": "Desistência de categoria",
       "area": "habilitacao",
+      "corePriority": true,
+      "corePriorityRank": 2,
       "recentUsageCount": 33,
       "searchQuery": "desistência categoria",
       "processId": "desistencia-categoria-primeira-habilitacao",
@@ -870,6 +885,8 @@
       "id": "pericia-medica-pcd",
       "label": "Perícia médica — CNH PCD",
       "area": "habilitacao",
+      "corePriority": true,
+      "corePriorityRank": 3,
       "recentUsageCount": 10,
       "searchQuery": "perícia médica",
       "processId": "solicitacao-pericia-medica",
@@ -938,6 +955,8 @@
       "id": "transferencia-prontuario",
       "label": "Transferência de prontuário",
       "area": "habilitacao",
+      "corePriority": true,
+      "corePriorityRank": 4,
       "recentUsageCount": 0,
       "searchQuery": "transferência prontuário",
       "processId": "transferencia-prontuario-habilitacao",
@@ -949,30 +968,48 @@
       ]
     },
     {
-      "id": "cancelamento-venda",
-      "label": "Cancelar comunicação/intenção",
+      "id": "cancelamento-comunicacao-venda",
+      "label": "Cancelamento de comunicação de venda",
       "area": "veiculos",
+      "corePriority": true,
+      "corePriorityRank": 5,
       "recentUsageCount": 6,
-      "searchQuery": "venda",
+      "searchQuery": "cancelamento comunicação venda",
       "canOpenProcess": false,
       "blockedReason": "Abertura somente presencial conforme o script vigente.",
-      "variants": [
-        {
-          "id": "comunicacao-venda",
-          "label": "Comunicação de venda",
-          "scriptId": "trello-64fe1b1b82cbce3912ecf28c",
-          "responseScriptIds": [
-            "trello-64fe1b1b82cbce3912ecf28c"
-          ]
-        },
-        {
-          "id": "intencao-venda",
-          "label": "Intenção de venda",
-          "scriptId": "trello-64fe1f0adc906e4ee29b4c09",
-          "responseScriptIds": [
-            "trello-64fe1f0adc906e4ee29b4c09"
-          ]
-        }
+      "scriptId": "trello-64fe1b1b82cbce3912ecf28c",
+      "responseScriptIds": [
+        "trello-64fe1b1b82cbce3912ecf28c"
+      ]
+    },
+    {
+      "id": "comunicacao-venda",
+      "label": "Comunicação de venda",
+      "area": "veiculos",
+      "corePriority": true,
+      "corePriorityRank": 6,
+      "recentUsageCount": 0,
+      "searchQuery": "comunicação venda",
+      "canOpenProcess": false,
+      "blockedReason": "Serviço direto, sem abertura de processo administrativo.",
+      "scriptId": "trello-64fe40b5e760a8f1950c3679",
+      "responseScriptIds": [
+        "trello-64fe40b5e760a8f1950c3679"
+      ]
+    },
+    {
+      "id": "intencao-venda",
+      "label": "Cancelamento de intenção de venda",
+      "area": "veiculos",
+      "corePriority": true,
+      "corePriorityRank": 7,
+      "recentUsageCount": 0,
+      "searchQuery": "cancelamento intenção venda",
+      "canOpenProcess": false,
+      "blockedReason": "Atendimento presencial conforme o script vigente.",
+      "scriptId": "trello-64fe1f0adc906e4ee29b4c09",
+      "responseScriptIds": [
+        "trello-64fe1f0adc906e4ee29b4c09"
       ]
     },
     {
