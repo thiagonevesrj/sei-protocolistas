@@ -585,22 +585,43 @@
         {
           "id": "pessoa-fisica",
           "label": "Pessoa física",
-          "scriptId": "trello-65f46ef5033efcda96e556ae"
+          "scriptId": "trello-65f46ef5033efcda96e556ae",
+          "responseScriptIds": [
+            "trello-64de9ae14d463a71564a5ad8",
+            "trello-65f46ef5033efcda96e556ae",
+            "trello-699e42fb57c04ce629e5eba1"
+          ]
         },
         {
           "id": "grt-pessoa-fisica",
           "label": "GRT — pessoa física",
-          "scriptId": "trello-6772d4710e4af6b3c2bd2fbb"
+          "scriptId": "trello-6772d4710e4af6b3c2bd2fbb",
+          "responseScriptIds": [
+            "trello-64de9ae14d463a71564a5ad8",
+            "trello-6772d4710e4af6b3c2bd2fbb",
+            "trello-699e42fb57c04ce629e5eba1"
+          ]
         },
         {
           "id": "pessoa-juridica",
           "label": "Pessoa jurídica",
-          "scriptId": "trello-663cc82584cc25ecb03205aa"
+          "scriptId": "trello-663cc82584cc25ecb03205aa",
+          "responseScriptIds": [
+            "trello-64de9ae14d463a71564a5ad8",
+            "trello-663cc82584cc25ecb03205aa",
+            "trello-6772d49945913bcf3069fa15",
+            "trello-699e42fb57c04ce629e5eba1"
+          ]
         },
         {
           "id": "multa",
           "label": "Ressarcimento de multa",
-          "scriptId": "trello-69fb4efa3dec966bbbcc52ac"
+          "scriptId": "trello-69fb4efa3dec966bbbcc52ac",
+          "responseScriptIds": [
+            "trello-64de9ae14d463a71564a5ad8",
+            "trello-69fb4efa3dec966bbbcc52ac",
+            "trello-699e42fb57c04ce629e5eba1"
+          ]
         }
       ]
     },
@@ -610,7 +631,13 @@
       "searchQuery": "desistência categoria",
       "processId": "desistencia-categoria-primeira-habilitacao",
       "canOpenProcess": true,
-      "scriptId": "trello-677290e1915209e347b75be7"
+      "scriptId": "trello-677290e1915209e347b75be7",
+      "responseScriptIds": [
+        "trello-677290e1915209e347b75be7",
+        "trello-65985d075c4b9be50a393d24",
+        "trello-65944f09dafe7ffdea8d753e",
+        "trello-658af473deecb17f5c505a32"
+      ]
     },
     {
       "id": "pericia-medica-pcd",
@@ -622,12 +649,20 @@
         {
           "id": "pcd-geral",
           "label": "Incluir/alterar anotação PCD",
-          "scriptId": "trello-64e29e008682149db2680d4a"
+          "scriptId": "trello-64e29e008682149db2680d4a",
+          "responseScriptIds": [
+            "trello-663108835c955877c54e89a6",
+            "trello-64e29e008682149db2680d4a"
+          ]
         },
         {
           "id": "visao-audicao",
           "label": "Visão monocular/deficiência auditiva",
-          "scriptId": "trello-663113e3d9dba6d93db00a8a"
+          "scriptId": "trello-663113e3d9dba6d93db00a8a",
+          "responseScriptIds": [
+            "trello-663108835c955877c54e89a6",
+            "trello-663113e3d9dba6d93db00a8a"
+          ]
         }
       ]
     },
@@ -637,7 +672,11 @@
       "searchQuery": "transferência prontuário",
       "processId": "transferencia-prontuario-habilitacao",
       "canOpenProcess": true,
-      "scriptId": "trello-68b6010614930008a05c012e"
+      "scriptId": "trello-68b6010614930008a05c012e",
+      "responseScriptIds": [
+        "trello-68b6010614930008a05c012e",
+        "trello-68ec3909f445960beaa7cd66"
+      ]
     },
     {
       "id": "cancelamento-venda",
@@ -649,12 +688,18 @@
         {
           "id": "comunicacao-venda",
           "label": "Comunicação de venda",
-          "scriptId": "trello-64fe1b1b82cbce3912ecf28c"
+          "scriptId": "trello-64fe1b1b82cbce3912ecf28c",
+          "responseScriptIds": [
+            "trello-64fe1b1b82cbce3912ecf28c"
+          ]
         },
         {
           "id": "intencao-venda",
           "label": "Intenção de venda",
-          "scriptId": "trello-64fe1f0adc906e4ee29b4c09"
+          "scriptId": "trello-64fe1f0adc906e4ee29b4c09",
+          "responseScriptIds": [
+            "trello-64fe1f0adc906e4ee29b4c09"
+          ]
         }
       ]
     },
@@ -664,7 +709,10 @@
       "searchQuery": "motor",
       "canOpenProcess": false,
       "blockedReason": "Abertura somente presencial conforme o script vigente.",
-      "scriptId": "trello-683f34d2e0adb2ad31bb2f55"
+      "scriptId": "trello-683f34d2e0adb2ad31bb2f55",
+      "responseScriptIds": [
+        "trello-683f34d2e0adb2ad31bb2f55"
+      ]
     },
     {
       "id": "chassi",
@@ -672,7 +720,10 @@
       "searchQuery": "chassi",
       "canOpenProcess": false,
       "blockedReason": "Abertura somente presencial conforme o script vigente.",
-      "scriptId": "trello-64fe0e22f7f7bdae92a13bcd"
+      "scriptId": "trello-64fe0e22f7f7bdae92a13bcd",
+      "responseScriptIds": [
+        "trello-64fe0e22f7f7bdae92a13bcd"
+      ]
     },
     {
       "id": "cnh-estrangeira",
@@ -680,7 +731,10 @@
       "searchQuery": "CNH estrangeira",
       "processId": "averbacao-cnh-estrangeira",
       "canOpenProcess": true,
-      "scriptId": "trello-64fe3239f05aa2b4bb34bddd"
+      "scriptId": "trello-64fe3239f05aa2b4bb34bddd",
+      "responseScriptIds": [
+        "trello-64fe3239f05aa2b4bb34bddd"
+      ]
     },
     {
       "id": "oficios",
@@ -688,7 +742,11 @@
       "searchQuery": "ofício",
       "processId": "oficio-mero-expediente",
       "canOpenProcess": true,
-      "scriptId": "trello-6851ad988d08db37811e2631"
+      "scriptId": "trello-6851ad988d08db37811e2631",
+      "responseScriptIds": [
+        "trello-6851ad988d08db37811e2631",
+        "trello-656e43495224d33e21cb6ac0"
+      ]
     }
   ],
   "fastMailNavigation": {
