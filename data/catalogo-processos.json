@@ -1,8 +1,13 @@
 {
   "schemaVersion": 4,
-  "updatedAt": "2026-08-06",
+  "updatedAt": "2026-08-10",
   "catalogScope": "priority",
   "catalogLabel": "Procedimentos prioritários — navegação por área",
+  "usageSample": {
+    "period": "julho e início de agosto de 2026",
+    "totalProcesses": 265,
+    "source": "Relação de processos abertos pelo protocolista nº 31"
+  },
   "processTypes": [
     {
       "id": "devolucao-taxas",
@@ -219,6 +224,211 @@
         "list": "HAB02 - TRIAGEM",
         "card": "HAB - Genérico",
         "cardId": "64e2a0fc88d682bd3ad5edb5",
+        "lastActivity": "2026-07-14"
+      }
+    },
+    {
+      "id": "rebaixamento-categoria-cnh",
+      "name": "Rebaixamento de Categoria de CNH",
+      "seiNames": [
+        "Detran: Rebaixamento de Categoria de CNH"
+      ],
+      "destinationUnit": "DIRHAB",
+      "quickTrigger": "REBAIX-CAT",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "citizenObjective": "Rebaixar a categoria da CNH",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
+          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "supporting-document",
+          "label": "Documento que comprove a solicitação, quando houver",
+          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver."
+        },
+        {
+          "id": "toxicology-result",
+          "label": "Resultado do exame toxicológico, caso realizado",
+          "text": "Resultado do exame toxicológico, caso o requerente já o tenha realizado."
+        },
+        {
+          "id": "paid-activity-declaration",
+          "label": "Declaração de Exercício de Atividade Remunerada",
+          "text": "Declaração de Exercício de Atividade Remunerada devidamente preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/HAB0070_declaracao_atividade_remunerada.pdf",
+          "linkLabel": "Acessar a Declaração de Atividade Remunerada"
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência"
+        },
+        {
+          "id": "representation",
+          "label": "Documentação do representante, quando houver",
+          "text": "Procuração e documentos de identificação ou credenciamento do representante, conforme se trate de advogado, despachante ou outro procurador."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "Rebaixamento de Categoria",
+        "cardId": "64fe3ad4bd5fbf5a609cb3a3",
+        "lastActivity": "2026-07-14"
+      }
+    },
+    {
+      "id": "retorno-categoria-cnh-rebaixada",
+      "name": "Retorno a Categoria de CNH Rebaixada",
+      "seiNames": [
+        "Detran: Retorno a Categoria de CNH Rebaixada"
+      ],
+      "destinationUnit": "DIRHAB",
+      "quickTrigger": "RET-CAT",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "citizenObjective": "Retornar à categoria anteriormente rebaixada a pedido do próprio condutor",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
+          "link": "https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "paid-activity-declaration",
+          "label": "Declaração de Exercício de Atividade Remunerada",
+          "text": "Declaração de Exercício de Atividade Remunerada devidamente preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/HAB0070_declaracao_atividade_remunerada.pdf",
+          "linkLabel": "Acessar a Declaração de Atividade Remunerada"
+        },
+        {
+          "id": "supporting-document",
+          "label": "Documento que comprove a solicitação, quando houver",
+          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver."
+        },
+        {
+          "id": "duda-2046",
+          "label": "DUDA 204-6 pago, exceto para isentos",
+          "text": "Comprovante de pagamento do DUDA código 204-6, exceto quando o requerente for isento da taxa."
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência"
+        },
+        {
+          "id": "representation",
+          "label": "Documentação do representante, quando houver",
+          "text": "Procuração e documentos de identificação ou credenciamento do representante, conforme se trate de advogado, despachante ou outro procurador."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "Retorno a categoria - Rebaixada por solicitação do próprio",
+        "cardId": "64fe3d0cc9919d85555a3dc9",
+        "lastActivity": "2026-07-14"
+      }
+    },
+    {
+      "id": "troca-retirada-clinica",
+      "name": "Troca ou Retirada de Clínica",
+      "seiNames": [
+        "Detran: Troca ou retirada de Clínica"
+      ],
+      "destinationUnit": "DIRHAB",
+      "quickTrigger": "TROCA-CLIN",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "citizenObjective": "Solicitar troca ou retirada de clínica",
+      "missingDocuments": [
+        {
+          "id": "clinic-change-form",
+          "label": "Formulário de Troca de Clínica",
+          "text": "Formulário de Troca de Clínica devidamente preenchido e assinado à caneta ou por certificação digital."
+        },
+        {
+          "id": "supporting-document",
+          "label": "Documento que comprove a solicitação, quando houver",
+          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver."
+        },
+        {
+          "id": "renach",
+          "label": "Formulário RENACH, caso possua",
+          "text": "Formulário RENACH, caso o requerente o possua."
+        },
+        {
+          "id": "workplace-declaration",
+          "label": "Declaração do local de trabalho, quando aplicável",
+          "text": "Declaração emitida pelo trabalho contendo o endereço laboral do condutor ou candidato, quando aplicável.",
+          "link": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/HAB0135_comprovacao_local_trabalho.pdf",
+          "linkLabel": "Acessar a Declaração de Comprovação do Local de Trabalho"
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante de residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência"
+        },
+        {
+          "id": "representation",
+          "label": "Documentação do representante, quando houver",
+          "text": "Procuração e documentos de identificação ou credenciamento do representante, conforme se trate de advogado, despachante ou outro procurador."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "HAB02 - TRIAGEM",
+        "card": "Troca de clínica",
+        "cardId": "64fe3bd5d6087d02fc82d184",
         "lastActivity": "2026-07-14"
       }
     },
@@ -578,6 +788,7 @@
     {
       "id": "devolucao-taxas",
       "label": "Devolução de taxas",
+      "recentUsageCount": 86,
       "searchQuery": "devolução taxas",
       "processId": "devolucao-taxas",
       "canOpenProcess": true,
@@ -628,6 +839,7 @@
     {
       "id": "desistencia-categoria",
       "label": "Desistência de categoria",
+      "recentUsageCount": 33,
       "searchQuery": "desistência categoria",
       "processId": "desistencia-categoria-primeira-habilitacao",
       "canOpenProcess": true,
@@ -642,6 +854,7 @@
     {
       "id": "pericia-medica-pcd",
       "label": "Perícia médica — CNH PCD",
+      "recentUsageCount": 10,
       "searchQuery": "perícia médica",
       "processId": "solicitacao-pericia-medica",
       "canOpenProcess": true,
@@ -667,8 +880,45 @@
       ]
     },
     {
+      "id": "troca-clinica",
+      "label": "Troca ou retirada de clínica",
+      "recentUsageCount": 3,
+      "searchQuery": "troca clínica",
+      "processId": "troca-retirada-clinica",
+      "canOpenProcess": true,
+      "scriptId": "trello-64fe3bd5d6087d02fc82d184",
+      "responseScriptIds": [
+        "trello-64fe3bd5d6087d02fc82d184"
+      ]
+    },
+    {
+      "id": "rebaixamento-categoria",
+      "label": "Rebaixamento de categoria",
+      "recentUsageCount": 2,
+      "searchQuery": "rebaixamento categoria",
+      "processId": "rebaixamento-categoria-cnh",
+      "canOpenProcess": true,
+      "scriptId": "trello-64fe3ad4bd5fbf5a609cb3a3",
+      "responseScriptIds": [
+        "trello-64fe3ad4bd5fbf5a609cb3a3"
+      ]
+    },
+    {
+      "id": "retorno-categoria",
+      "label": "Retorno à categoria rebaixada",
+      "recentUsageCount": 1,
+      "searchQuery": "retorno categoria rebaixada",
+      "processId": "retorno-categoria-cnh-rebaixada",
+      "canOpenProcess": true,
+      "scriptId": "trello-64fe3d0cc9919d85555a3dc9",
+      "responseScriptIds": [
+        "trello-64fe3d0cc9919d85555a3dc9"
+      ]
+    },
+    {
       "id": "transferencia-prontuario",
       "label": "Transferência de prontuário",
+      "recentUsageCount": 0,
       "searchQuery": "transferência prontuário",
       "processId": "transferencia-prontuario-habilitacao",
       "canOpenProcess": true,
@@ -681,6 +931,7 @@
     {
       "id": "cancelamento-venda",
       "label": "Cancelar comunicação/intenção",
+      "recentUsageCount": 6,
       "searchQuery": "venda",
       "canOpenProcess": false,
       "blockedReason": "Abertura somente presencial conforme o script vigente.",
@@ -706,6 +957,7 @@
     {
       "id": "motor",
       "label": "Regularização/troca de motor",
+      "recentUsageCount": 2,
       "searchQuery": "motor",
       "canOpenProcess": false,
       "blockedReason": "Abertura somente presencial conforme o script vigente.",
@@ -717,6 +969,7 @@
     {
       "id": "chassi",
       "label": "Remarcação de chassi",
+      "recentUsageCount": 1,
       "searchQuery": "chassi",
       "canOpenProcess": false,
       "blockedReason": "Abertura somente presencial conforme o script vigente.",
@@ -728,6 +981,7 @@
     {
       "id": "cnh-estrangeira",
       "label": "Averbação de CNH estrangeira",
+      "recentUsageCount": 2,
       "searchQuery": "CNH estrangeira",
       "processId": "averbacao-cnh-estrangeira",
       "canOpenProcess": true,
@@ -739,6 +993,7 @@
     {
       "id": "oficios",
       "label": "Ofícios de outros órgãos",
+      "recentUsageCount": 29,
       "searchQuery": "ofício",
       "processId": "oficio-mero-expediente",
       "canOpenProcess": true,
@@ -764,6 +1019,21 @@
             "id": "desistir-categoria-1hab",
             "label": "Desistir de categoria na primeira habilitação",
             "processId": "desistencia-categoria-primeira-habilitacao"
+          },
+          {
+            "id": "rebaixar-categoria-cnh",
+            "label": "Rebaixar categoria da CNH",
+            "processId": "rebaixamento-categoria-cnh"
+          },
+          {
+            "id": "retornar-categoria-rebaixada",
+            "label": "Retornar à categoria anteriormente rebaixada",
+            "processId": "retorno-categoria-cnh-rebaixada"
+          },
+          {
+            "id": "trocar-retirar-clinica",
+            "label": "Trocar ou retirar clínica",
+            "processId": "troca-retirada-clinica"
           },
           {
             "id": "outra-solicitacao-habilitacao",

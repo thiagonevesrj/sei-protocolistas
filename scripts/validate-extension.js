@@ -227,7 +227,7 @@ if (catalog) {
   }
 
   const priorityTopics = catalog.fastMailPriorityTopics
-  expect(Array.isArray(priorityTopics) && priorityTopics.length === 9, 'FAST MAIL: 9 assuntos prioritários obrigatórios')
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 12, 'FAST MAIL: 12 assuntos prioritários obrigatórios')
   if (Array.isArray(priorityTopics)) {
     expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
     priorityTopics.forEach((topic, topicIndex) => {
@@ -235,6 +235,7 @@ if (catalog) {
       const routes = Array.isArray(topic.variants) && topic.variants.length ? topic.variants : [topic]
       expect(Boolean(topic.id), `${prefix}: id obrigatório`)
       expect(Boolean(topic.label), `${prefix}: label obrigatório`)
+      expect(Number.isInteger(topic.recentUsageCount), `${prefix}: frequência recente obrigatória`)
       expect(typeof topic.canOpenProcess === 'boolean', `${prefix}: canOpenProcess deve ser booleano`)
       if (topic.canOpenProcess) {
         expect(processIds.has(topic.processId), `${prefix}: processo inexistente ${topic.processId}`)

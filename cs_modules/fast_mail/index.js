@@ -937,7 +937,11 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const payload = await response.json()
       catalogProcesses = Array.isArray(payload.processTypes) ? payload.processTypes : []
-      priorityTopics = Array.isArray(payload.fastMailPriorityTopics) ? payload.fastMailPriorityTopics : []
+      priorityTopics = Array.isArray(payload.fastMailPriorityTopics)
+        ? payload.fastMailPriorityTopics.slice().sort((a, b) =>
+          Number(b.recentUsageCount || 0) - Number(a.recentUsageCount || 0)
+        )
+        : []
       catalogNavigation = payload.fastMailNavigation && Array.isArray(payload.fastMailNavigation.areas)
         ? payload.fastMailNavigation
         : { areas: [] }
