@@ -25,6 +25,7 @@
   let priorityTopics = []
   let responseScripts = []
   let responseScriptPhases = []
+  let priorityResponseScriptIds = null
   let currentOperator = null
   let processResultAutofillRunning = false
 
@@ -978,6 +979,7 @@
 
     return responseScripts.filter((script) => {
       if (!script.body) return false
+      if (priorityResponseScriptIds && !priorityResponseScriptIds.has(script.id)) return false
       if (phase && script.phase !== phase) return false
       const haystack = scriptSearchText(script)
       return terms.every((term) => haystack.includes(term))
@@ -1133,7 +1135,9 @@
     const button = document.querySelector('#spfm-script-toggle')
     if (!catalog || !button) return
 
+    const opening = catalog.hidden
     catalog.hidden = !catalog.hidden
+    if (opening) priorityResponseScriptIds = null
     button.textContent = catalog.hidden ? 'BUSCAR SCRIPT' : 'FECHAR SCRIPTS'
     if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
   }
@@ -1237,8 +1241,9 @@
 
     catalog.hidden = false
     toggleButton.textContent = 'FECHAR RESPOSTAS'
+    priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
     phase.value = ''
-    search.value = route.searchQuery || route.topicLabel || ''
+    search.value = ''
     renderResponseScriptResults()
 
     const mappedScriptAvailable = Array.from(result.options).some((option) => option.value === route.scriptId)
