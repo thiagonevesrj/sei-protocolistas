@@ -533,6 +533,7 @@ if (curatedResponses && scriptCatalog) {
   'cs_modules/fast_mail/index.js',
   'cs_modules/fast_mail/styles.css',
   'cs_modules/fast_proc_handoff/index.js',
+  'docs/CHECKPOINT-OPERACIONAL-0.5.0.md',
   'docs/CHECKLIST-REGRESSAO.md',
   'docs/PLANO-MESTRE.md',
   'docs/REGRAS-FUNCIONAIS.md'
