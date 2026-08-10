@@ -472,6 +472,7 @@
   async function sendFeedback (event) {
     event.preventDefault()
     const button = $('#send-feedback')
+    let pendingFeedbackId = ''
     const stored = await get([OPERATOR_KEY, WEBMAIL_CREDENTIALS_KEY])
     const operator = stored[OPERATOR_KEY]
     const credentials = stored[WEBMAIL_CREDENTIALS_KEY]
@@ -504,6 +505,7 @@
 
     try {
       const id = feedbackId()
+      pendingFeedbackId = id
       await set({
         [FEEDBACK_KEY]: {
           id,
@@ -523,11 +525,16 @@
       })
       await runtimeMessage({ type: SEND_FEEDBACK_MESSAGE, feedbackId: id })
       await waitForFeedbackResult(id)
+      await remove(FEEDBACK_KEY)
 
       $('#feedback-form').reset()
       message('#feedback-message', 'Relato enviado com sucesso. Obrigado pela colaboração.', 'success')
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao enviar relato:', error)
+      if (pendingFeedbackId) {
+        const pending = (await get(FEEDBACK_KEY))[FEEDBACK_KEY]
+        if (pending?.id === pendingFeedbackId) await remove(FEEDBACK_KEY)
+      }
       message('#feedback-message', `Não foi possível enviar agora: ${error.message}`, 'error')
     } finally {
       button.disabled = false
