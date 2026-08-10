@@ -663,7 +663,9 @@
           documents
         )
       )
-      if (status) status.textContent = 'Exigência inserida com sucesso.'
+      setEmailPreparationVisible(true)
+      if (status) status.textContent = 'Exigência inserida. Agora prepare o e-mail.'
+      document.querySelector('#spfm-email-preparation')?.scrollIntoView?.({ block: 'nearest' })
     } catch (error) {
       if (status) status.textContent = error.message || 'Não foi possível inserir a exigência'
     }
@@ -2062,6 +2064,9 @@
               <div id="spfm-body-status" class="spfm-mini-status"></div>
             </div>
           </div>
+          <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
+            <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
+          </section>
           <div id="spfm-priority-status" class="spfm-mini-status">Escolha primeiro a área do atendimento.</div>
         </section>
 
@@ -2088,10 +2093,6 @@
           <button id="spfm-insert-script" type="button" disabled>INSERIR RESPOSTA</button>
           <div id="spfm-script-status" class="spfm-mini-status"></div>
         </div>
-
-        <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
-          <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
-        </section>
 
         <section id="spfm-process-setup" class="spfm-process-setup" hidden>
           <div class="spfm-section-title">DADOS PARA ABRIR O PROCESSO</div>

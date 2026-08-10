@@ -224,6 +224,9 @@ function testFastMailProgressiveNavigation () {
   assert.ok(source.includes('priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)'))
   assert.ok(source.includes('box.hidden = !hasDocumentModel || activePriorityAction !== \'missing\''))
   assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-priority-status"'))
+  assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-email-preparation"'))
+  assert.ok(source.indexOf('id="spfm-email-preparation"') < source.indexOf('id="spfm-priority-status"'))
+  assert.ok(source.includes("status.textContent = 'Exigência inserida. Agora prepare o e-mail.'"))
   assert.ok(styles.includes('.spfm-area-grid'))
   assert.ok(!source.includes('spfm-topic-button'))
 }
