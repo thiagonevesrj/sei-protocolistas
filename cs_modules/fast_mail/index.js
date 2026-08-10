@@ -19,6 +19,7 @@
   const HISTORY_SEPARATOR = '----- HISTÓRICO DE MENSAGENS ANTERIORES -----'
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
+  const PRIORITY_AREA_ORDER = ['habilitacao', 'veiculos', 'taxas', 'oficios', 'outros']
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
@@ -26,6 +27,8 @@
   let responseScripts = []
   let responseScriptPhases = []
   let priorityResponseScriptIds = null
+  let selectedPriorityAreaId = ''
+  let activePriorityAction = ''
   let currentOperator = null
   let processResultAutofillRunning = false
 
@@ -622,9 +625,9 @@
 
     const documents = missingDocumentsForProcedure(procedure.value)
     const hasDocumentModel = documents.length > 0
-    box.hidden = !hasDocumentModel
+    box.hidden = !hasDocumentModel || activePriorityAction !== 'reply'
 
-    if (!hasDocumentModel) {
+    if (!hasDocumentModel || activePriorityAction !== 'reply') {
       if (list) list.hidden = true
       return
     }
@@ -947,6 +950,7 @@
         : { areas: [] }
       renderProcedureOptions()
       renderAreaOptions()
+      renderPriorityAreas()
       renderPriorityTopics()
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao carregar catálogo no FAST MAIL:', error)
@@ -1145,14 +1149,58 @@
 
     const opening = catalog.hidden
     catalog.hidden = !catalog.hidden
-    if (opening) priorityResponseScriptIds = null
-    button.textContent = catalog.hidden ? 'BUSCAR SCRIPT' : 'FECHAR SCRIPTS'
+    if (opening) {
+      priorityResponseScriptIds = null
+      activePriorityAction = 'catalog'
+      const processSetup = document.querySelector('#spfm-process-setup')
+      const identityFields = document.querySelector('#spfm-identity-fields')
+      if (processSetup) processSetup.hidden = false
+      if (identityFields) identityFields.hidden = false
+      setManualRouteFieldsVisible(true)
+      syncRouteWithProcedure('')
+      const missingBox = document.querySelector('#spfm-missing-box')
+      if (missingBox) missingBox.hidden = true
+    } else {
+      activePriorityAction = ''
+    }
+    button.textContent = catalog.hidden ? 'OUTRO ATENDIMENTO' : 'FECHAR OUTRO ATENDIMENTO'
     if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
   }
 
+  function priorityAreaLabel (areaId) {
+    return catalogNavigation.areas.find((area) => area.id === areaId)?.label || areaId
+  }
+
+  function setManualRouteFieldsVisible (visible) {
+    const areaField = document.querySelector('#spfm-area-field')
+    const objectiveField = document.querySelector('#spfm-objective-field')
+    const procedureField = document.querySelector('#spfm-procedure-field')
+    if (areaField) areaField.hidden = !visible
+    if (!visible) {
+      if (objectiveField) objectiveField.hidden = true
+      if (procedureField) procedureField.hidden = true
+    }
+  }
+
+  function renderPriorityAreas () {
+    const container = document.querySelector('#spfm-priority-areas')
+    if (!container) return
+
+    container.innerHTML = ''
+    PRIORITY_AREA_ORDER.forEach((areaId) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'spfm-area-button'
+      button.dataset.areaId = areaId
+      button.textContent = priorityAreaLabel(areaId)
+      button.addEventListener('click', () => selectPriorityArea(areaId))
+      container.appendChild(button)
+    })
+  }
+
   function selectedPriorityTopic () {
-    const selected = document.querySelector('.spfm-topic-button.is-active')
-    return priorityTopics.find((topic) => topic.id === selected?.dataset.topicId) || null
+    const topicId = document.querySelector('#spfm-priority-topic')?.value || ''
+    return priorityTopics.find((topic) => topic.id === topicId) || null
   }
 
   function selectedPriorityVariant (topic) {
@@ -1181,7 +1229,8 @@
     const replyButton = document.querySelector('#spfm-priority-reply')
     const openButton = document.querySelector('#spfm-priority-open')
     const status = document.querySelector('#spfm-priority-status')
-    if (!variantField || !variantSelect || !replyButton || !openButton || !status) return
+    const actionStep = document.querySelector('#spfm-action-step')
+    if (!variantField || !variantSelect || !replyButton || !openButton || !status || !actionStep) return
 
     const currentVariant = variantSelect.value
     const variants = Array.isArray(topic?.variants) ? topic.variants : []
@@ -1198,6 +1247,7 @@
     variantField.hidden = variants.length === 0
 
     const route = selectedPriorityRoute()
+    actionStep.hidden = !route
     replyButton.disabled = !route?.scriptId
     openButton.disabled = !route?.canOpenProcess || !route?.processId
     status.textContent = !route
@@ -1211,27 +1261,71 @@
   }
 
   function selectPriorityTopic (topicId) {
-    document.querySelectorAll('.spfm-topic-button').forEach((button) => {
-      button.classList.toggle('is-active', button.dataset.topicId === topicId)
-    })
+    activePriorityAction = ''
+    const topicSelect = document.querySelector('#spfm-priority-topic')
+    if (topicSelect) topicSelect.value = topicId
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    if (catalog) catalog.hidden = true
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = true
+    if (missingBox) missingBox.hidden = true
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
     renderPriorityRoute()
   }
 
-  function renderPriorityTopics () {
-    const container = document.querySelector('#spfm-priority-topics')
-    if (!container) return
-
-    container.innerHTML = ''
-    priorityTopics.forEach((topic) => {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.className = 'spfm-topic-button'
-      button.dataset.topicId = topic.id
-      button.textContent = topic.label
-      button.addEventListener('click', () => selectPriorityTopic(topic.id))
-      container.appendChild(button)
+  function selectPriorityArea (areaId) {
+    selectedPriorityAreaId = areaId
+    activePriorityAction = ''
+    document.querySelectorAll('.spfm-area-button').forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.areaId === areaId)
     })
+    const topicSelect = document.querySelector('#spfm-priority-topic')
+    if (topicSelect) topicSelect.value = ''
+
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    const actionStep = document.querySelector('#spfm-action-step')
+    if (catalog) catalog.hidden = true
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = true
+    if (missingBox) missingBox.hidden = true
+    if (actionStep) actionStep.hidden = true
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
+
+    renderPriorityTopics()
+  }
+
+  function renderPriorityTopics () {
+    const select = document.querySelector('#spfm-priority-topic')
+    const topicStep = document.querySelector('#spfm-topic-step')
+    const status = document.querySelector('#spfm-priority-status')
+    if (!select || !topicStep) return
+
+    select.innerHTML = '<option value="">Selecione o assunto</option>'
+    const visibleTopics = priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)
+    visibleTopics.forEach((topic) => {
+      const option = document.createElement('option')
+      option.value = topic.id
+      option.textContent = topic.label
+      select.appendChild(option)
+    })
+    select.disabled = visibleTopics.length === 0
+    topicStep.hidden = !selectedPriorityAreaId
     renderPriorityRoute()
+    if (status) {
+      status.textContent = !selectedPriorityAreaId
+        ? 'Escolha primeiro a área do atendimento.'
+        : visibleTopics.length
+          ? 'Agora escolha o assunto do e-mail.'
+          : 'Nenhum atalho principal nesta área. Use Outro atendimento.'
+    }
   }
 
   function openPriorityResponses () {
@@ -1247,7 +1341,12 @@
       return
     }
 
+    activePriorityAction = 'reply'
     catalog.hidden = false
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = false
     toggleButton.textContent = 'FECHAR RESPOSTAS'
     priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
     const mappedScript = responseScripts.find((script) => script.id === route.scriptId)
@@ -1258,21 +1357,34 @@
     const mappedScriptAvailable = Array.from(result.options).some((option) => option.value === route.scriptId)
     if (mappedScriptAvailable) result.value = route.scriptId
     renderSelectedResponseScript()
+    updateMissingDocumentsVisibility()
     if (status) status.textContent = 'Resposta principal selecionada. Confira ou troque a fase antes de inserir.'
     catalog.scrollIntoView?.({ block: 'nearest' })
   }
 
-  async function openPriorityProcess () {
+  function openPriorityProcess () {
     const route = selectedPriorityRoute()
-    const button = document.querySelector('#spfm-priority-open')
     const status = document.querySelector('#spfm-priority-status')
     if (!route?.canOpenProcess || !route?.processId) {
       if (status) status.textContent = route?.blockedReason || 'Este atendimento não admite abertura por e-mail.'
       return
     }
 
+    activePriorityAction = 'process'
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    if (catalog) catalog.hidden = true
+    if (missingBox) missingBox.hidden = true
+    if (processSetup) processSetup.hidden = false
+    if (identityFields) identityFields.hidden = false
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
     syncRouteWithProcedure(route.processId)
-    await openProcessInSei(button)
+    setManualRouteFieldsVisible(false)
+    if (status) status.textContent = 'Confira os dados abaixo e abra o processo no FAST PROC.'
+    processSetup?.scrollIntoView?.({ block: 'nearest' })
   }
 
   function renderProcedureOptions (processIds = null) {
@@ -1822,20 +1934,29 @@
         </div>
 
         <section class="spfm-priority-workflow">
-          <div class="spfm-section-title">QUAL É O ASSUNTO DO E-MAIL?</div>
-          <div id="spfm-priority-topics" class="spfm-topic-grid"></div>
-          <label id="spfm-topic-variant-field" hidden>
-            <span>Qual é o caso?</span>
-            <select id="spfm-topic-variant"></select>
-          </label>
-          <div class="spfm-decision-grid">
-            <button id="spfm-priority-reply" type="button" disabled>RESPONDER E-MAIL</button>
-            <button id="spfm-priority-open" type="button" disabled>ABRIR NO FAST PROC</button>
+          <div class="spfm-section-title">1. ESCOLHA A ÁREA</div>
+          <div id="spfm-priority-areas" class="spfm-area-grid"></div>
+          <div id="spfm-topic-step" class="spfm-step" hidden>
+            <div class="spfm-section-title">2. ESCOLHA O ASSUNTO</div>
+            <select id="spfm-priority-topic">
+              <option value="">Selecione o assunto</option>
+            </select>
+            <label id="spfm-topic-variant-field" hidden>
+              <span>Qual é o caso?</span>
+              <select id="spfm-topic-variant"></select>
+            </label>
           </div>
-          <div id="spfm-priority-status" class="spfm-mini-status">Escolha o assunto do e-mail.</div>
+          <div id="spfm-action-step" class="spfm-step" hidden>
+            <div class="spfm-section-title">3. ESCOLHA A AÇÃO</div>
+            <div class="spfm-decision-grid">
+              <button id="spfm-priority-reply" type="button" disabled>RESPONDER E-MAIL</button>
+              <button id="spfm-priority-open" type="button" disabled>ABRIR PROCESSO</button>
+            </div>
+          </div>
+          <div id="spfm-priority-status" class="spfm-mini-status">Escolha primeiro a área do atendimento.</div>
         </section>
 
-        <button id="spfm-script-toggle" class="spfm-secondary" type="button">BUSCAR SCRIPT</button>
+        <button id="spfm-script-toggle" class="spfm-secondary" type="button">OUTRO ATENDIMENTO</button>
         <div id="spfm-script-catalog" class="spfm-script-catalog" hidden>
           <label>
             <span>Fase do atendimento</span>
@@ -1859,39 +1980,50 @@
           <div id="spfm-script-status" class="spfm-mini-status"></div>
         </div>
 
-        <div class="spfm-fields">
-          <label>
-            <span>Nome do requerente</span>
-            <input id="spfm-requester-name" type="text" autocomplete="off" placeholder="Nome completo">
-          </label>
-          <label>
-            <span>CPF <small>(opcional)</small></span>
-            <input id="spfm-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Somente se informado">
-          </label>
-          <label>
-            <span>Área</span>
-            <select id="spfm-area">
-              <option value="">Carregando caminhos...</option>
-            </select>
-          </label>
-          <label id="spfm-objective-field" hidden>
-            <span>Objetivo do cidadão</span>
-            <select id="spfm-objective">
-              <option value="">O que o cidadão deseja?</option>
-            </select>
-          </label>
-          <label id="spfm-procedure-field" hidden>
-            <span>Procedimento</span>
-            <select id="spfm-procedure">
-              <option value="">Carregando catálogo...</option>
-            </select>
-          </label>
-          <label id="spfm-destination-field" hidden>
-            <span>Destino <small>(editável)</small></span>
-            <input id="spfm-destination" type="text" autocomplete="off" placeholder="Unidade de destino">
-          </label>
-          <div id="spfm-route-status" class="spfm-mini-status">Escolha uma das áreas principais.</div>
-        </div>
+        <section id="spfm-identity-fields" class="spfm-process-setup" hidden>
+          <div class="spfm-section-title">DADOS DO REQUERENTE</div>
+          <div class="spfm-fields">
+            <label>
+              <span>Nome do requerente</span>
+              <input id="spfm-requester-name" type="text" autocomplete="off" placeholder="Nome completo">
+            </label>
+            <label>
+              <span>CPF <small>(opcional)</small></span>
+              <input id="spfm-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Somente se informado">
+            </label>
+          </div>
+        </section>
+
+        <section id="spfm-process-setup" class="spfm-process-setup" hidden>
+          <div class="spfm-section-title">DADOS PARA ABRIR O PROCESSO</div>
+          <div class="spfm-fields">
+            <label id="spfm-area-field">
+              <span>Área</span>
+              <select id="spfm-area">
+                <option value="">Carregando caminhos...</option>
+              </select>
+            </label>
+            <label id="spfm-objective-field" hidden>
+              <span>Objetivo do cidadão</span>
+              <select id="spfm-objective">
+                <option value="">O que o cidadão deseja?</option>
+              </select>
+            </label>
+            <label id="spfm-procedure-field" hidden>
+              <span>Procedimento</span>
+              <select id="spfm-procedure">
+                <option value="">Carregando catálogo...</option>
+              </select>
+            </label>
+            <label id="spfm-destination-field" hidden>
+              <span>Destino <small>(editável)</small></span>
+              <input id="spfm-destination" type="text" autocomplete="off" placeholder="Unidade de destino">
+            </label>
+            <div id="spfm-route-status" class="spfm-mini-status">Escolha uma das áreas principais.</div>
+          </div>
+          <button id="spfm-open-process" type="button">ABRIR NO FAST PROC</button>
+          <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR TRIAGEM</button>
+        </section>
 
         <div id="spfm-missing-box" class="spfm-missing-box" hidden>
           <button id="spfm-missing-toggle" class="spfm-secondary" type="button">FALTAM DOCUMENTOS</button>
@@ -1907,14 +2039,15 @@
           <div id="spfm-process-response-status" class="spfm-mini-status"></div>
         </div>
 
-        <button id="spfm-open-process" type="button" hidden>ABRIR PROCESSO</button>
-        <button id="spfm-triagem" type="button">PREPARAR TRIAGEM</button>
       </div>
     `
 
     document.documentElement.appendChild(panel)
 
     panel.querySelector('#spfm-collapse').addEventListener('click', () => togglePanel(panel))
+    panel.querySelector('#spfm-priority-topic').addEventListener('change', (event) => {
+      selectPriorityTopic(event.target.value)
+    })
     panel.querySelector('#spfm-topic-variant').addEventListener('change', renderPriorityRoute)
     panel.querySelector('#spfm-priority-reply').addEventListener('click', openPriorityResponses)
     panel.querySelector('#spfm-priority-open').addEventListener('click', openPriorityProcess)
