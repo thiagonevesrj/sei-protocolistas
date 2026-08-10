@@ -201,6 +201,13 @@ function testCompactFastProcLayout () {
   assert.ok(styles.includes('position: sticky'))
 }
 
+function testFastMailHiddenFieldsStayHidden () {
+  const styles = read('cs_modules/fast_mail/styles.css')
+
+  assert.ok(styles.includes('#sei-protocolistas-fast-mail-status [hidden]'))
+  assert.ok(styles.includes('display: none !important;'))
+}
+
 function testUnusedSeiFieldsAreHidden () {
   const source = read('cs_modules/clique_protocolista/index.js')
   const hideFunction = source.indexOf('function hideUnusedProcessFields')
@@ -485,6 +492,7 @@ async function run () {
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
   testCompactFastProcLayout()
+  testFastMailHiddenFieldsStayHidden()
   testUnusedSeiFieldsAreHidden()
   testAutomaticEmailCompletion()
   testHighlightedQuickRequestButton()
