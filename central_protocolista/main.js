@@ -8,6 +8,7 @@
   const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
   const CATALOG_PATH = '../data/catalogo-processos.json'
   const FEEDBACK_ENDPOINT = `https://formsubmit.co/ajax/${atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')}`
+  const FEEDBACK_SOURCE_URL = 'https://github.com/thiagonevesrj/sei-protocolistas'
 
   const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
@@ -462,6 +463,7 @@
           _subject: `[SEI Protocolistas] ${type}: ${title}`,
           _template: 'table',
           _captcha: 'false',
+          _url: FEEDBACK_SOURCE_URL,
           Tipo: type,
           Título: title,
           Local: location,
@@ -475,7 +477,8 @@
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const result = await response.json()
-      if (result.success === false) throw new Error(result.message || 'Envio recusado')
+      const confirmed = result.success === true || String(result.success).toLowerCase() === 'true'
+      if (!confirmed) throw new Error(result.message || 'O serviço não confirmou o envio')
 
       $('#feedback-form').reset()
       message('#feedback-message', 'Relato enviado com sucesso. Obrigado pela colaboração.', 'success')
