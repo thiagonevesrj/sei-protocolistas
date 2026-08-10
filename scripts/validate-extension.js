@@ -282,6 +282,31 @@ if (catalog) {
         })
       })
     })
+
+    const expectedOpenProcesses = {
+      'devolucao-taxas': 'devolucao-taxas',
+      'desistencia-categoria': 'desistencia-categoria-primeira-habilitacao',
+      'pericia-medica-pcd': 'solicitacao-pericia-medica',
+      'troca-clinica': 'troca-retirada-clinica',
+      'rebaixamento-categoria': 'rebaixamento-categoria-cnh',
+      'retorno-categoria': 'retorno-categoria-cnh-rebaixada',
+      'transferencia-prontuario': 'transferencia-prontuario-habilitacao',
+      'cnh-estrangeira': 'averbacao-cnh-estrangeira',
+      oficios: 'oficio-mero-expediente'
+    }
+    Object.entries(expectedOpenProcesses).forEach(([topicId, processId]) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      const processType = processTypes.find((item) => item.id === processId)
+      expect(topic?.canOpenProcess === true, `FAST MAIL: ${topicId} deve permitir FAST PROC`)
+      expect(topic?.processId === processId, `FAST MAIL: ${topicId} deve usar ${processId}`)
+      expect(processType?.missingDocuments?.length > 0, `FAST MAIL: ${topicId} deve ter checklist`)
+    })
+
+    ;['cancelamento-venda', 'motor', 'chassi'].forEach((topicId) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      expect(topic?.canOpenProcess === false, `FAST MAIL: ${topicId} deve ser somente orientação`)
+      expect(!topic?.processId, `FAST MAIL: ${topicId} não pode apontar para o FAST PROC`)
+    })
   }
 }
 
