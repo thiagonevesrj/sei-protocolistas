@@ -1020,7 +1020,7 @@
     visibleMatches.forEach((script) => {
       const option = document.createElement('option')
       option.value = script.id
-      option.textContent = `${script.title} — ${script.group}`
+      option.textContent = `${script.phaseLabel} — ${script.title}`
       select.appendChild(option)
     })
 
@@ -1250,14 +1250,15 @@
     catalog.hidden = false
     toggleButton.textContent = 'FECHAR RESPOSTAS'
     priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
-    phase.value = ''
+    const mappedScript = responseScripts.find((script) => script.id === route.scriptId)
+    phase.value = mappedScript?.phase || ''
     search.value = ''
     renderResponseScriptResults()
 
     const mappedScriptAvailable = Array.from(result.options).some((option) => option.value === route.scriptId)
     if (mappedScriptAvailable) result.value = route.scriptId
     renderSelectedResponseScript()
-    if (status) status.textContent = 'Escolha a fase e confira a resposta antes de inserir.'
+    if (status) status.textContent = 'Resposta principal selecionada. Confira ou troque a fase antes de inserir.'
     catalog.scrollIntoView?.({ block: 'nearest' })
   }
 

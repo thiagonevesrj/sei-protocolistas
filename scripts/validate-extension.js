@@ -148,6 +148,10 @@ expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automáti
 expect(fastMailSource.includes('spfm-priority-topics'), 'FAST MAIL: assuntos prioritários devem aparecer na tela inicial')
 expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
 expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
+expect(
+  fastMailSource.includes("phase.value = mappedScript?.phase || ''"),
+  'FAST MAIL: assunto prioritário deve abrir na fase da resposta principal'
+)
 expect(fastMailSource.includes('Protocolista nº'), 'FAST MAIL: exigência deve usar a assinatura do protocolista')
 expect(!fastMailSource.includes('background:#fff1f1'), 'FAST MAIL: alerta de reenvio não deve usar caixa vermelha')
 expect(
