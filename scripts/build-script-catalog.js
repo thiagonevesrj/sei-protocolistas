@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..')
 const sourceDirectory = path.resolve(process.argv[2] || path.join(root, '..', 'trello_sources'))
 const attachmentDirectory = path.resolve(process.argv[3] || path.join(sourceDirectory, 'attachments'))
 const outputPath = path.resolve(process.argv[4] || path.join(root, 'data', 'catalogo-scripts.json'))
+const processCatalogPath = path.resolve(process.argv[5] || path.join(root, 'data', 'catalogo-processos.json'))
 
 const retiredCardIds = new Set([
   '665a8e0b87370831e17d0e34',
@@ -53,6 +54,11 @@ function isScriptTextAttachment (attachment) {
   return /\.txt$/i.test(name) && !/destino[\s_]+do[\s_]+processo/i.test(name)
 }
 
+function isDestinationTextAttachment (attachment) {
+  const name = String(attachment?.name || '')
+  return /destino[\s_]+do[\s_]+processo.*\.txt$/i.test(name)
+}
+
 function findLocalAttachment (card, attachment) {
   const expectedName = normalizeFileName(attachment.name)
   const ranked = localAttachmentFiles
@@ -87,6 +93,69 @@ function attachedScriptBody (card) {
   return null
 }
 
+function destinationUnitFromText (value) {
+  const normalized = String(value || '')
+    .replace(/^\uFEFF/, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+
+  const detranPath = normalized.match(/DETRAN\s*\/\s*([A-Z][A-Z0-9]{2,})/)
+  if (detranPath) return detranPath[1]
+
+  const labeled = normalized.match(/(?:SETOR\s+(?:DE\s+)?DESTINO|DESTINO\s+DO\s+PROCESSO)\s*:?\s*([A-Z][A-Z0-9]{2,})/)
+  if (labeled) return labeled[1]
+
+  const firstLine = normalized.split(/\r?\n/)[0].trim()
+  const acronym = firstLine.match(/^([A-Z][A-Z0-9]{2,})(?:\s*-.*)?$/)
+  return acronym?.[1] || ''
+}
+
+function attachedDestination (card) {
+  const attachments = (card.attachments || [])
+    .filter(isDestinationTextAttachment)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+
+  for (const attachment of attachments) {
+    const localPath = findLocalAttachment(card, attachment)
+    if (!localPath) continue
+    const destinationUnit = destinationUnitFromText(fs.readFileSync(localPath, 'utf8'))
+    if (destinationUnit) return { destinationUnit, attachment }
+  }
+
+  return null
+}
+
+function syncProcessDestinations (scripts) {
+  if (!fs.existsSync(processCatalogPath)) return 0
+
+  const processCatalog = JSON.parse(fs.readFileSync(processCatalogPath, 'utf8'))
+  const destinationsByCardId = new Map(
+    scripts
+      .filter((script) => script.source.destinationUnit)
+      .map((script) => [script.source.cardId, script.source])
+  )
+  let updated = 0
+
+  ;(processCatalog.processTypes || []).forEach((processType) => {
+    const source = destinationsByCardId.get(processType.source?.cardId)
+    if (!source || processType.destinationUnit === source.destinationUnit) return
+
+    processType.destinationUnit = source.destinationUnit
+    processType.source = {
+      ...processType.source,
+      destinationReference: `Trello: ${source.destinationAttachment.name}`
+    }
+    updated += 1
+  })
+
+  if (updated) {
+    fs.writeFileSync(processCatalogPath, `${JSON.stringify(processCatalog, null, 2)}\n`)
+  }
+  return updated
+}
+
 if (!fs.existsSync(sourceDirectory)) {
   fail(`Diretório com exportações do Trello não encontrado: ${sourceDirectory}`)
 }
@@ -116,6 +185,7 @@ files.forEach((file) => {
 
     const list = lists.get(card.idList)
     const attachedScript = attachedScriptBody(card)
+    const destination = attachedDestination(card)
     scripts.push({
       id: `trello-${card.id}`,
       title: String(card.name || '').trim(),
@@ -131,6 +201,10 @@ files.forEach((file) => {
         bodySource: attachedScript ? 'txt-attachment' : 'card-description',
         attachment: attachedScript
           ? { id: attachedScript.attachment.id, name: attachedScript.attachment.name }
+          : null,
+        destinationUnit: destination?.destinationUnit || null,
+        destinationAttachment: destination
+          ? { id: destination.attachment.id, name: destination.attachment.name }
           : null
       }
     })
@@ -164,4 +238,5 @@ const catalog = {
 }
 
 fs.writeFileSync(outputPath, `${JSON.stringify(catalog, null, 2)}\n`)
-console.log(`Catálogo gerado com ${scripts.length} scripts em ${outputPath}`)
+const updatedDestinations = syncProcessDestinations(scripts)
+console.log(`Catálogo gerado com ${scripts.length} scripts em ${outputPath}; ${updatedDestinations} destinos sincronizados.`)

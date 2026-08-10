@@ -626,20 +626,15 @@
 
     const documents = missingDocumentsForProcedure(procedure.value)
     const hasDocumentModel = documents.length > 0
-    box.hidden = !hasDocumentModel || activePriorityAction !== 'reply'
+    box.hidden = !hasDocumentModel || activePriorityAction !== 'missing'
 
-    if (!hasDocumentModel || activePriorityAction !== 'reply') {
+    if (!hasDocumentModel || activePriorityAction !== 'missing') {
       if (list) list.hidden = true
       return
     }
 
     renderMissingDocumentsOptions()
-  }
-
-  function toggleMissingDocuments () {
-    const list = document.querySelector('#spfm-missing-list')
-    if (!list) return
-    list.hidden = !list.hidden
+    if (list) list.hidden = false
   }
 
   async function insertMissingDocumentsRequirement () {
@@ -826,6 +821,7 @@
     const destinationField = document.querySelector('#spfm-destination-field')
     const missingBox = document.querySelector('#spfm-missing-box')
     const priorityReply = document.querySelector('#spfm-priority-reply')
+    const priorityMissing = document.querySelector('#spfm-priority-missing')
     const priorityOpen = document.querySelector('#spfm-priority-open')
     const priorityStatus = document.querySelector('#spfm-priority-status')
 
@@ -833,6 +829,7 @@
     if (triageButton) triageButton.hidden = true
     if (missingBox) missingBox.hidden = true
     if (priorityReply) priorityReply.hidden = true
+    if (priorityMissing) priorityMissing.hidden = true
     if (priorityOpen) priorityOpen.hidden = true
     if (priorityStatus) {
       priorityStatus.textContent = payload?.numero
@@ -1268,10 +1265,11 @@
     const variantField = document.querySelector('#spfm-topic-variant-field')
     const variantSelect = document.querySelector('#spfm-topic-variant')
     const replyButton = document.querySelector('#spfm-priority-reply')
+    const missingButton = document.querySelector('#spfm-priority-missing')
     const openButton = document.querySelector('#spfm-priority-open')
     const status = document.querySelector('#spfm-priority-status')
     const actionStep = document.querySelector('#spfm-action-step')
-    if (!variantField || !variantSelect || !replyButton || !openButton || !status || !actionStep) return
+    if (!variantField || !variantSelect || !replyButton || !missingButton || !openButton || !status || !actionStep) return
 
     const currentVariant = variantSelect.value
     const variants = Array.isArray(topic?.variants) ? topic.variants : []
@@ -1288,13 +1286,16 @@
     variantField.hidden = variants.length === 0
 
     const route = selectedPriorityRoute()
+    const hasMissingDocuments = Boolean(route?.processId && missingDocumentsForProcedure(route.processId).length)
     actionStep.hidden = !route
     replyButton.disabled = !route?.scriptId
+    missingButton.disabled = !hasMissingDocuments
+    missingButton.hidden = !hasMissingDocuments
     openButton.disabled = !route?.canOpenProcess || !route?.processId
     status.textContent = !route
       ? 'Escolha o assunto do e-mail.'
       : route.canOpenProcess
-        ? 'Documentação incompleta: responder. Documentação completa: abrir no FAST PROC.'
+        ? 'Escolha: orientar, solicitar documentos faltantes ou abrir o processo.'
         : route.blockedReason || 'Este atendimento deve ser respondido por e-mail.'
 
     if (route?.processId) syncRouteWithProcedure(route.processId)
@@ -1396,6 +1397,8 @@
     }
 
     activePriorityAction = 'reply'
+    const missingBox = document.querySelector('#spfm-missing-box')
+    if (missingBox) missingBox.hidden = true
     catalog.hidden = false
     const processSetup = document.querySelector('#spfm-process-setup')
     const identityFields = document.querySelector('#spfm-identity-fields')
@@ -1415,6 +1418,32 @@
     updateMissingDocumentsVisibility()
     if (status) status.textContent = 'Resposta principal selecionada. Confira ou troque a fase antes de inserir.'
     catalog.scrollIntoView?.({ block: 'nearest' })
+  }
+
+  function openPriorityMissingDocuments () {
+    const route = selectedPriorityRoute()
+    const status = document.querySelector('#spfm-priority-status')
+    const documents = route?.processId ? missingDocumentsForProcedure(route.processId) : []
+    if (!route?.processId || !documents.length) {
+      if (status) status.textContent = 'Este assunto ainda não possui checklist documental configurado.'
+      return
+    }
+
+    activePriorityAction = 'missing'
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    if (catalog) catalog.hidden = true
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = false
+    setEmailPreparationVisible(false)
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
+    syncRouteWithProcedure(route.processId)
+    setManualRouteFieldsVisible(false)
+    updateMissingDocumentsVisibility()
+    if (status) status.textContent = 'Marque os documentos faltantes e insira a exigência no e-mail.'
+    document.querySelector('#spfm-missing-box')?.scrollIntoView?.({ block: 'nearest' })
   }
 
   function openPriorityProcess () {
@@ -2005,8 +2034,32 @@
           <div id="spfm-action-step" class="spfm-step" hidden>
             <div class="spfm-section-title">3. ESCOLHA A AÇÃO</div>
             <div class="spfm-decision-grid">
-              <button id="spfm-priority-reply" type="button" disabled>RESPONDER E-MAIL</button>
+              <button id="spfm-priority-reply" type="button" disabled>ORIENTAR / RESPONDER</button>
+              <button id="spfm-priority-missing" type="button" disabled hidden>DOCUMENTOS FALTANTES</button>
               <button id="spfm-priority-open" type="button" disabled>ABRIR PROCESSO</button>
+            </div>
+          </div>
+
+          <section id="spfm-identity-fields" class="spfm-process-setup" hidden>
+            <div class="spfm-section-title">DADOS DO REQUERENTE</div>
+            <div class="spfm-fields">
+              <label>
+                <span>Nome do requerente</span>
+                <input id="spfm-requester-name" type="text" autocomplete="off" placeholder="Nome completo">
+              </label>
+              <label>
+                <span>CPF <small>(opcional)</small></span>
+                <input id="spfm-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Somente se informado">
+              </label>
+            </div>
+          </section>
+
+          <div id="spfm-missing-box" class="spfm-missing-box" hidden>
+            <div class="spfm-section-title">DOCUMENTOS FALTANTES</div>
+            <div id="spfm-missing-list" class="spfm-missing-list" hidden>
+              <div id="spfm-missing-options"></div>
+              <button id="spfm-insert-requirement" type="button">INSERIR EXIGÊNCIA</button>
+              <div id="spfm-body-status" class="spfm-mini-status"></div>
             </div>
           </div>
           <div id="spfm-priority-status" class="spfm-mini-status">Escolha primeiro a área do atendimento.</div>
@@ -2035,20 +2088,6 @@
           <button id="spfm-insert-script" type="button" disabled>INSERIR RESPOSTA</button>
           <div id="spfm-script-status" class="spfm-mini-status"></div>
         </div>
-
-        <section id="spfm-identity-fields" class="spfm-process-setup" hidden>
-          <div class="spfm-section-title">DADOS DO REQUERENTE</div>
-          <div class="spfm-fields">
-            <label>
-              <span>Nome do requerente</span>
-              <input id="spfm-requester-name" type="text" autocomplete="off" placeholder="Nome completo">
-            </label>
-            <label>
-              <span>CPF <small>(opcional)</small></span>
-              <input id="spfm-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Somente se informado">
-            </label>
-          </div>
-        </section>
 
         <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
           <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
@@ -2084,15 +2123,6 @@
           <button id="spfm-open-process" type="button">ABRIR NO FAST PROC</button>
         </section>
 
-        <div id="spfm-missing-box" class="spfm-missing-box" hidden>
-          <button id="spfm-missing-toggle" class="spfm-secondary" type="button">FALTAM DOCUMENTOS</button>
-          <div id="spfm-missing-list" class="spfm-missing-list" hidden>
-            <div id="spfm-missing-options"></div>
-            <button id="spfm-insert-requirement" type="button">INSERIR EXIGÊNCIA</button>
-            <div id="spfm-body-status" class="spfm-mini-status"></div>
-          </div>
-        </div>
-
         <div id="spfm-process-response-box" class="spfm-missing-box" hidden>
           <button id="spfm-insert-process-response" type="button">INSERIR RESPOSTA DO PROCESSO</button>
           <div id="spfm-process-response-status" class="spfm-mini-status"></div>
@@ -2109,6 +2139,7 @@
     })
     panel.querySelector('#spfm-topic-variant').addEventListener('change', renderPriorityRoute)
     panel.querySelector('#spfm-priority-reply').addEventListener('click', openPriorityResponses)
+    panel.querySelector('#spfm-priority-missing').addEventListener('click', openPriorityMissingDocuments)
     panel.querySelector('#spfm-priority-open').addEventListener('click', openPriorityProcess)
     panel.querySelector('#spfm-script-toggle').addEventListener('click', toggleResponseScriptCatalog)
     panel.querySelector('#spfm-script-phase').addEventListener('change', renderResponseScriptResults)
@@ -2117,7 +2148,6 @@
     panel.querySelector('#spfm-insert-script').addEventListener('click', insertSelectedResponseScript)
     panel.querySelector('#spfm-open-process').addEventListener('click', () => openProcessInSei())
     panel.querySelector('#spfm-triagem').addEventListener('click', prepareTriagem)
-    panel.querySelector('#spfm-missing-toggle').addEventListener('click', toggleMissingDocuments)
     panel.querySelector('#spfm-insert-requirement').addEventListener('click', insertMissingDocumentsRequirement)
     panel.querySelector('#spfm-insert-process-response').addEventListener('click', () => {
       insertPendingProcessResponse(false)

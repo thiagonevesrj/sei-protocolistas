@@ -403,7 +403,7 @@
       "seiNames": [
         "Detran: Troca ou retirada de Clínica"
       ],
-      "destinationUnit": "DIRHAB",
+      "destinationUnit": "SERVMT",
       "quickTrigger": "TROCA-CLIN",
       "priority": true,
       "responseModel": "standard",
@@ -453,7 +453,8 @@
         "card": "Troca de clínica",
         "cardId": "64fe3bd5d6087d02fc82d184",
         "lastActivity": "2026-07-14",
-        "bodyReference": "Script real confirmado pelo operador em 2026-08-10"
+        "bodyReference": "Script real confirmado pelo operador em 2026-08-10",
+        "destinationReference": "Trello HAB - TROCA DE CLINICA: SETOR DESTINO SERVMT, confirmado pelo operador em 2026-08-10"
       }
     },
     {

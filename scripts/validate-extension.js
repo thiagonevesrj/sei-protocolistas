@@ -150,6 +150,7 @@ expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automáti
 expect(fastMailSource.includes('spfm-priority-areas'), 'FAST MAIL: áreas prioritárias devem aparecer na tela inicial')
 expect(fastMailSource.includes('spfm-priority-topic'), 'FAST MAIL: seletor de assunto prioritário obrigatório')
 expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
+expect(fastMailSource.includes('openPriorityMissingDocuments'), 'FAST MAIL: pendência documental deve ser uma ação vinculada ao assunto')
 expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
 expect(fastMailSource.includes('CURATED_RESPONSES_PATH'), 'FAST MAIL: respostas curadas devem prevalecer sobre exportações antigas')
 expect(fastMailSource.includes('PREPARAR E-MAIL'), 'FAST MAIL: botão PREPARAR E-MAIL obrigatório no fluxo de resposta')
@@ -177,6 +178,8 @@ expect(returnCoordinatorSource.includes("api.tabs, 'update'"), 'Retorno: aba ori
 expect(protocolSource.includes('sei-protocolistas:return-fast-mail'), 'PROTOCOLO CLIENTE: comando de retorno obrigatório')
 expect(scriptCatalogBuilderSource.includes('txt-attachment'), 'Importador Trello: scripts em anexos .txt devem prevalecer sobre a descrição')
 expect(scriptCatalogBuilderSource.includes('destino[\\s_]+do[\\s_]+processo'), 'Importador Trello: DESTINO DO PROCESSO.txt não pode virar resposta')
+expect(scriptCatalogBuilderSource.includes('attachedDestination'), 'Importador Trello: destino anexado deve alimentar o catálogo de processos')
+expect(scriptCatalogBuilderSource.includes('syncProcessDestinations'), 'Importador Trello: destino deve ficar salvo por procedimento')
 
 let processTypes = []
 let processIds = new Set()
@@ -366,6 +369,7 @@ if (catalog) {
   const clinicDocumentIds = (clinic?.missingDocuments || []).map((document) => document.id)
   expect(clinic?.documentsStatus === 'operator-confirmed-2026-08-10', 'Troca de clínica: fonte real deve estar confirmada')
   expect(clinicDocumentIds.join(',') === 'general-request,identification,cpf,residence,renach,workplace-declaration', 'Troca de clínica: checklist deve seguir o script real')
+  expect(clinic?.destinationUnit === 'SERVMT', 'Troca de clínica: destino deve ser SERVMT conforme Trello e SEI')
   expect(!JSON.stringify(clinic).includes('HAB0135'), 'Troca de clínica: link inexistente da declaração de trabalho deve ser removido')
 }
 

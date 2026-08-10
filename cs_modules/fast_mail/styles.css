@@ -171,7 +171,7 @@
 
 #sei-protocolistas-fast-mail-status .spfm-decision-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
   gap: 6px;
 }
 
@@ -187,6 +187,11 @@
   color: #f1c44f;
   background: #06172d;
   border: 1px solid rgba(241, 196, 79, 0.58);
+}
+
+#sei-protocolistas-fast-mail-status .spfm-decision-grid #spfm-priority-missing {
+  color: #071224;
+  background: #f1c44f;
 }
 
 #sei-protocolistas-fast-mail-status .spfm-fields {
@@ -273,6 +278,8 @@
 }
 
 #sei-protocolistas-fast-mail-status .spfm-missing-box {
+  display: grid;
+  gap: 6px;
   margin-top: 9px;
 }
 
