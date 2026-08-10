@@ -95,6 +95,8 @@ async function prepareEmailResponse(button,context,processData){
       requerente:processData.requerente,
       tipo:processData.tipo,
       destino:processData.destino,
+      procedureId:context?.procedureId||'',
+      areaId:context?.areaId||'',
       data:processData.data,
       createdAt:Date.now(),
       expiresAt:Date.now()+60*60*1000

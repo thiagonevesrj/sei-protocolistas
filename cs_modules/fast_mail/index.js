@@ -668,6 +668,72 @@
     }
   }
 
+  function processCompletedResponseModel (payload) {
+    const procedureId = cleanValue(payload?.procedureId)
+    const processType = processTypeById(procedureId)
+    const configuredModel = cleanValue(processType?.responseModel).toLowerCase()
+    const areaId = cleanValue(payload?.areaId || processType?.category).toLowerCase()
+    const destination = cleanValue(payload?.destino).toUpperCase()
+    const processLabel = cleanValue(payload?.tipo).toUpperCase()
+
+    if (configuredModel === 'daf' || procedureId === 'devolucao-taxas' || areaId === 'taxas' || /\b(?:DIVAF|DAF)\b/.test(destination) || /DEVOLU[CÇ][AÃ]O DE TAXAS/.test(processLabel)) return 'daf'
+    if (configuredModel === 'divmed' || procedureId === 'solicitacao-pericia-medica' || /\bDIVMED\b/.test(destination) || /PER[IÍ]CIA M[EÉ]DICA/.test(processLabel)) return 'divmed'
+    if (areaId === 'veiculos' || configuredModel === 'drv' || /SOLICITA[CÇ][OÕ]ES GERAIS - VE[IÍ]CULOS/.test(processLabel)) return 'drv'
+    return 'standard'
+  }
+
+  function generalServiceChannelsHtml () {
+    return `
+      <div style="margin:14px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-radius:4px;color:#1f1f1f;">
+        <p style="margin:0 0 8px 0;font-weight:700;">CANAIS GERAIS DO DETRAN-RJ</p>
+        <p style="margin:0 0 5px 0;"><strong>Teleatendimento:</strong> (21) 3460-4040 ou (21) 3460-4041</p>
+        <p style="margin:0 0 5px 0;"><strong>Ouvidoria:</strong> (21) 2332-0438 ou (21) 2321-0450</p>
+        <p style="margin:0;"><strong>WhatsApp:</strong> <a href="https://api.whatsapp.com/send/?phone=552134604040&amp;text&amp;type=phone_number&amp;app_absent=0">(21) 3460-4040</a></p>
+      </div>`
+  }
+
+  function processModelSpecificHtml (model) {
+    if (model === 'daf') {
+      return `
+        <p style="margin:18px 0 10px 0;font-weight:700;">CONTATO E EXIGÊNCIAS — DIVAF/DAF</p>
+        <div style="margin:0;padding:12px 14px;background:#fff8e6;border:1px solid #e2c36a;border-left:4px solid #c69214;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 9px 0;">O Serviço de Protocolo não fornece informações sobre processos que já estão em tramitação. Para consultas, exigências ou informações sobre o pagamento, entre em contato diretamente com o setor responsável:</p>
+          <p style="margin:0 0 5px 0;"><strong>Assuntos de pagamento:</strong> (21) 2332-0043</p>
+          <p style="margin:0 0 5px 0;"><strong>Consultas e exigências:</strong> (21) 2332-0078 ou (21) 2332-0070</p>
+          <p style="margin:0;"><strong>E-mail:</strong> <a href="mailto:DAF.ANL@DETRAN.RJ.GOV.BR">DAF.ANL@DETRAN.RJ.GOV.BR</a></p>
+        </div>
+        <div style="margin:12px 0 0 0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0;"><strong>Sobre a devolução:</strong> o crédito será realizado em conta bancária de titularidade do requerente. Acompanhe a entrada do valor pelo extrato bancário.</p>
+        </div>
+        ${generalServiceChannelsHtml()}`
+    }
+
+    if (model === 'drv') {
+      return `
+        <p style="margin:18px 0 10px 0;font-weight:700;">CONTATO E EXIGÊNCIAS — VEÍCULOS</p>
+        <div style="margin:0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 8px 0;">Para sanar eventuais exigências, compareça à unidade onde o processo se encontra ou entre em contato diretamente com o setor responsável.</p>
+          <p style="margin:0;"><strong>E-mail:</strong> <a href="mailto:atendimento.drv@detran.rj.gov.br">atendimento.drv@detran.rj.gov.br</a></p>
+        </div>
+        ${generalServiceChannelsHtml()}`
+    }
+
+    if (model === 'divmed') {
+      return `
+        <p style="margin:18px 0 10px 0;font-weight:700;">CONTATO E EXIGÊNCIAS — DIVMED</p>
+        <div style="margin:0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 8px 0;">A partir deste momento, eventuais exigências, instruções ou informações sobre o processo devem ser tratadas diretamente com o setor responsável.</p>
+          <p style="margin:0;"><strong>WhatsApp DIVMED:</strong> <a href="https://wa.me/552123320206">(21) 2332-0206</a></p>
+        </div>`
+    }
+
+    return `
+      <div style="margin:18px 0 0 0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+        <p style="margin:0;">Seu atendimento pelo Serviço de Protocolo está encerrado. A partir deste momento, todas as tratativas, exigências e informações sobre o processo devem ser realizadas diretamente junto ao setor onde ele se encontra.</p>
+      </div>
+      ${generalServiceChannelsHtml()}`
+  }
+
   function buildProcessCompletedResponseHtml (payload) {
     const name = escapeHtml(cleanValue(payload?.requerente))
     const greeting = name ? `Olá, ${name}.` : 'Olá.'
@@ -675,11 +741,12 @@
     const processDate = escapeHtml(cleanValue(payload?.data))
     const processType = escapeHtml(cleanValue(payload?.tipo))
     const destination = escapeHtml(cleanValue(payload?.destino))
+    const responseModel = processCompletedResponseModel(payload)
 
     return `
       <div data-sei-protocolistas="process-completed-response" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
         <p style="margin:0 0 14px 0;">${greeting}</p>
-        <p style="margin:0 0 14px 0;">Informamos que sua solicitação foi registrada no Sistema Eletrônico de Informações do Estado do Rio de Janeiro — SEI-RJ e encaminhada à unidade responsável para análise.</p>
+        <p style="margin:0 0 14px 0;">Seu processo foi aberto no Sistema Eletrônico de Informações do Estado do Rio de Janeiro — SEI-RJ e encaminhado à unidade responsável para análise.</p>
 
         <p style="margin:18px 0 10px 0;font-weight:700;">DADOS DO PROCESSO</p>
         <div style="margin:0 0 16px 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
@@ -689,17 +756,17 @@
           <p style="margin:0;"><strong>Unidade de destino:</strong> ${destination || 'Não identificada'}</p>
         </div>
 
-        <p style="margin:18px 0 10px 0;font-weight:700;">ACOMPANHAMENTO</p>
+        <p style="margin:18px 0 10px 0;font-weight:700;">COMO ACOMPANHAR</p>
         <p style="margin:0 0 12px 0;">Guarde o número completo do processo para acompanhar o andamento da sua solicitação.</p>
-        <p style="margin:0 0 6px 0;">A consulta pode ser realizada pelo portal:</p>
-        <p style="margin:0 0 12px 0;"><a href="https://portalsei.rj.gov.br/pesquisaprocessualmunicipios">https://portalsei.rj.gov.br/pesquisaprocessualmunicipios</a></p>
+        <p style="margin:0 0 6px 0;">A consulta pode ser realizada pela <a href="https://portalsei.rj.gov.br/pesquisaprocessualmunicipios"><strong>Pesquisa Pública do SEI-RJ</strong></a>.</p>
         <ol style="margin:0 0 16px 22px;padding:0;">
-          <li style="margin:0 0 5px 0;">Acesse o endereço acima;</li>
           <li style="margin:0 0 5px 0;">Digite o número completo do processo, incluindo “SEI-”;</li>
           <li style="margin:0 0 5px 0;">No campo “Municípios”, selecione “ERJ”;</li>
           <li style="margin:0 0 5px 0;">Digite o código de verificação exibido;</li>
           <li style="margin:0;">Clique em “Pesquisar processos” e, depois, no número azul do processo.</li>
         </ol>
+
+        ${processModelSpecificHtml(responseModel)}
 
         <div style="margin:18px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #7a8491;border-radius:4px;color:#1f1f1f;">
           <p style="margin:0 0 7px 0;font-weight:700;">IMPORTANTE</p>
@@ -707,7 +774,9 @@
           <p style="margin:0;">A Administração poderá solicitar a apresentação dos documentos originais enviados eletronicamente, conforme o art. 49 do Decreto SEI-RJ nº 48.209, de 19 de setembro de 2022.</p>
         </div>
 
-        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ</p>
+        <div style="margin:18px 0 0 0;padding:11px 14px;background:#fff8e6;border:1px solid #e2c36a;border-radius:4px;text-align:center;font-weight:700;color:#5c4500;">POR FAVOR, NÃO RESPONDA ESTE E-MAIL.</div>
+
+        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Atendimento do Serviço de Protocolo<br>DETRAN-RJ</p>
       </div>`
   }
 

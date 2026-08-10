@@ -276,11 +276,13 @@ function testAutomaticEmailCompletion () {
   )
   assert.ok(completedResponse.includes('DADOS DO PROCESSO'))
   assert.ok(completedResponse.includes('Data de abertura:'))
-  assert.ok(completedResponse.includes('ACOMPANHAMENTO'))
+  assert.ok(completedResponse.includes('COMO ACOMPANHAR'))
   assert.ok(completedResponse.includes('portalsei.rj.gov.br/pesquisaprocessualmunicipios'))
   assert.ok(completedResponse.includes('não representa a aprovação do pedido'))
   assert.ok(completedResponse.includes('art. 49 do Decreto SEI-RJ nº 48.209'))
-  assert.ok(completedResponse.includes('Serviço de Protocolo<br>DETRAN-RJ'))
+  assert.ok(completedResponse.includes('Atendimento do Serviço de Protocolo<br>DETRAN-RJ'))
+  assert.ok(completedResponse.includes('POR FAVOR, NÃO RESPONDA ESTE E-MAIL.'))
+  assert.ok(completedResponse.includes('processModelSpecificHtml(responseModel)'))
   assert.ok(!completedResponse.includes('Protocolista nº'))
   assert.ok(completedResponse.includes(
     'const greeting = name ? `Olá, ' + '$' + "{name}.` : 'Olá.'"
@@ -289,6 +291,18 @@ function testAutomaticEmailCompletion () {
   assert.ok(source.includes('await insertPendingProcessResponse(true)'))
   assert.ok(subjectUpdate > -1 && bodyInsertion > subjectUpdate)
   assert.ok(source.includes('await autoInsertPendingProcessResponse()'))
+  assert.ok(source.includes("configuredModel === 'daf'"))
+  assert.ok(source.includes("configuredModel === 'divmed'"))
+  assert.ok(source.includes("areaId === 'veiculos'"))
+  assert.ok(source.includes("areaId === 'taxas'"))
+  assert.ok(source.includes("procedureId === 'devolucao-taxas'"))
+  assert.ok(source.includes("procedureId === 'solicitacao-pericia-medica'"))
+  assert.ok(source.includes('DAF.ANL@DETRAN.RJ.GOV.BR'))
+  assert.ok(source.includes('atendimento.drv@detran.rj.gov.br'))
+  assert.ok(source.includes('https://wa.me/552123320206'))
+  const protocolSource = read('cs_modules/protocolo_cliente/index.js')
+  assert.ok(protocolSource.includes("procedureId:context?.procedureId||''"))
+  assert.ok(protocolSource.includes("areaId:context?.areaId||''"))
 }
 
 function testHighlightedQuickRequestButton () {
