@@ -3,7 +3,7 @@
 
   if (window.top !== window) return
 
-  const IS_COMPOSE_WINDOW = /[?&]ae=PreFormAction(?:&|$)/i.test(location.search) &&
+  const IS_COMPOSE_WINDOW = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(location.search) &&
     /[?&]a=(?:Reply|ReplyAll|Forward|New)(?:&|$)/i.test(location.search)
 
   const api = typeof browser === 'undefined' ? chrome : browser
@@ -14,7 +14,7 @@
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
   const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
   const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
-  const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=PreFormAction&a=New&t=IPM.Note'
+  const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
   const FEEDBACK_DESTINATION = atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'

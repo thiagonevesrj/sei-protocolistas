@@ -10,7 +10,7 @@ const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
 const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
 const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
 const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
-const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=PreFormAction&a=New&t=IPM.Note'
+const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
 const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
 const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 const MAX_ROUTE_AGE = 60 * 60 * 1000

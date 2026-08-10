@@ -170,6 +170,8 @@ expect(centralSource.includes('sei-protocolistas:open-workday-systems'), 'Centra
 expect(!centralSource.includes('window.setTimeout(openSei, 350)'), 'Central: expediente não pode depender de duas janelas sujeitas a bloqueio de popup')
 expect(returnCoordinatorSource.includes('openFeedbackCompose'), 'Webmail: abertura da mensagem de relato não encontrada')
 expect(returnCoordinatorSource.includes('url: \'about:blank\'') && returnCoordinatorSource.includes('{ url: FEEDBACK_COMPOSE_URL }'), 'Webmail: aba exclusiva do relato deve ser identificada antes de carregar o formulário')
+expect(returnCoordinatorSource.includes('/owa/?ae=Item&a=New&t=IPM.Note'), 'Webmail: relato deve usar a rota de composição compatível com o Exchange')
+expect(!returnCoordinatorSource.includes('/owa/?ae=PreFormAction&a=New&t=IPM.Note'), 'Webmail: rota PreFormAction incompatível não pode ser usada no relato')
 expect(returnCoordinatorSource.includes('openWorkdaySystems'), 'Central: coordenador não abre Webmail e SEI para o expediente')
 expect(returnCoordinatorSource.includes('url: WEBMAIL_URL') && returnCoordinatorSource.includes('url: SEI_LOGIN_URL'), 'Central: as duas abas do expediente precisam ser criadas pelo coordenador')
 expect(fastMailSource.includes('processPendingFeedback'), 'Webmail: processamento do relato pendente não encontrado')
