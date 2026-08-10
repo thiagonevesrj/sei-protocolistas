@@ -801,6 +801,7 @@
     {
       "id": "devolucao-taxas",
       "label": "Devolução de taxas",
+      "area": "taxas",
       "recentUsageCount": 86,
       "searchQuery": "devolução taxas",
       "processId": "devolucao-taxas",
@@ -852,6 +853,7 @@
     {
       "id": "desistencia-categoria",
       "label": "Desistência de categoria",
+      "area": "habilitacao",
       "recentUsageCount": 33,
       "searchQuery": "desistência categoria",
       "processId": "desistencia-categoria-primeira-habilitacao",
@@ -867,6 +869,7 @@
     {
       "id": "pericia-medica-pcd",
       "label": "Perícia médica — CNH PCD",
+      "area": "habilitacao",
       "recentUsageCount": 10,
       "searchQuery": "perícia médica",
       "processId": "solicitacao-pericia-medica",
@@ -895,6 +898,7 @@
     {
       "id": "troca-clinica",
       "label": "Troca ou retirada de clínica",
+      "area": "habilitacao",
       "recentUsageCount": 3,
       "searchQuery": "troca clínica",
       "processId": "troca-retirada-clinica",
@@ -907,6 +911,7 @@
     {
       "id": "rebaixamento-categoria",
       "label": "Rebaixamento de categoria",
+      "area": "habilitacao",
       "recentUsageCount": 2,
       "searchQuery": "rebaixamento categoria",
       "processId": "rebaixamento-categoria-cnh",
@@ -919,6 +924,7 @@
     {
       "id": "retorno-categoria",
       "label": "Retorno à categoria rebaixada",
+      "area": "habilitacao",
       "recentUsageCount": 1,
       "searchQuery": "retorno categoria rebaixada",
       "processId": "retorno-categoria-cnh-rebaixada",
@@ -931,6 +937,7 @@
     {
       "id": "transferencia-prontuario",
       "label": "Transferência de prontuário",
+      "area": "habilitacao",
       "recentUsageCount": 0,
       "searchQuery": "transferência prontuário",
       "processId": "transferencia-prontuario-habilitacao",
@@ -944,6 +951,7 @@
     {
       "id": "cancelamento-venda",
       "label": "Cancelar comunicação/intenção",
+      "area": "veiculos",
       "recentUsageCount": 6,
       "searchQuery": "venda",
       "canOpenProcess": false,
@@ -970,6 +978,7 @@
     {
       "id": "motor",
       "label": "Regularização/troca de motor",
+      "area": "veiculos",
       "recentUsageCount": 2,
       "searchQuery": "motor",
       "canOpenProcess": false,
@@ -982,6 +991,7 @@
     {
       "id": "chassi",
       "label": "Remarcação de chassi",
+      "area": "veiculos",
       "recentUsageCount": 1,
       "searchQuery": "chassi",
       "canOpenProcess": false,
@@ -994,6 +1004,7 @@
     {
       "id": "cnh-estrangeira",
       "label": "Averbação de CNH estrangeira",
+      "area": "habilitacao",
       "recentUsageCount": 2,
       "searchQuery": "CNH estrangeira",
       "processId": "averbacao-cnh-estrangeira",
@@ -1006,6 +1017,7 @@
     {
       "id": "oficios",
       "label": "Ofícios de outros órgãos",
+      "area": "oficios",
       "recentUsageCount": 29,
       "searchQuery": "ofício",
       "processId": "oficio-mero-expediente",
