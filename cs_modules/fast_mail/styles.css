@@ -3,7 +3,7 @@
   right: 14px;
   bottom: 14px;
   z-index: 2147483647;
-  width: min(310px, calc(100vw - 20px));
+  width: min(370px, calc(100vw - 20px));
   max-height: min(78vh, 680px);
   color: #f8fafc;
   background: #06172d;
@@ -352,7 +352,7 @@
   display: none !important;
 }
 
-#sei-protocolistas-fast-mail-status .spfm-check {
+#sei-protocolistas-fast-mail-status .spfm-priority-workflow .spfm-check {
   display: flex;
   align-items: flex-start;
   gap: 7px;

@@ -552,6 +552,7 @@
 
   function buildMissingDocumentsRequirementHtml (name, procedureLabel, documents) {
     const safeName = escapeHtml(cleanValue(name))
+    const greeting = safeName ? `Olá, ${safeName}.` : 'Olá.'
     const safeProcedureLabel = escapeHtml(cleanValue(procedureLabel))
     const operatorSignature = currentOperator?.number
       ? `Protocolista nº ${escapeHtml(currentOperator.number)} — SEI-RJ`
@@ -572,7 +573,7 @@
 
     return `
       <div data-sei-protocolistas="missing-documents-requirement" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
-        <p style="margin:0 0 14px 0;">Olá, ${safeName}.</p>
+        <p style="margin:0 0 14px 0;">${greeting}</p>
         <p style="margin:0 0 12px 0;">Após a análise da documentação encaminhada, identificamos a necessidade do envio dos seguintes documentos para dar continuidade à solicitação de ${safeProcedureLabel}:</p>
         <ul style="margin:0 0 14px 22px;padding:0;">${items}</ul>
         ${links}
@@ -646,7 +647,6 @@
       if (!processType) throw new Error('Selecione o procedimento.')
 
       const name = cleanValue(document.querySelector('#spfm-requester-name')?.value)
-      if (!name) throw new Error('Digite o nome do requerente.')
 
       const documents = selectedMissingDocuments()
       if (!documents.length) throw new Error('Marque pelo menos um documento faltante.')
@@ -1346,6 +1346,10 @@
     if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
 
     renderPriorityTopics()
+
+    if (areaId === 'taxas') {
+      selectPriorityTopic('devolucao-taxas')
+    }
   }
 
   function renderPriorityTopics () {
@@ -1438,7 +1442,7 @@
     if (catalog) catalog.hidden = true
     if (processSetup) processSetup.hidden = true
     if (identityFields) identityFields.hidden = false
-    setEmailPreparationVisible(false)
+    setEmailPreparationVisible(true)
     const toggleButton = document.querySelector('#spfm-script-toggle')
     if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
     syncRouteWithProcedure(route.processId)

@@ -222,12 +222,28 @@ function testFastMailProgressiveNavigation () {
   assert.ok(source.includes('function openPriorityMissingDocuments'))
   assert.ok(source.includes('id="spfm-process-setup" class="spfm-process-setup" hidden'))
   assert.ok(source.includes('priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)'))
+  assert.ok(source.includes("if (areaId === 'taxas')"))
+  assert.ok(source.includes("selectPriorityTopic('devolucao-taxas')"))
   assert.ok(source.includes('box.hidden = !hasDocumentModel || activePriorityAction !== \'missing\''))
   assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-priority-status"'))
   assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-email-preparation"'))
   assert.ok(source.indexOf('id="spfm-email-preparation"') < source.indexOf('id="spfm-priority-status"'))
   assert.ok(source.includes("status.textContent = 'Exigência inserida. Agora prepare o e-mail.'"))
+  const missingDocumentsFlow = source.slice(
+    source.indexOf('function openPriorityMissingDocuments'),
+    source.indexOf('function openPriorityProcess')
+  )
+  assert.ok(missingDocumentsFlow.includes('setEmailPreparationVisible(true)'))
+  assert.ok(!missingDocumentsFlow.includes('setEmailPreparationVisible(false)'))
+  const insertMissingRequirement = source.slice(
+    source.indexOf('async function insertMissingDocumentsRequirement'),
+    source.indexOf('function buildProcessCompletedResponseHtml')
+  )
+  assert.ok(!insertMissingRequirement.includes("throw new Error('Digite o nome do requerente.')"))
+  assert.ok(source.includes('const greeting = safeName ? `Olá, ' + '$' + '{safeName}.` : \'Olá.\''))
   assert.ok(styles.includes('.spfm-area-grid'))
+  assert.ok(styles.includes('width: min(370px, calc(100vw - 20px))'))
+  assert.ok(styles.includes('.spfm-priority-workflow .spfm-check'))
   assert.ok(!source.includes('spfm-topic-button'))
 }
 
