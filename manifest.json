@@ -137,10 +137,10 @@
         },
         {
             "matches": [
-                "*://sei.rj.gov.br/*controlador.php?acao=procedimento_gerar*"
+                "*://sei.rj.gov.br/*controlador.php?acao=*"
             ],
             "run_at": "document_start",
-            "all_frames": false,
+            "all_frames": true,
             "world": "MAIN",
             "js": [
                 "cs_modules/clique_protocolista/confirmarInclusaoInteressado.js"

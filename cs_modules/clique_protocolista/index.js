@@ -7,6 +7,8 @@
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
   const INTERESTED_CONFIRM_KEY =
     'spFastProcConfirmarInclusaoInteressado'
+  const INTERESTED_CONFIRM_EVENT =
+    'sp-fast-proc-armar-inclusao-interessado'
 
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const STORAGE_TIMEOUT = 5000
@@ -2193,6 +2195,12 @@
         sessionStorage.setItem(
           INTERESTED_CONFIRM_KEY,
           String(Date.now())
+        )
+
+        document.dispatchEvent(
+          new CustomEvent(
+            INTERESTED_CONFIRM_EVENT
+          )
         )
       } catch (error) {
         console.warn(

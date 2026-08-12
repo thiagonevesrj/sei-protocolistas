@@ -13,9 +13,15 @@ const tick = () => new Promise((resolve) => setImmediate(resolve))
 
 function testInterestedConfirmation () {
   const session = new Map()
+  const listeners = new Map()
   const nativeMessages = []
   const context = {
     Date,
+    document: {
+      addEventListener: (eventName, callback) => {
+        listeners.set(eventName, callback)
+      }
+    },
     sessionStorage: {
       getItem: (key) => session.get(key) || null,
       removeItem: (key) => session.delete(key)
@@ -37,6 +43,10 @@ function testInterestedConfirmation () {
   assert.strictEqual(session.has('spFastProcConfirmarInclusaoInteressado'), false)
   assert.deepStrictEqual(nativeMessages, [])
 
+  listeners.get('sp-fast-proc-armar-inclusao-interessado')()
+  assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), true)
+  assert.deepStrictEqual(nativeMessages, [])
+
   assert.strictEqual(context.confirm('Deseja excluir o processo?'), false)
   assert.deepStrictEqual(nativeMessages, ['Deseja excluir o processo?'])
 
@@ -54,6 +64,13 @@ function testInterestedConfirmation () {
 
   assert.ok(armIndex >= 0)
   assert.ok(clickIndex > armIndex)
+  assert.ok(fastProcSource.includes('new CustomEvent(\n            INTERESTED_CONFIRM_EVENT'))
+
+  const interceptorSource = read(
+    'cs_modules/clique_protocolista/confirmarInclusaoInteressado.js'
+  )
+  assert.ok(interceptorSource.includes("const ARM_EVENT = 'sp-fast-proc-armar-inclusao-interessado'"))
+  assert.ok(interceptorSource.includes('document.addEventListener(ARM_EVENT'))
 }
 
 function testFastMailOperatorFallback () {
