@@ -1057,7 +1057,9 @@ async function autopreencherDocumentoExterno (BaseName) {
       'margin:4px 0 8px',
       'min-height:0',
       'min-width:0',
-      'overflow:visible'
+      'overflow:visible',
+      'padding-right:150px',
+      'position:relative'
     ].join(';')
 
     heading.parentElement.insertBefore(
@@ -1126,28 +1128,28 @@ async function autopreencherDocumentoExterno (BaseName) {
     )
 
     commandBar.style.setProperty(
-      'height',
-      'auto',
+      'align-items',
+      'center',
       'important'
     )
     commandBar.style.setProperty(
+      'display',
       'flex',
-      '0 0 auto',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'height',
+      '42px',
       'important'
     )
     commandBar.style.setProperty(
       'margin',
-      '0 0 0 auto',
-      'important'
-    )
-    commandBar.style.setProperty(
-      'min-height',
       '0',
       'important'
     )
     commandBar.style.setProperty(
-      'max-width',
-      '100%',
+      'min-height',
+      '42px',
       'important'
     )
     commandBar.style.setProperty(
@@ -1156,8 +1158,33 @@ async function autopreencherDocumentoExterno (BaseName) {
       'important'
     )
     commandBar.style.setProperty(
-      'text-align',
+      'position',
+      'absolute',
+      'important'
+    )
+    commandBar.style.setProperty(
       'right',
+      '0',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'top',
+      '50%',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'transform',
+      'translateY(-50%)',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'width',
+      'auto',
+      'important'
+    )
+    commandBar.style.setProperty(
+      'z-index',
+      '20',
       'important'
     )
 

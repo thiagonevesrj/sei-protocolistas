@@ -129,21 +129,20 @@
 
     if (!title) return null
 
-    let container = title
+    const password = Array.from(document.querySelectorAll(
+      '#pwdSenha, input[name="pwdSenha"], input[type="password"]'
+    )).find(isVisible)
 
-    while (container && container !== document.body) {
-      const password = container.querySelector(
-        '#pwdSenha, input[name="pwdSenha"], input[type="password"]'
-      )
-      const sign = Array.from(container.querySelectorAll(
-        'button, input[type="button"], input[type="submit"], a, [role="button"]'
-      )).find((element) => isVisible(element) && buttonLabel(element) === 'assinar')
+    const sign = Array.from(document.querySelectorAll(
+      'button, input[type="button"], input[type="submit"], a, [role="button"]'
+    )).find((element) =>
+      isVisible(element) &&
+      buttonLabel(element) === 'assinar'
+    )
 
-      if (password && sign) return { container, password, sign }
-      container = container.parentElement
-    }
-
-    return null
+    return password && sign
+      ? { container: document.body, password, sign }
+      : null
   }
 
   async function completeAuthentication () {

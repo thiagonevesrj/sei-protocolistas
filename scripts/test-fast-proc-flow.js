@@ -96,6 +96,7 @@ function testQuickAuthentication () {
   assert.ok(source.includes("const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'"))
   assert.ok(source.includes("normalize(element.textContent) === 'autenticacao de documento'"))
   assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
+  assert.ok(source.includes('? { container: document.body, password, sign }'))
   assert.ok(source.includes("description.includes('documento_autenticar')"))
   assert.ok(source.includes("description.includes('autenticacao1')"))
   assert.ok(source.includes('existingButtons.slice(1).forEach((button) => button.remove())'))
@@ -106,6 +107,17 @@ function testQuickAuthentication () {
   assert.ok(manifest.includes('cs_modules/autenticacao_rapida/index.js'))
   assert.ok(manifest.includes('cs_modules/autenticacao_rapida/styles.css'))
   assert.ok(manifest.includes('"*://sei.rj.gov.br/*controlador.php?acao=*"'))
+}
+
+function testExternalDocumentSaveVisibility () {
+  const source = read(
+    'cs_modules/documento_receber/autopreencherDocumentoExterno.js'
+  )
+
+  assert.ok(source.includes("'padding-right:150px'"))
+  assert.ok(source.includes("'position:relative'"))
+  assert.ok(source.includes("'translateY(-50%)'"))
+  assert.ok(source.includes("commandBar.style.setProperty(\n      'right'"))
 }
 
 async function testSeiAutoLogin () {
@@ -533,7 +545,7 @@ function testExternalDocumentHeaderIsCompact () {
   ))
   assert.ok(!source.includes('calc(100vw - 24px)'))
   assert.ok(source.includes(
-    "'0 0 0 auto'"
+    "'translateY(-50%)'"
   ))
   assert.ok(source.includes('compactDocumentHeader()'))
 }
@@ -663,6 +675,7 @@ async function run () {
   testInterestedConfirmation()
   testFastMailOperatorFallback()
   testQuickAuthentication()
+  testExternalDocumentSaveVisibility()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
