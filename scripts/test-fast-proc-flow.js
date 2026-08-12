@@ -102,6 +102,11 @@ function testQuickAuthentication () {
 
   assert.ok(source.includes("const BUTTON_ID = 'sp-autenticacao-rapida'"))
   assert.ok(source.includes("const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'"))
+  assert.ok(source.includes('const storageSet = (items) => new Promise'))
+  assert.ok(source.includes('const storageRemove = (key) => new Promise'))
+  assert.ok(source.includes('async function activePending ()'))
+  assert.ok(source.includes('[PENDING_KEY]: {'))
+  assert.ok(!source.includes('sessionStorage.setItem(PENDING_KEY'))
   assert.ok(source.includes("normalize(element.textContent) === 'autenticacao de documento'"))
   assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
   assert.ok(source.includes('? { container: document.body, password, sign }'))

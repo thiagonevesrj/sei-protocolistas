@@ -21,6 +21,24 @@
     if (result?.then) result.then(resolve, reject)
   })
 
+  const storageSet = (items) => new Promise((resolve, reject) => {
+    const result = api.storage.local.set(items, () => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else resolve()
+    })
+    if (result?.then) result.then(resolve, reject)
+  })
+
+  const storageRemove = (key) => new Promise((resolve, reject) => {
+    const result = api.storage.local.remove(key, () => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else resolve()
+    })
+    if (result?.then) result.then(resolve, reject)
+  })
+
   function normalize (value) {
     return String(value || '')
       .normalize('NFD')
@@ -105,23 +123,20 @@
     }, 1000)
   }
 
-  function activePending () {
-    try {
-      const createdAt = Number(sessionStorage.getItem(PENDING_KEY))
-      if (!createdAt || Date.now() - createdAt > MAX_PENDING_AGE) {
-        sessionStorage.removeItem(PENDING_KEY)
-        return false
-      }
-      return true
-    } catch (_) {
+  async function activePending () {
+    const stored = await storageGet(PENDING_KEY)
+    const createdAt = Number(stored[PENDING_KEY]?.createdAt)
+
+    if (!createdAt || Date.now() - createdAt > MAX_PENDING_AGE) {
+      if (stored[PENDING_KEY]) await storageRemove(PENDING_KEY)
       return false
     }
+
+    return true
   }
 
-  function clearPending () {
-    try {
-      sessionStorage.removeItem(PENDING_KEY)
-    } catch (_) {}
+  async function clearPending () {
+    await storageRemove(PENDING_KEY)
   }
 
   function fillField (field, value) {
@@ -165,10 +180,11 @@
   }
 
   async function completeAuthentication () {
-    if (processing || !activePending()) return
+    if (processing) return
 
     const dialog = findAuthenticationDialog()
     if (!dialog) return
+    if (!await activePending()) return
 
     processing = true
 
@@ -177,12 +193,12 @@
       const credentials = stored[CREDENTIALS_KEY]
 
       if (!credentials?.remember || !credentials.password) {
-        clearPending()
+        await clearPending()
         throw new Error('Salve a senha do SEI na Central do Protocolista.')
       }
 
       fillField(dialog.password, credentials.password)
-      clearPending()
+      await clearPending()
 
       window.setTimeout(() => {
         dialog.sign.focus?.()
@@ -214,18 +230,26 @@
         throw new Error('Salve a senha do SEI na Central do Protocolista antes de usar o carimbo.')
       }
 
-      sessionStorage.setItem(PENDING_KEY, String(Date.now()))
+      await storageSet({
+        [PENDING_KEY]: {
+          createdAt: Date.now(),
+          expiresAt: Date.now() + MAX_PENDING_AGE
+        }
+      })
       setButtonState('loading', 'Abrindo autenticação...')
       nativeAuthentication.focus?.()
       nativeAuthentication.click()
 
-      window.setTimeout(() => {
-        if (!activePending()) return
-        clearPending()
-        setButtonState('error', 'A janela de autenticação não foi localizada')
+      window.setTimeout(async () => {
+        if (!await activePending()) return
+        await clearPending()
+        setButtonState(
+          'error',
+          'A janela de autenticação não foi localizada'
+        )
       }, MAX_PENDING_AGE)
     } catch (error) {
-      clearPending()
+      await clearPending().catch(() => {})
       setButtonState('error', error.message || String(error))
       window.alert(`Autenticação rápida: ${error.message || error}`)
     }
