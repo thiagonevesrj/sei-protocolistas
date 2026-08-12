@@ -5,6 +5,8 @@
   const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
   const PENDING_KEY = 'spAutenticacaoRapidaPendente'
   const BUTTON_ID = 'sp-autenticacao-rapida'
+  const SUCCESS_MESSAGE = 'sp-autenticacao-rapida-concluida'
+  const TOAST_ID = 'sp-autenticacao-rapida-toast'
   const MAX_PENDING_AGE = 30 * 1000
 
   let quickButton = null
@@ -84,6 +86,23 @@
     quickButton.dataset.state = state
     quickButton.title = title
     quickButton.disabled = state === 'loading'
+  }
+
+  function showSuccessToast () {
+    if (window.top !== window) return
+
+    document.getElementById(TOAST_ID)?.remove()
+
+    const toast = document.createElement('div')
+    toast.id = TOAST_ID
+    toast.setAttribute('role', 'status')
+    toast.textContent = '✓ AUTENTICADO ORIGINAL'
+    document.body.appendChild(toast)
+
+    window.setTimeout(() => {
+      toast.classList.add('sp-auth-toast--leaving')
+      window.setTimeout(() => toast.remove(), 180)
+    }, 1000)
   }
 
   function activePending () {
@@ -168,6 +187,10 @@
       window.setTimeout(() => {
         dialog.sign.focus?.()
         dialog.sign.click()
+        window.top.postMessage(
+          { type: SUCCESS_MESSAGE },
+          window.location.origin
+        )
         setButtonState('success', 'Autenticação enviada ao SEI')
         window.setTimeout(() => {
           setButtonState('ready', 'Autenticação rápida — autenticar e assinar')
@@ -243,6 +266,15 @@
     completeAuthentication().catch((error) => {
       console.error('[SEI Protocolistas] Falha ao acompanhar autenticação:', error)
     })
+  })
+
+  window.addEventListener('message', (event) => {
+    if (
+      event.origin !== window.location.origin ||
+      event.data?.type !== SUCCESS_MESSAGE
+    ) return
+
+    showSuccessToast()
   })
 
   observer.observe(document.documentElement, {

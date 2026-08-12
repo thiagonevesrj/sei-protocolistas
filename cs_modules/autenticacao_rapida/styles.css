@@ -50,3 +50,28 @@
   from { opacity: 0.45; }
   to { opacity: 1; }
 }
+
+#sp-autenticacao-rapida-toast {
+  align-items: center;
+  background: #137a48;
+  border: 1px solid #6ee7a8;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 38%);
+  color: #fff;
+  display: flex;
+  font: 800 14px Arial, Helvetica, sans-serif;
+  left: 50%;
+  letter-spacing: 0.5px;
+  min-height: 48px;
+  padding: 0 22px;
+  position: fixed;
+  top: 24px;
+  transform: translateX(-50%);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 2147483647;
+}
+
+#sp-autenticacao-rapida-toast.sp-auth-toast--leaving {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
