@@ -45,6 +45,15 @@ function testInterestedConfirmation () {
     String(Date.now() - (11 * 60 * 1000))
   )
   assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), false)
+
+  const fastProcSource = read('cs_modules/clique_protocolista/index.js')
+  const armIndex = fastProcSource.indexOf(
+    'sessionStorage.setItem(\n          INTERESTED_CONFIRM_KEY'
+  )
+  const clickIndex = fastProcSource.indexOf('clickAddInterested(interested)')
+
+  assert.ok(armIndex >= 0)
+  assert.ok(clickIndex > armIndex)
 }
 
 function testFastMailOperatorFallback () {

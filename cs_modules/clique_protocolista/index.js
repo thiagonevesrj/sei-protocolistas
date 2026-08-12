@@ -2184,6 +2184,23 @@
 
     if (interestedSelected) {
       await wait(250)
+
+      /*
+       * O confirm nativo é disparado dentro do clique de inclusão.
+       * A autorização precisa existir antes desse clique acontecer.
+       */
+      try {
+        sessionStorage.setItem(
+          INTERESTED_CONFIRM_KEY,
+          String(Date.now())
+        )
+      } catch (error) {
+        console.warn(
+          '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+          error
+        )
+      }
+
       clickAddInterested(interested)
       await wait(250)
       closeInterestedSuggestions(interested)
@@ -2215,23 +2232,6 @@
       }
     })
     await storageRemove(STORAGE_KEY)
-
-    /*
-     * A caixa window.confirm do SEI não existe no DOM. Este marcador
-     * temporário permite que o interceptador da página aceite apenas
-     * "Nome inexistente. Deseja incluir?" durante este FAST PROC.
-     */
-    try {
-      sessionStorage.setItem(
-        INTERESTED_CONFIRM_KEY,
-        String(Date.now())
-      )
-    } catch (error) {
-      console.warn(
-        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
-        error
-      )
-    }
 
     closeInterestedSuggestions(interested)
 
