@@ -70,6 +70,27 @@
     ].filter(Boolean).join(' '))
   }
 
+  function findCommandToolbar (element) {
+    let container = element?.parentElement
+
+    while (
+      container &&
+      container !== document.body &&
+      container !== document.documentElement
+    ) {
+      const iconCommands = Array.from(
+        container.querySelectorAll('a, button, [role="button"]')
+      ).filter((candidate) =>
+        candidate.querySelector?.('img, svg')
+      )
+
+      if (iconCommands.length >= 5) return container
+      container = container.parentElement
+    }
+
+    return null
+  }
+
   function findNativeAuthentication () {
     const candidates = Array.from(document.querySelectorAll(
       'a, button, input[type="button"], [role="button"], [onclick]'
@@ -85,9 +106,14 @@
         element.getAttribute?.('onclick')
       ].filter(Boolean).join(' '))
 
+      const toolbar = findCommandToolbar(element)
+      if (!toolbar) return false
+
       return action.includes('documento_autenticar') ||
         description.includes('autenticar documento') ||
-        description.includes('autenticacao de documento')
+        description.includes('autenticacao de documento') ||
+        description.includes('autenticacao1') ||
+        description.includes('selo autenticacao1')
     }) || null
   }
 
@@ -292,9 +318,11 @@
 
     if (document.getElementById(BUTTON_ID)) return
 
-    const toolbar = nativeAuthentication.closest(
-      'div, td, li, nav'
-    ) || nativeAuthentication.parentElement
+    const toolbar = findCommandToolbar(
+      nativeAuthentication
+    )
+
+    if (!toolbar) return
 
     toolbar.appendChild(button)
     quickButton = button
