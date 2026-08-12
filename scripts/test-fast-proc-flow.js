@@ -11,6 +11,42 @@ const root = path.resolve(__dirname, '..')
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 const tick = () => new Promise((resolve) => setImmediate(resolve))
 
+function testInterestedConfirmation () {
+  const session = new Map()
+  const nativeMessages = []
+  const context = {
+    Date,
+    sessionStorage: {
+      getItem: (key) => session.get(key) || null,
+      removeItem: (key) => session.delete(key)
+    },
+    confirm: (message) => {
+      nativeMessages.push(message)
+      return false
+    }
+  }
+  context.window = context
+
+  vm.runInNewContext(
+    read('cs_modules/clique_protocolista/confirmarInclusaoInteressado.js'),
+    context
+  )
+
+  session.set('spFastProcConfirmarInclusaoInteressado', String(Date.now()))
+  assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), true)
+  assert.strictEqual(session.has('spFastProcConfirmarInclusaoInteressado'), false)
+  assert.deepStrictEqual(nativeMessages, [])
+
+  assert.strictEqual(context.confirm('Deseja excluir o processo?'), false)
+  assert.deepStrictEqual(nativeMessages, ['Deseja excluir o processo?'])
+
+  session.set(
+    'spFastProcConfirmarInclusaoInteressado',
+    String(Date.now() - (11 * 60 * 1000))
+  )
+  assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), false)
+}
+
 async function testSeiAutoLogin () {
   const values = { user: '', password: '' }
   let submitted = 0
@@ -558,6 +594,7 @@ function testInterestedAutocompleteIsReleased () {
 }
 
 async function run () {
+  testInterestedConfirmation()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()

@@ -137,6 +137,17 @@
         },
         {
             "matches": [
+                "*://sei.rj.gov.br/*controlador.php?acao=procedimento_gerar*"
+            ],
+            "run_at": "document_start",
+            "all_frames": false,
+            "world": "MAIN",
+            "js": [
+                "cs_modules/clique_protocolista/confirmarInclusaoInteressado.js"
+            ]
+        },
+        {
+            "matches": [
                 "*://sei.rj.gov.br/*controlador.php?acao=procedimento_controlar*"
             ],
             "js": [

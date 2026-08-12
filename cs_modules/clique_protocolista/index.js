@@ -5,6 +5,8 @@
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
+  const INTERESTED_CONFIRM_KEY =
+    'spFastProcConfirmarInclusaoInteressado'
 
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const STORAGE_TIMEOUT = 5000
@@ -2213,6 +2215,23 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    /*
+     * A caixa window.confirm do SEI não existe no DOM. Este marcador
+     * temporário permite que o interceptador da página aceite apenas
+     * "Nome inexistente. Deseja incluir?" durante este FAST PROC.
+     */
+    try {
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_KEY,
+        String(Date.now())
+      )
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+        error
+      )
+    }
 
     closeInterestedSuggestions(interested)
 
