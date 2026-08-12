@@ -227,6 +227,44 @@
     }
   }
 
+  function validStoredOperator (value) {
+    const number = cleanValue(value?.number)
+    const email = normalizeEmail(value?.email)
+    const expectedEmail = number
+      ? `protocolista${number}@detran.rj.gov.br`
+      : ''
+
+    if (
+      !/^\d{1,4}$/.test(number) ||
+      email !== expectedEmail
+    ) {
+      return null
+    }
+
+    return {
+      ...value,
+      number,
+      email: expectedEmail,
+      source: value.source || 'central-config'
+    }
+  }
+
+  async function resolveOperator () {
+    const visibleOperator = findOperator()
+
+    if (visibleOperator) {
+      await storageSet({
+        [OPERATOR_KEY]: visibleOperator
+      })
+      return visibleOperator
+    }
+
+    const stored = await storageGet(OPERATOR_KEY)
+    return validStoredOperator(
+      stored[OPERATOR_KEY]
+    )
+  }
+
   function normalizeEmail (value) {
     return String(value || '')
       .replace(/^mailto:/i, '')
@@ -2483,7 +2521,7 @@
   }
 
   async function scan () {
-    const operator = findOperator()
+    const operator = await resolveOperator()
     const senderEmail = findSenderEmail()
     currentOperator = operator
 
@@ -2500,8 +2538,6 @@
       emailElement.textContent = senderEmail ||
         'Não identificado no cabeçalho atual'
     }
-
-    if (operator) await storageSet({ [OPERATOR_KEY]: operator })
 
     if (IS_COMPOSE_WINDOW) {
       await autoInsertPendingProcessResponse()

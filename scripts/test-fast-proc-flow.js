@@ -47,6 +47,17 @@ function testInterestedConfirmation () {
   assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), false)
 }
 
+function testFastMailOperatorFallback () {
+  const source = read('cs_modules/fast_mail/index.js')
+
+  assert.ok(source.includes('function validStoredOperator (value)'))
+  assert.ok(source.includes('async function resolveOperator ()'))
+  assert.ok(source.includes('const visibleOperator = findOperator()'))
+  assert.ok(source.includes('const stored = await storageGet(OPERATOR_KEY)'))
+  assert.ok(source.includes('const operator = await resolveOperator()'))
+  assert.ok(source.includes('email !== expectedEmail'))
+}
+
 async function testSeiAutoLogin () {
   const values = { user: '', password: '' }
   let submitted = 0
@@ -597,6 +608,7 @@ function testInterestedAutocompleteIsReleased () {
 
 async function run () {
   testInterestedConfirmation()
+  testFastMailOperatorFallback()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
