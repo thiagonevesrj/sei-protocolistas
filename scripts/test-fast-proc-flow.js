@@ -388,6 +388,9 @@ function testHighlightedQuickRequestButton () {
   assert.ok(styles.includes('align-self: center'))
   assert.ok(styles.includes('border: 1px solid #e0ae28'))
   assert.ok(source.includes('function resetRqButton (button)'))
+  assert.ok(source.includes('function removeDuplicateRqButtons ()'))
+  assert.ok(source.includes('buttons.slice(1).forEach((button) =>'))
+  assert.ok(source.includes('const duplicateObserver ='))
   assert.ok(source.includes('browserApi.storage?.onChanged'))
   assert.ok(source.includes('!changes[PENDING_KEY].newValue'))
 
