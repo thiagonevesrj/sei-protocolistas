@@ -77,12 +77,17 @@
 
     return candidates.find((element) => {
       if (element.id === BUTTON_ID || !isVisible(element)) return false
+      if (element.closest('#divArvore, [id*="Arvore"]')) return false
+
       const description = describe(element)
-      return description.includes('documento autenticar') ||
-        description.includes('documento_autenticar') ||
-        description.includes('autenticacao1') ||
-        description.includes('selo autenticacao1') ||
-        description.includes('autenticar documento')
+      const action = normalize([
+        element.getAttribute?.('href'),
+        element.getAttribute?.('onclick')
+      ].filter(Boolean).join(' '))
+
+      return action.includes('documento_autenticar') ||
+        description.includes('autenticar documento') ||
+        description.includes('autenticacao de documento')
     }) || null
   }
 
@@ -260,8 +265,18 @@
       document.querySelectorAll(`#${BUTTON_ID}`)
     )
 
-    existingButtons.slice(1).forEach((button) => button.remove())
-    if (existingButtons.length) return
+    existingButtons
+      .filter((button) =>
+        button.closest('#divArvore, [id*="Arvore"]')
+      )
+      .forEach((button) => button.remove())
+
+    const validExistingButtons = existingButtons.filter(
+      (button) => button.isConnected
+    )
+
+    validExistingButtons.slice(1).forEach((button) => button.remove())
+    if (validExistingButtons.length) return
 
     const nativeAuthentication = findNativeAuthentication()
     if (!nativeAuthentication?.parentElement) return
