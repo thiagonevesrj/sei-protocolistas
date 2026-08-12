@@ -1,0 +1,47 @@
+#sp-autenticacao-rapida {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: #ef3434;
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  margin: 0 2px 0 7px;
+  padding: 2px;
+  vertical-align: middle;
+  width: 36px;
+}
+
+#sp-autenticacao-rapida svg {
+  display: block;
+  height: 32px;
+  width: 32px;
+}
+
+#sp-autenticacao-rapida:hover,
+#sp-autenticacao-rapida:focus {
+  background: rgb(239 52 52 / 12%);
+  box-shadow: 0 0 0 2px rgb(239 52 52 / 22%);
+  outline: none;
+}
+
+#sp-autenticacao-rapida[data-state="loading"] {
+  animation: sp-autenticacao-pulse 0.9s ease-in-out infinite alternate;
+  cursor: wait;
+  opacity: 0.72;
+}
+
+#sp-autenticacao-rapida[data-state="success"] {
+  color: #31c978;
+}
+
+#sp-autenticacao-rapida[data-state="error"] {
+  background: rgb(239 52 52 / 14%);
+}
+
+@keyframes sp-autenticacao-pulse {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}

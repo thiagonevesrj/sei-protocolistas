@@ -58,6 +58,21 @@ function testFastMailOperatorFallback () {
   assert.ok(source.includes('email !== expectedEmail'))
 }
 
+function testQuickAuthentication () {
+  const source = read('cs_modules/autenticacao_rapida/index.js')
+  const styles = read('cs_modules/autenticacao_rapida/styles.css')
+  const manifest = read('manifest.json')
+
+  assert.ok(source.includes("const BUTTON_ID = 'sp-autenticacao-rapida'"))
+  assert.ok(source.includes("const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'"))
+  assert.ok(source.includes("normalize(element.textContent) === 'autenticacao de documento'"))
+  assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
+  assert.ok(source.includes('clearPending()\n\n      window.setTimeout'))
+  assert.ok(styles.includes('color: #ef3434'))
+  assert.ok(manifest.includes('cs_modules/autenticacao_rapida/index.js'))
+  assert.ok(manifest.includes('cs_modules/autenticacao_rapida/styles.css'))
+}
+
 async function testSeiAutoLogin () {
   const values = { user: '', password: '' }
   let submitted = 0
@@ -609,6 +624,7 @@ function testInterestedAutocompleteIsReleased () {
 async function run () {
   testInterestedConfirmation()
   testFastMailOperatorFallback()
+  testQuickAuthentication()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()

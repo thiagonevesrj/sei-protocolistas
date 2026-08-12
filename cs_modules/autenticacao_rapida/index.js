@@ -1,0 +1,241 @@
+(() => {
+  'use strict'
+
+  const api = typeof browser === 'undefined' ? chrome : browser
+  const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
+  const PENDING_KEY = 'spAutenticacaoRapidaPendente'
+  const BUTTON_ID = 'sp-autenticacao-rapida'
+  const MAX_PENDING_AGE = 30 * 1000
+
+  let quickButton = null
+  let processing = false
+
+  const storageGet = (key) => new Promise((resolve, reject) => {
+    const result = api.storage.local.get(key, (items) => {
+      const error = api.runtime?.lastError
+      if (error) reject(error)
+      else resolve(items || {})
+    })
+    if (result?.then) result.then(resolve, reject)
+  })
+
+  function normalize (value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+  }
+
+  function isVisible (element) {
+    if (!element) return false
+    const style = element.ownerDocument.defaultView?.getComputedStyle(element)
+    if (!style || style.display === 'none' || style.visibility === 'hidden') return false
+    const rectangle = element.getBoundingClientRect()
+    return rectangle.width > 0 && rectangle.height > 0
+  }
+
+  function describe (element) {
+    const image = element.querySelector?.('img')
+    return normalize([
+      element.textContent,
+      element.getAttribute?.('title'),
+      element.getAttribute?.('aria-label'),
+      element.getAttribute?.('href'),
+      element.getAttribute?.('onclick'),
+      image?.getAttribute('alt'),
+      image?.getAttribute('title'),
+      image?.getAttribute('src')
+    ].filter(Boolean).join(' '))
+  }
+
+  function findNativeAuthentication () {
+    const candidates = Array.from(document.querySelectorAll(
+      'a, button, input[type="button"], [role="button"], [onclick]'
+    ))
+
+    return candidates.find((element) => {
+      if (element.id === BUTTON_ID || !isVisible(element)) return false
+      const description = describe(element)
+      return description.includes('autenticar') ||
+        description.includes('autenticacao')
+    }) || null
+  }
+
+  function createStampIcon () {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    icon.setAttribute('viewBox', '0 0 36 36')
+    icon.setAttribute('aria-hidden', 'true')
+    icon.innerHTML = `
+      <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/>
+      <path d="M11 19.5l4.3 4.2L25.5 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M10 28h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    `
+    return icon
+  }
+
+  function setButtonState (state, title) {
+    if (!quickButton?.isConnected) return
+    quickButton.dataset.state = state
+    quickButton.title = title
+    quickButton.disabled = state === 'loading'
+  }
+
+  function activePending () {
+    try {
+      const createdAt = Number(sessionStorage.getItem(PENDING_KEY))
+      if (!createdAt || Date.now() - createdAt > MAX_PENDING_AGE) {
+        sessionStorage.removeItem(PENDING_KEY)
+        return false
+      }
+      return true
+    } catch (_) {
+      return false
+    }
+  }
+
+  function clearPending () {
+    try {
+      sessionStorage.removeItem(PENDING_KEY)
+    } catch (_) {}
+  }
+
+  function fillField (field, value) {
+    field.focus()
+    field.value = value
+    ;['input', 'change', 'keyup', 'blur'].forEach((eventName) => {
+      field.dispatchEvent(new Event(eventName, { bubbles: true }))
+    })
+  }
+
+  function buttonLabel (element) {
+    return normalize([
+      element.textContent,
+      element.value,
+      element.getAttribute?.('title'),
+      element.getAttribute?.('aria-label')
+    ].filter(Boolean).join(' '))
+  }
+
+  function findAuthenticationDialog () {
+    const title = Array.from(document.querySelectorAll('h1, h2, h3, div, span'))
+      .find((element) => isVisible(element) &&
+        normalize(element.textContent) === 'autenticacao de documento')
+
+    if (!title) return null
+
+    let container = title
+
+    while (container && container !== document.body) {
+      const password = container.querySelector(
+        '#pwdSenha, input[name="pwdSenha"], input[type="password"]'
+      )
+      const sign = Array.from(container.querySelectorAll(
+        'button, input[type="button"], input[type="submit"], a, [role="button"]'
+      )).find((element) => isVisible(element) && buttonLabel(element) === 'assinar')
+
+      if (password && sign) return { container, password, sign }
+      container = container.parentElement
+    }
+
+    return null
+  }
+
+  async function completeAuthentication () {
+    if (processing || !activePending()) return
+
+    const dialog = findAuthenticationDialog()
+    if (!dialog) return
+
+    processing = true
+
+    try {
+      const stored = await storageGet(CREDENTIALS_KEY)
+      const credentials = stored[CREDENTIALS_KEY]
+
+      if (!credentials?.remember || !credentials.password) {
+        clearPending()
+        throw new Error('Salve a senha do SEI na Central do Protocolista.')
+      }
+
+      fillField(dialog.password, credentials.password)
+      clearPending()
+
+      window.setTimeout(() => {
+        dialog.sign.focus?.()
+        dialog.sign.click()
+        setButtonState('success', 'Autenticação enviada ao SEI')
+        window.setTimeout(() => {
+          setButtonState('ready', 'Autenticação rápida — autenticar e assinar')
+        }, 3500)
+      }, 180)
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha na autenticação rápida:', error)
+      setButtonState('error', error.message || String(error))
+      window.alert(`Autenticação rápida: ${error.message || error}`)
+    } finally {
+      processing = false
+    }
+  }
+
+  async function startAuthentication (nativeAuthentication) {
+    try {
+      const stored = await storageGet(CREDENTIALS_KEY)
+      const credentials = stored[CREDENTIALS_KEY]
+
+      if (!credentials?.remember || !credentials.password) {
+        throw new Error('Salve a senha do SEI na Central do Protocolista antes de usar o carimbo.')
+      }
+
+      sessionStorage.setItem(PENDING_KEY, String(Date.now()))
+      setButtonState('loading', 'Abrindo autenticação...')
+      nativeAuthentication.focus?.()
+      nativeAuthentication.click()
+
+      window.setTimeout(() => {
+        if (!activePending()) return
+        clearPending()
+        setButtonState('error', 'A janela de autenticação não foi localizada')
+      }, MAX_PENDING_AGE)
+    } catch (error) {
+      clearPending()
+      setButtonState('error', error.message || String(error))
+      window.alert(`Autenticação rápida: ${error.message || error}`)
+    }
+  }
+
+  function insertQuickButton () {
+    if (document.getElementById(BUTTON_ID)) return
+
+    const nativeAuthentication = findNativeAuthentication()
+    if (!nativeAuthentication?.parentElement) return
+
+    const button = document.createElement('button')
+    button.id = BUTTON_ID
+    button.type = 'button'
+    button.title = 'Autenticação rápida — autenticar e assinar'
+    button.setAttribute('aria-label', 'Autenticação rápida — autenticar e assinar')
+    button.dataset.state = 'ready'
+    button.appendChild(createStampIcon())
+    button.addEventListener('click', () => startAuthentication(nativeAuthentication))
+
+    nativeAuthentication.parentElement.appendChild(button)
+    quickButton = button
+  }
+
+  const observer = new MutationObserver(() => {
+    insertQuickButton()
+    completeAuthentication().catch((error) => {
+      console.error('[SEI Protocolistas] Falha ao acompanhar autenticação:', error)
+    })
+  })
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  })
+
+  insertQuickButton()
+  completeAuthentication().catch(() => {})
+})()

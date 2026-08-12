@@ -195,7 +195,8 @@
             ],
             "all_frames": true,
             "css": [
-                "cs_modules/procedimento_visualizar/styles.css"
+                "cs_modules/procedimento_visualizar/styles.css",
+                "cs_modules/autenticacao_rapida/styles.css"
             ],
             "js": [
                 "cs_modules/lib/pontoControleCores.js",
@@ -208,6 +209,7 @@
                 "cs_modules/procedimento_visualizar/alterarTitulo.js",
                 "cs_modules/procedimento_visualizar/documentoModelo.js",
                 "cs_modules/procedimento_visualizar/ajustarElementosNativos.js",
+                "cs_modules/autenticacao_rapida/index.js",
                 "cs_modules/procedimento_visualizar/consultarAtribuicao.js",
                 "cs_modules/procedimento_visualizar/index.js"
             ]
