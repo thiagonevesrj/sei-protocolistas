@@ -1,29 +1,31 @@
 #sp-autenticacao-rapida {
+  align-self: flex-start;
   align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
-  color: #ef3434;
+  background: rgb(49 201 120 / 10%);
+  border: 1px solid rgb(49 201 120 / 55%);
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: #31c978;
   cursor: pointer;
   display: inline-flex;
-  height: 36px;
+  height: 46px;
   justify-content: center;
-  margin: 0 2px 0 7px;
+  margin: 4px 4px 0 10px;
   padding: 2px;
-  vertical-align: middle;
-  width: 36px;
+  vertical-align: top;
+  width: 46px;
 }
 
 #sp-autenticacao-rapida svg {
   display: block;
-  height: 32px;
-  width: 32px;
+  height: 40px;
+  width: 40px;
 }
 
 #sp-autenticacao-rapida:hover,
 #sp-autenticacao-rapida:focus {
-  background: rgb(239 52 52 / 12%);
-  box-shadow: 0 0 0 2px rgb(239 52 52 / 22%);
+  background: rgb(49 201 120 / 20%);
+  box-shadow: 0 0 0 2px rgb(49 201 120 / 25%);
   outline: none;
 }
 
@@ -34,11 +36,14 @@
 }
 
 #sp-autenticacao-rapida[data-state="success"] {
-  color: #31c978;
+  background: rgb(49 201 120 / 24%);
+  color: #6ee7a8;
 }
 
 #sp-autenticacao-rapida[data-state="error"] {
-  background: rgb(239 52 52 / 14%);
+  background: rgb(241 196 79 / 18%);
+  border-color: rgb(241 196 79 / 65%);
+  color: #f1c44f;
 }
 
 @keyframes sp-autenticacao-pulse {

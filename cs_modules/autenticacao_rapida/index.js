@@ -71,9 +71,10 @@
     icon.setAttribute('viewBox', '0 0 36 36')
     icon.setAttribute('aria-hidden', 'true')
     icon.innerHTML = `
-      <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/>
-      <path d="M11 19.5l4.3 4.2L25.5 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M10 28h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="18" cy="18" r="15" fill="currentColor"/>
+      <circle cx="18" cy="18" r="12" fill="none" stroke="white" stroke-width="1.5" opacity=".72"/>
+      <path d="M10.5 18.5l4.5 4.4L25.8 12.7" fill="none" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M11 29h14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".85"/>
     `
     return icon
   }
