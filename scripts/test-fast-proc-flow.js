@@ -65,6 +65,9 @@ function testFastMailOperatorFallback () {
   assert.ok(source.includes('const stored = await storageGet(OPERATOR_KEY)'))
   assert.ok(source.includes('const operator = await resolveOperator()'))
   assert.ok(source.includes('email !== expectedEmail'))
+  assert.ok(source.includes('function isInvalidatedContextError (error)'))
+  assert.ok(source.includes('function runSafely (operation, label)'))
+  assert.ok(source.includes("'Falha ao iniciar o Fast Mail'"))
 }
 
 function testQuickAuthentication () {
@@ -76,10 +79,14 @@ function testQuickAuthentication () {
   assert.ok(source.includes("const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'"))
   assert.ok(source.includes("normalize(element.textContent) === 'autenticacao de documento'"))
   assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
+  assert.ok(source.includes("description.includes('documento_autenticar')"))
+  assert.ok(source.includes("description.includes('autenticacao1')"))
+  assert.ok(source.includes('existingButtons.slice(1).forEach((button) => button.remove())'))
   assert.ok(source.includes('clearPending()\n\n      window.setTimeout'))
   assert.ok(styles.includes('color: #ef3434'))
   assert.ok(manifest.includes('cs_modules/autenticacao_rapida/index.js'))
   assert.ok(manifest.includes('cs_modules/autenticacao_rapida/styles.css'))
+  assert.ok(manifest.includes('"*://sei.rj.gov.br/*controlador.php?acao=*"'))
 }
 
 async function testSeiAutoLogin () {
@@ -383,7 +390,7 @@ function testHighlightedQuickRequestButton () {
   assert.ok(source.includes("QUICK_REQUEST_LABEL = 'REQUERIMENTO RÁPIDO'"))
   assert.ok(source.includes("QUICK_REQUEST_LOADING_LABEL = 'ABRINDO...'"))
   assert.ok(source.includes("button.id = 'sp-fast-proc-rq'"))
-  assert.ok(styles.includes('min-width: 207px'))
+  assert.ok(styles.includes('min-width: 190px'))
   assert.ok(styles.includes('height: 36px'))
   assert.ok(styles.includes('align-self: center'))
   assert.ok(styles.includes('border: 1px solid #e0ae28'))

@@ -58,8 +58,11 @@
     return candidates.find((element) => {
       if (element.id === BUTTON_ID || !isVisible(element)) return false
       const description = describe(element)
-      return description.includes('autenticar') ||
-        description.includes('autenticacao')
+      return description.includes('documento autenticar') ||
+        description.includes('documento_autenticar') ||
+        description.includes('autenticacao1') ||
+        description.includes('selo autenticacao1') ||
+        description.includes('autenticar documento')
     }) || null
   }
 
@@ -206,7 +209,12 @@
   }
 
   function insertQuickButton () {
-    if (document.getElementById(BUTTON_ID)) return
+    const existingButtons = Array.from(
+      document.querySelectorAll(`#${BUTTON_ID}`)
+    )
+
+    existingButtons.slice(1).forEach((button) => button.remove())
+    if (existingButtons.length) return
 
     const nativeAuthentication = findNativeAuthentication()
     if (!nativeAuthentication?.parentElement) return
@@ -220,7 +228,13 @@
     button.appendChild(createStampIcon())
     button.addEventListener('click', () => startAuthentication(nativeAuthentication))
 
-    nativeAuthentication.parentElement.appendChild(button)
+    if (document.getElementById(BUTTON_ID)) return
+
+    const toolbar = nativeAuthentication.closest(
+      'div, td, li, nav'
+    ) || nativeAuthentication.parentElement
+
+    toolbar.appendChild(button)
     quickButton = button
   }
 

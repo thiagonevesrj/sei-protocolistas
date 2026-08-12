@@ -123,6 +123,21 @@
 
   const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
+  function isInvalidatedContextError (error) {
+    return /extension context invalidated/i.test(
+      String(error?.message || error || '')
+    )
+  }
+
+  function runSafely (operation, label) {
+    Promise.resolve()
+      .then(operation)
+      .catch((error) => {
+        if (isInvalidatedContextError(error)) return
+        console.error(`[SEI Protocolistas] ${label}:`, error)
+      })
+  }
+
   function dispatchFieldEvents (field) {
     ['input', 'change', 'keyup', 'blur'].forEach((eventName) => {
       field.dispatchEvent(new Event(eventName, { bubbles: true }))
@@ -2594,7 +2609,13 @@
     await scan()
 
     if (!IS_COMPOSE_WINDOW) {
-      window.setInterval(scan, 2500)
+      window.setInterval(
+        () => runSafely(
+          scan,
+          'Falha ao atualizar o Fast Mail'
+        ),
+        2500
+      )
       return
     }
 
@@ -2608,7 +2629,13 @@
 
     // O Bcc é obrigatório em todas as respostas: prepara automaticamente.
     window.setTimeout(() => prepareBcc(), 700)
-    window.setInterval(scan, 2500)
+    window.setInterval(
+      () => runSafely(
+        scan,
+        'Falha ao atualizar o Fast Mail'
+      ),
+      2500
+    )
   }
 
   api.runtime.onMessage.addListener((message) => {
@@ -2618,5 +2645,8 @@
     })
   })
 
-  initialize()
+  runSafely(
+    initialize,
+    'Falha ao iniciar o Fast Mail'
+  )
 })()

@@ -17,8 +17,8 @@
   justify-content: center;
   line-height: 1;
   margin: 0 12px 0 0;
-  min-width: 207px;
-  padding: 6px 14px;
+  min-width: 190px;
+  padding: 6px 12px;
   position: relative;
   top: 0;
   text-decoration: none;
@@ -57,5 +57,5 @@
 }
 
 .sp-fast-proc-rq--loading {
-  min-width: 207px;
+  min-width: 190px;
 }
