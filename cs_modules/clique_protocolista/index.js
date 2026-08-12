@@ -2178,6 +2178,28 @@
 
     await wait(400)
 
+    /*
+     * O SEI pode disparar a confirmação já durante a seleção da
+     * sugestão, antes do clique no ícone de incluir interessado.
+     */
+    try {
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_KEY,
+        String(Date.now())
+      )
+
+      document.dispatchEvent(
+        new CustomEvent(
+          INTERESTED_CONFIRM_EVENT
+        )
+      )
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+        error
+      )
+    }
+
     const interestedSelected =
       await selectInterestedSuggestion(
         draft.nome,
@@ -2186,29 +2208,6 @@
 
     if (interestedSelected) {
       await wait(250)
-
-      /*
-       * O confirm nativo é disparado dentro do clique de inclusão.
-       * A autorização precisa existir antes desse clique acontecer.
-       */
-      try {
-        sessionStorage.setItem(
-          INTERESTED_CONFIRM_KEY,
-          String(Date.now())
-        )
-
-        document.dispatchEvent(
-          new CustomEvent(
-            INTERESTED_CONFIRM_EVENT
-          )
-        )
-      } catch (error) {
-        console.warn(
-          '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
-          error
-        )
-      }
-
       clickAddInterested(interested)
       await wait(250)
       closeInterestedSuggestions(interested)

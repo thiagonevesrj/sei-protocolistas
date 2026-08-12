@@ -58,13 +58,21 @@ function testInterestedConfirmation () {
 
   const fastProcSource = read('cs_modules/clique_protocolista/index.js')
   const armIndex = fastProcSource.indexOf(
-    'sessionStorage.setItem(\n          INTERESTED_CONFIRM_KEY'
+    'sessionStorage.setItem(\n        INTERESTED_CONFIRM_KEY'
   )
-  const clickIndex = fastProcSource.indexOf('clickAddInterested(interested)')
+  const selectIndex = fastProcSource.indexOf(
+    'selectInterestedSuggestion(',
+    armIndex
+  )
+  const clickIndex = fastProcSource.indexOf(
+    'clickAddInterested(interested)',
+    armIndex
+  )
 
   assert.ok(armIndex >= 0)
+  assert.ok(selectIndex > armIndex)
   assert.ok(clickIndex > armIndex)
-  assert.ok(fastProcSource.includes('new CustomEvent(\n            INTERESTED_CONFIRM_EVENT'))
+  assert.ok(fastProcSource.includes('new CustomEvent(\n          INTERESTED_CONFIRM_EVENT'))
 
   const interceptorSource = read(
     'cs_modules/clique_protocolista/confirmarInclusaoInteressado.js'
