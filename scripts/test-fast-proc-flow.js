@@ -514,6 +514,10 @@ function testExternalDocumentHeaderIsCompact () {
   assert.ok(source.includes(
     "'0 0 0 auto'"
   ))
+  assert.ok(source.includes('const pinSaveToVisibleArea = () =>'))
+  assert.ok(source.includes("'position',\n        'fixed'"))
+  assert.ok(source.includes("'right',\n        '24px'"))
+  assert.ok(source.includes("'z-index',\n        '1000'"))
   assert.ok(source.includes('compactDocumentHeader()'))
 }
 
