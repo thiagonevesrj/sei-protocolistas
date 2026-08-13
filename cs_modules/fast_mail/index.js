@@ -123,21 +123,6 @@
 
   const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
-  function isInvalidatedContextError (error) {
-    return /extension context invalidated/i.test(
-      String(error?.message || error || '')
-    )
-  }
-
-  function runSafely (operation, label) {
-    Promise.resolve()
-      .then(operation)
-      .catch((error) => {
-        if (isInvalidatedContextError(error)) return
-        console.error(`[SEI Protocolistas] ${label}:`, error)
-      })
-  }
-
   function dispatchFieldEvents (field) {
     ['input', 'change', 'keyup', 'blur'].forEach((eventName) => {
       field.dispatchEvent(new Event(eventName, { bubbles: true }))
@@ -612,38 +597,21 @@
     for (const doc of allDocuments()) {
       const elements = Array.from(doc.querySelectorAll('[contenteditable="true"], body[contenteditable="true"]'))
 
-      const designModeBody = doc.designMode?.toLowerCase() === 'on'
-        ? doc.body
-        : null
+      if (doc.designMode?.toLowerCase() === 'on' && doc.body) elements.push(doc.body)
 
-      if (designModeBody) elements.unshift(designModeBody)
-
-      for (const element of [...new Set(elements)]) {
-        if (element !== designModeBody && !isVisible(element)) continue
+      for (const element of elements) {
+        if (!isVisible(element)) continue
         if (element.closest?.('#sei-protocolistas-fast-mail-status')) continue
         if (element.matches?.('input,textarea')) continue
 
-        const headerRow = element.closest?.('tr')
-        const headerText = elementText(headerRow)
-        if (/^\s*(?:Para|Cc|Bcc|Assunto)\.{0,3}:?/i.test(headerText)) continue
-
         const rect = element.getBoundingClientRect()
         const area = rect.width * rect.height
-        if (element !== designModeBody && area < 12000) continue
+        if (area < 12000) continue
 
         const label = `${element.getAttribute?.('aria-label') || ''} ${element.getAttribute?.('title') || ''}`
-        if (/assunto|subject|bcc|\bcc\b|destinat|recipient|\bpara\b/i.test(label)) continue
+        if (/assunto|subject|bcc|cc|destinat|recipient/i.test(label)) continue
 
-        const editorPriority = element === designModeBody
-          ? 1000000000
-          : element.matches?.('body[contenteditable="true"]')
-            ? 500000000
-            : 0
-
-        candidates.push({
-          element,
-          score: editorPriority + area + (element.innerText?.length || 0)
-        })
+        candidates.push({ element, score: area + (element.innerText?.length || 0) })
       }
     }
 
@@ -2626,13 +2594,7 @@
     await scan()
 
     if (!IS_COMPOSE_WINDOW) {
-      window.setInterval(
-        () => runSafely(
-          scan,
-          'Falha ao atualizar o Fast Mail'
-        ),
-        2500
-      )
+      window.setInterval(scan, 2500)
       return
     }
 
@@ -2646,13 +2608,7 @@
 
     // O Bcc é obrigatório em todas as respostas: prepara automaticamente.
     window.setTimeout(() => prepareBcc(), 700)
-    window.setInterval(
-      () => runSafely(
-        scan,
-        'Falha ao atualizar o Fast Mail'
-      ),
-      2500
-    )
+    window.setInterval(scan, 2500)
   }
 
   api.runtime.onMessage.addListener((message) => {
@@ -2662,8 +2618,5 @@
     })
   })
 
-  runSafely(
-    initialize,
-    'Falha ao iniciar o Fast Mail'
-  )
+  initialize()
 })()
