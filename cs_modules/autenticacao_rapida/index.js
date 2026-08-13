@@ -78,11 +78,7 @@
       container !== document.body &&
       container !== document.documentElement
     ) {
-      const iconCommands = Array.from(
-        container.querySelectorAll('a, button, [role="button"]')
-      ).filter((candidate) =>
-        candidate.querySelector?.('img, svg')
-      )
+      const iconCommands = container.querySelectorAll('img, svg')
 
       if (iconCommands.length >= 5) return container
       container = container.parentElement
@@ -92,9 +88,30 @@
   }
 
   function findNativeAuthentication () {
-    const candidates = Array.from(document.querySelectorAll(
+    const actionCandidates = Array.from(document.querySelectorAll(
       'a, button, input[type="button"], [role="button"], [onclick]'
     ))
+
+    const imageCandidates = Array.from(document.querySelectorAll('img'))
+      .filter((image) => {
+        const description = normalize([
+          image.getAttribute('src'),
+          image.getAttribute('alt'),
+          image.getAttribute('title')
+        ].filter(Boolean).join(' '))
+
+        return description.includes('autenticacao1') ||
+          description.includes('selo autenticacao1')
+      })
+      .map((image) => image.closest(
+        'a, button, input[type="button"], [role="button"], [onclick]'
+      ) || image.parentElement)
+      .filter(Boolean)
+
+    const candidates = Array.from(new Set([
+      ...imageCandidates,
+      ...actionCandidates
+    ]))
 
     return candidates.find((element) => {
       if (element.id === BUTTON_ID || !isVisible(element)) return false
