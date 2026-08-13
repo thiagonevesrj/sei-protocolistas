@@ -1,26 +1,23 @@
 #sp-fast-proc-rq {
-  align-self: center;
   align-items: center;
   background: #071a33;
-  border: 1px solid #e0ae28;
-  border-radius: 5px;
-  box-shadow: none;
+  border: 2px solid #e0ae28;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 35%);
   box-sizing: border-box;
   color: #ffffff;
   cursor: pointer;
   display: inline-flex;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  gap: 7px;
-  height: 36px;
+  gap: 8px;
+  height: 42px;
   justify-content: center;
   line-height: 1;
-  margin: 0 12px 0 0;
-  min-width: 190px;
-  padding: 6px 12px;
-  position: relative;
-  top: 0;
+  margin: 0 10px 0 0;
+  min-width: 222px;
+  padding: 8px 16px;
   text-decoration: none;
   vertical-align: middle;
   white-space: nowrap;
@@ -30,7 +27,8 @@
 #sp-fast-proc-rq:focus {
   background: #0b2346;
   box-shadow:
-    0 0 0 2px rgb(224 174 40 / 26%);
+    0 0 0 3px rgb(224 174 40 / 30%),
+    0 3px 10px rgb(0 0 0 / 35%);
   outline: none;
 }
 
@@ -46,7 +44,7 @@
 .sp-fast-proc-rq__bolt {
   color: #e0ae28;
   flex: 0 0 auto;
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -57,5 +55,5 @@
 }
 
 .sp-fast-proc-rq--loading {
-  min-width: 190px;
+  min-width: 222px;
 }
