@@ -98,14 +98,14 @@ function testNativeAuthenticationAutomation () {
 
   assert.ok(source.includes("const PENDING_KEY = 'spAutenticacaoNativaPendente'"))
   assert.ok(source.includes("const SUCCESS_KEY = 'spAutenticacaoNativaConcluida'"))
-  assert.ok(source.includes('function clickedAuthenticationCommand (target)'))
-  assert.ok(source.includes('function isNativeAuthenticationCommand (element)'))
-  assert.ok(source.includes("element.closest('#divArvore, [id*=\"Arvore\"]')"))
-  assert.ok(source.includes('function describeCommand (element)'))
-  assert.ok(source.includes("description.includes('autenticar documento')"))
-  assert.ok(source.includes("description.includes('autenticacao de documento')"))
-  assert.ok(source.includes("description.includes('autenticacao1')"))
-  assert.ok(source.includes("document.addEventListener('click', armFromNativeClick, true)"))
+  assert.ok(source.includes('function processCommandToolbar ()'))
+  assert.ok(source.includes("document.querySelector('#sp-fast-proc-rq')"))
+  assert.ok(source.includes('function armFromToolbarClick (event)'))
+  assert.ok(source.includes('toolbar.contains(target)'))
+  assert.ok(source.includes("target.closest?.('#sp-fast-proc-rq')"))
+  assert.ok(source.includes("document.addEventListener('click', armFromToolbarClick, true)"))
+  assert.ok(!source.includes('isNativeAuthenticationCommand'))
+  assert.ok(!source.includes('autenticacao1'))
   assert.ok(source.includes('function authenticationDialog ()'))
   assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
   assert.ok(source.includes('fillPassword(dialog.password, credentials.password)'))
@@ -120,6 +120,154 @@ function testNativeAuthenticationAutomation () {
   assert.ok(!manifest.includes('cs_modules/autenticacao_rapida'))
   assert.ok(!fs.existsSync(path.join(root, 'cs_modules/autenticacao_rapida/index.js')))
   assert.ok(!fs.existsSync(path.join(root, 'cs_modules/autenticacao_rapida/styles.css')))
+}
+
+async function testNativeAuthenticationBehavior () {
+  const storage = {
+    centralProtocolistaSeiCredentials: {
+      user: 'protocolista31',
+      password: 'senha-teste',
+      remember: true
+    }
+  }
+  const storageListeners = []
+  const documentListeners = new Map()
+  let signClicks = 0
+  let toastText = ''
+
+  class FakeInput {}
+  Object.defineProperty(FakeInput.prototype, 'value', {
+    configurable: true,
+    get () { return this._value || '' },
+    set (value) { this._value = value }
+  })
+
+  const visibleElement = (extra = {}) => ({
+    ownerDocument: null,
+    getBoundingClientRect: () => ({ width: 180, height: 36 }),
+    getAttribute: () => '',
+    ...extra
+  })
+
+  const password = Object.assign(
+    Object.create(FakeInput.prototype),
+    visibleElement({
+      focus: () => {},
+      dispatchEvent: () => {}
+    })
+  )
+  const sign = visibleElement({
+    textContent: 'Assinar',
+    value: '',
+    focus: () => {},
+    click: () => { signClicks += 1 }
+  })
+  const quickRequest = { parentElement: null }
+  const toolbarTarget = {
+    nodeType: 1,
+    closest: () => null,
+    parentElement: null
+  }
+  const toolbar = {
+    contains: (element) => element === toolbarTarget
+  }
+  quickRequest.parentElement = toolbar
+
+  const body = {
+    innerText: 'Autenticação de Documento',
+    appendChild: (element) => { toastText = element.textContent }
+  }
+  const documentMock = {
+    body,
+    defaultView: {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible' })
+    },
+    querySelector: (selector) => selector === '#sp-fast-proc-rq' ? quickRequest : null,
+    querySelectorAll: (selector) => {
+      if (selector.includes('#pwdSenha')) return [password]
+      if (selector.startsWith('button,')) return [sign]
+      return []
+    },
+    getElementById: () => null,
+    createElement: () => ({
+      classList: { add: () => {} },
+      remove: () => {},
+      setAttribute: () => {},
+      style: { cssText: '' },
+      textContent: ''
+    }),
+    addEventListener: (eventName, callback) => {
+      documentListeners.set(eventName, callback)
+    }
+  }
+  password.ownerDocument = documentMock
+  sign.ownerDocument = documentMock
+
+  const notifyChanges = (changes) => {
+    storageListeners.forEach((listener) => listener(changes, 'local'))
+  }
+  const context = {
+    console,
+    Date,
+    Math,
+    Node: { ELEMENT_NODE: 1 },
+    Event: class Event {},
+    HTMLInputElement: FakeInput,
+    document: documentMock,
+    setTimeout: (callback) => { callback(); return 1 },
+    clearTimeout: () => {},
+    alert: () => {},
+    chrome: {
+      runtime: { lastError: null },
+      storage: {
+        local: {
+          get: (keys, callback) => {
+            const list = Array.isArray(keys) ? keys : [keys]
+            callback(Object.fromEntries(list.map((key) => [key, storage[key]])))
+          },
+          set: (items, callback) => {
+            const changes = Object.fromEntries(
+              Object.entries(items).map(([key, value]) => [key, {
+                oldValue: storage[key],
+                newValue: value
+              }])
+            )
+            Object.assign(storage, items)
+            callback()
+            notifyChanges(changes)
+          },
+          remove: (keys, callback) => {
+            const list = Array.isArray(keys) ? keys : [keys]
+            const changes = {}
+            list.forEach((key) => {
+              changes[key] = { oldValue: storage[key], newValue: undefined }
+              delete storage[key]
+            })
+            callback()
+            notifyChanges(changes)
+          }
+        },
+        onChanged: {
+          addListener: (listener) => storageListeners.push(listener)
+        }
+      }
+    }
+  }
+  context.window = context
+
+  vm.runInNewContext(
+    read('cs_modules/autenticacao_nativa/index.js'),
+    context
+  )
+
+  documentListeners.get('click')({ target: toolbarTarget })
+  await tick()
+  await tick()
+  await tick()
+
+  assert.strictEqual(password.value, 'senha-teste')
+  assert.strictEqual(signClicks, 1)
+  assert.strictEqual(toastText, '✓ AUTENTICADO COM SUCESSO')
 }
 
 async function testSeiAutoLogin () {
@@ -676,6 +824,7 @@ async function run () {
   testInterestedConfirmation()
   testFastMailOperatorFallback()
   testNativeAuthenticationAutomation()
+  await testNativeAuthenticationBehavior()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
