@@ -1,5 +1,5 @@
 #sp-autenticacao-rapida {
-  align-self: flex-start;
+  align-self: center;
   align-items: center;
   background: rgb(49 201 120 / 10%);
   border: 1px solid rgb(49 201 120 / 55%);
@@ -8,18 +8,18 @@
   color: #31c978;
   cursor: pointer;
   display: inline-flex;
-  height: 46px;
+  height: 42px;
   justify-content: center;
   margin: 0 12px 0 0;
   padding: 2px;
   vertical-align: top;
-  width: 46px;
+  width: 42px;
 }
 
 #sp-autenticacao-rapida svg {
   display: block;
-  height: 40px;
-  width: 40px;
+  height: 36px;
+  width: 36px;
 }
 
 #sp-autenticacao-rapida:hover,
