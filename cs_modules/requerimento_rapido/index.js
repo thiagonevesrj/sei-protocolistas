@@ -502,18 +502,6 @@
     ).textContent = QUICK_REQUEST_LABEL
   }
 
-  function removeDuplicateRqButtons () {
-    const buttons = Array.from(
-      document.querySelectorAll(
-        '#sp-fast-proc-rq'
-      )
-    )
-
-    buttons.slice(1).forEach((button) => {
-      button.remove()
-    })
-  }
-
   function clickNativeElement(element) {
     if (!element) {
       throw new Error(
@@ -630,19 +618,6 @@
       return
     }
 
-    /*
-     * Duas cópias da extensão podem iniciar a busca ao mesmo tempo.
-     * Revalidar aqui evita que ambas insiram o botão após o waitFor.
-     */
-    if (
-      document.querySelector(
-        '#sp-fast-proc-rq'
-      )
-    ) {
-      removeDuplicateRqButtons()
-      return
-    }
-
     const button =
       createRqButton()
 
@@ -732,8 +707,6 @@
       button,
       includeLink
     )
-
-    removeDuplicateRqButtons()
   }
 
   function findExternalOption() {
@@ -844,19 +817,6 @@
   }
 
   const action = getAction()
-
-  const duplicateObserver =
-    new MutationObserver(
-      removeDuplicateRqButtons
-    )
-
-  duplicateObserver.observe(
-    document.documentElement,
-    {
-      childList: true,
-      subtree: true
-    }
-  )
 
   if (action === 'arvore_visualizar') {
     insertRqButton().catch((error) => {
