@@ -57,7 +57,9 @@
   }
 
   function describe (element) {
-    const image = element.querySelector?.('img')
+    const image = element.matches?.('img')
+      ? element
+      : element.querySelector?.('img')
     return normalize([
       element.textContent,
       element.getAttribute?.('title'),
@@ -103,11 +105,6 @@
         return description.includes('autenticacao1') ||
           description.includes('selo autenticacao1')
       })
-      .map((image) => image.closest(
-        'a, button, input[type="button"], [role="button"], [onclick]'
-      ) || image.parentElement)
-      .filter(Boolean)
-
     const candidates = Array.from(new Set([
       ...imageCandidates,
       ...actionCandidates
@@ -285,8 +282,12 @@
         }
       })
       setButtonState('loading', 'Abrindo autenticação...')
-      nativeAuthentication.focus?.()
-      nativeAuthentication.click()
+      const nativeTrigger = nativeAuthentication.closest?.(
+        'a, button, input[type="button"], [role="button"], [onclick]'
+      ) || nativeAuthentication
+
+      nativeTrigger.focus?.()
+      nativeTrigger.click()
 
       window.setTimeout(async () => {
         if (!await activePending()) return
