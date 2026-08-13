@@ -92,6 +92,29 @@ function testFastMailOperatorFallback () {
   assert.ok(source.includes('email !== expectedEmail'))
 }
 
+function testIsolatedQuickAuthentication () {
+  const source = read('cs_modules/autenticacao_rapida/index.js')
+  const styles = read('cs_modules/autenticacao_rapida/styles.css')
+  const manifest = read('manifest.json')
+
+  assert.ok(source.includes("const BUTTON_ID = 'sp-autenticacao-rapida'"))
+  assert.ok(source.includes("const SUCCESS_KEY = 'spAutenticacaoRapidaConcluida'"))
+  assert.ok(source.includes("if (action === 'arvore_visualizar')"))
+  assert.ok(source.includes("document.querySelector('#sp-fast-proc-rq')"))
+  assert.ok(source.includes("quickRequest.insertAdjacentElement('afterend', button)"))
+  assert.ok(source.includes('function nativeAuthenticationTrigger ()'))
+  assert.ok(source.includes("describeImage(image).includes('autenticacao1')"))
+  assert.ok(source.includes('function authenticationDialog ()'))
+  assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
+  assert.ok(source.includes("toast.textContent = '✓ AUTENTICADO ORIGINAL'"))
+  assert.ok(source.includes('api.storage.onChanged.addListener'))
+  assert.ok(!source.includes('MutationObserver'))
+  assert.ok(styles.includes('height: 42px'))
+  assert.ok(styles.includes('width: 42px'))
+  assert.ok(manifest.includes('cs_modules/autenticacao_rapida/index.js'))
+  assert.ok(manifest.includes('cs_modules/autenticacao_rapida/styles.css'))
+}
+
 async function testSeiAutoLogin () {
   const values = { user: '', password: '' }
   let submitted = 0
@@ -645,6 +668,7 @@ function testInterestedAutocompleteIsReleased () {
 async function run () {
   testInterestedConfirmation()
   testFastMailOperatorFallback()
+  testIsolatedQuickAuthentication()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
