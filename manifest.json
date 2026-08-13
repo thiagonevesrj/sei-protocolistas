@@ -195,11 +195,8 @@
             ],
             "run_at": "document_idle",
             "all_frames": true,
-            "css": [
-                "cs_modules/autenticacao_rapida/styles.css"
-            ],
             "js": [
-                "cs_modules/autenticacao_rapida/index.js"
+                "cs_modules/autenticacao_nativa/index.js"
             ]
         },
         {
