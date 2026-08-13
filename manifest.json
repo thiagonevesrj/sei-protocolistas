@@ -191,19 +191,6 @@
         },
         {
             "matches": [
-                "*://sei.rj.gov.br/*controlador.php?acao=*"
-            ],
-            "run_at": "document_idle",
-            "all_frames": true,
-            "css": [
-                "cs_modules/autenticacao_rapida/styles.css"
-            ],
-            "js": [
-                "cs_modules/autenticacao_rapida/index.js"
-            ]
-        },
-        {
-            "matches": [
                 "*://sei.rj.gov.br/*controlador.php?acao=procedimento_visualizar*"
             ],
             "all_frames": true,
