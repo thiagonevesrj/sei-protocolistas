@@ -80,52 +80,9 @@
     })
   }
 
-  function describeCommand (element) {
-    const images = Array.from(element?.querySelectorAll?.('img') || [])
-
-    return normalize([
-      element?.textContent,
-      element?.getAttribute?.('href'),
-      element?.getAttribute?.('onclick'),
-      element?.getAttribute?.('title'),
-      element?.getAttribute?.('aria-label'),
-      ...images.flatMap((image) => [
-        image.getAttribute('src'),
-        image.getAttribute('alt'),
-        image.getAttribute('title'),
-        image.getAttribute('aria-label')
-      ])
-    ].filter(Boolean).join(' '))
-  }
-
-  function isNativeAuthenticationCommand (element) {
-    if (!element || element.closest('#divArvore, [id*="Arvore"]')) return false
-
-    const description = describeCommand(element)
-
-    return description.includes('documento_autenticar') ||
-      description.includes('autenticar documento') ||
-      description.includes('autenticacao de documento') ||
-      description.includes('autenticacao1') ||
-      description.includes('autenticacao_documento') ||
-      (
-        description.includes('autenticar') &&
-        description.includes('documento')
-      )
-  }
-
-  function clickedAuthenticationCommand (target) {
-    const element = target?.nodeType === Node.ELEMENT_NODE
-      ? target
-      : target?.parentElement
-
-    const command = element?.closest?.(
-      'a, button, [role="button"], [onclick]'
-    )
-
-    return command && isNativeAuthenticationCommand(command)
-      ? command
-      : null
+  function processCommandToolbar () {
+    const quickRequest = document.querySelector('#sp-fast-proc-rq')
+    return quickRequest?.parentElement || null
   }
 
   function requestId () {
@@ -196,13 +153,12 @@
 
   async function completeAuthentication () {
     if (completing) return false
-
-    const pending = await activePending()
-    if (!pending) return false
-
     completing = true
 
     try {
+      const pending = await activePending()
+      if (!pending) return false
+
       const dialog = await waitFor(authenticationDialog, DIALOG_WAIT)
       if (!dialog) return false
 
@@ -277,8 +233,14 @@
     return true
   }
 
-  function armFromNativeClick (event) {
-    if (!clickedAuthenticationCommand(event.target)) return
+  function armFromToolbarClick (event) {
+    const toolbar = processCommandToolbar()
+    const target = event.target?.nodeType === Node.ELEMENT_NODE
+      ? event.target
+      : event.target?.parentElement
+
+    if (!toolbar || !target || !toolbar.contains(target)) return
+    if (target.closest?.('#sp-fast-proc-rq')) return
 
     storageSet({
       [PENDING_KEY]: {
@@ -295,7 +257,7 @@
     })
   }
 
-  document.addEventListener('click', armFromNativeClick, true)
+  document.addEventListener('click', armFromToolbarClick, true)
 
   api.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return
