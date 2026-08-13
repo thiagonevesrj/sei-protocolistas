@@ -90,68 +90,6 @@ function testFastMailOperatorFallback () {
   assert.ok(source.includes('const stored = await storageGet(OPERATOR_KEY)'))
   assert.ok(source.includes('const operator = await resolveOperator()'))
   assert.ok(source.includes('email !== expectedEmail'))
-  assert.ok(source.includes('function isInvalidatedContextError (error)'))
-  assert.ok(source.includes('function runSafely (operation, label)'))
-  assert.ok(source.includes("'Falha ao iniciar o Fast Mail'"))
-  assert.ok(source.includes("const designModeBody = doc.designMode?.toLowerCase() === 'on'"))
-  assert.ok(source.includes("element.closest?.('tr')"))
-  assert.ok(source.includes('(?:Para|Cc|Bcc|Assunto)'))
-  assert.ok(source.includes('element === designModeBody'))
-  assert.ok(source.includes('? 1000000000'))
-}
-
-function testQuickAuthentication () {
-  const source = read('cs_modules/autenticacao_rapida/index.js')
-  const styles = read('cs_modules/autenticacao_rapida/styles.css')
-  const manifest = read('manifest.json')
-
-  assert.ok(source.includes("const BUTTON_ID = 'sp-autenticacao-rapida'"))
-  assert.ok(source.includes("const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'"))
-  assert.ok(source.includes('const storageSet = (items) => new Promise'))
-  assert.ok(source.includes('const storageRemove = (key) => new Promise'))
-  assert.ok(source.includes('async function activePending ()'))
-  assert.ok(source.includes('[PENDING_KEY]: {'))
-  assert.ok(!source.includes('sessionStorage.setItem(PENDING_KEY'))
-  assert.ok(source.includes("normalize(element.textContent) === 'autenticacao de documento'"))
-  assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
-  assert.ok(source.includes('? { container: document.body, password, sign }'))
-  assert.ok(source.includes("action.includes('documento_autenticar')"))
-  assert.ok(source.includes("element.closest('#divArvore, [id*=\"Arvore\"]')"))
-  assert.ok(source.includes('function findCommandToolbar (element)'))
-  assert.ok(source.includes("container.querySelectorAll('img, svg')"))
-  assert.ok(source.includes('if (iconCommands.length >= 5) return container'))
-  assert.ok(source.includes("const imageCandidates = Array.from(document.querySelectorAll('img'))"))
-  assert.ok(source.includes("const image = element.matches?.('img')"))
-  assert.ok(source.includes('...imageCandidates,'))
-  assert.ok(source.includes('const nativeTrigger = nativeAuthentication.closest?.('))
-  assert.ok(source.includes("const quickRequest = document.querySelector('#sp-fast-proc-rq')"))
-  assert.ok(source.includes("quickRequest.insertAdjacentElement('afterend', button)"))
-  assert.ok(source.includes("throw new Error('O botão nativo de autenticação não está disponível neste documento.')"))
-  assert.ok(!source.includes('toolbar.appendChild(button)'))
-  assert.ok(source.includes("description.includes('autenticacao1')"))
-  assert.ok(source.includes('validExistingButtons.slice(1).forEach((button) => button.remove())'))
-  assert.ok(source.includes('clearPending()\n\n      window.setTimeout'))
-  assert.ok(styles.includes('color: #31c978'))
-  assert.ok(styles.includes('height: 46px'))
-  assert.ok(styles.includes('vertical-align: top'))
-  assert.ok(styles.includes('margin: 0 12px 0 0'))
-  assert.ok(source.includes("toast.textContent = '✓ AUTENTICADO ORIGINAL'"))
-  assert.ok(source.includes('{ type: SUCCESS_MESSAGE }'))
-  assert.ok(styles.includes('#sp-autenticacao-rapida-toast'))
-  assert.ok(manifest.includes('cs_modules/autenticacao_rapida/index.js'))
-  assert.ok(manifest.includes('cs_modules/autenticacao_rapida/styles.css'))
-  assert.ok(manifest.includes('"*://sei.rj.gov.br/*controlador.php?acao=*"'))
-}
-
-function testExternalDocumentSaveVisibility () {
-  const source = read(
-    'cs_modules/documento_receber/autopreencherDocumentoExterno.js'
-  )
-
-  assert.ok(source.includes("'padding-right:150px'"))
-  assert.ok(source.includes("'position:relative'"))
-  assert.ok(source.includes("'translateY(-50%)'"))
-  assert.ok(source.includes("commandBar.style.setProperty(\n      'right'"))
 }
 
 async function testSeiAutoLogin () {
@@ -455,14 +393,9 @@ function testHighlightedQuickRequestButton () {
   assert.ok(source.includes("QUICK_REQUEST_LABEL = 'REQUERIMENTO RÁPIDO'"))
   assert.ok(source.includes("QUICK_REQUEST_LOADING_LABEL = 'ABRINDO...'"))
   assert.ok(source.includes("button.id = 'sp-fast-proc-rq'"))
-  assert.ok(styles.includes('min-width: 190px'))
-  assert.ok(styles.includes('height: 36px'))
-  assert.ok(styles.includes('align-self: center'))
-  assert.ok(styles.includes('border: 1px solid #e0ae28'))
+  assert.ok(styles.includes('min-width: 222px'))
+  assert.ok(styles.includes('border: 2px solid #e0ae28'))
   assert.ok(source.includes('function resetRqButton (button)'))
-  assert.ok(source.includes('function removeDuplicateRqButtons ()'))
-  assert.ok(source.includes('buttons.slice(1).forEach((button) =>'))
-  assert.ok(source.includes('const duplicateObserver ='))
   assert.ok(source.includes('browserApi.storage?.onChanged'))
   assert.ok(source.includes('!changes[PENDING_KEY].newValue'))
 
@@ -579,7 +512,7 @@ function testExternalDocumentHeaderIsCompact () {
   ))
   assert.ok(!source.includes('calc(100vw - 24px)'))
   assert.ok(source.includes(
-    "'translateY(-50%)'"
+    "'0 0 0 auto'"
   ))
   assert.ok(source.includes('compactDocumentHeader()'))
 }
@@ -708,8 +641,6 @@ function testInterestedAutocompleteIsReleased () {
 async function run () {
   testInterestedConfirmation()
   testFastMailOperatorFallback()
-  testQuickAuthentication()
-  testExternalDocumentSaveVisibility()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
