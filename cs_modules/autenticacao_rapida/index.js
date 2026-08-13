@@ -8,7 +8,7 @@
   const BUTTON_ID = 'sp-autenticacao-rapida'
   const TOAST_ID = 'sp-autenticacao-rapida-toast'
   const MAX_PENDING_AGE = 20 * 1000
-  const QUICK_REQUEST_WAIT = 15 * 1000
+  const AUTHENTICATION_AVAILABILITY_WAIT = 30 * 60 * 1000
   const DIALOG_WAIT = 12 * 1000
 
   let quickButton = null
@@ -101,13 +101,18 @@
   function nativeAuthenticationTrigger () {
     const direct = Array.from(document.querySelectorAll(
       'a[href*="documento_autenticar" i], [onclick*="documento_autenticar" i]'
-    )).find(isVisible)
+    )).find((element) =>
+      isVisible(element) &&
+      !element.closest('#divArvore, [id*="Arvore"]')
+    )
 
     if (direct) return direct
 
     const nativeImage = Array.from(document.querySelectorAll('img'))
       .find((image) =>
-        isVisible(image) && describeImage(image).includes('autenticacao1')
+        isVisible(image) &&
+        !image.closest('#divArvore, [id*="Arvore"]') &&
+        describeImage(image).includes('autenticacao1')
       )
 
     if (!nativeImage) return null
@@ -292,13 +297,22 @@
   }
 
   async function insertQuickButton () {
-    const quickRequest = await waitFor(
-      () => document.querySelector('#sp-fast-proc-rq'),
-      QUICK_REQUEST_WAIT,
-      200
+    const available = await waitFor(
+      () => {
+        const quickRequest = document.querySelector('#sp-fast-proc-rq')
+        const nativeTrigger = nativeAuthenticationTrigger()
+
+        return quickRequest?.parentElement && nativeTrigger
+          ? { quickRequest, nativeTrigger }
+          : null
+      },
+      AUTHENTICATION_AVAILABILITY_WAIT,
+      250
     )
 
-    if (!quickRequest?.parentElement || document.getElementById(BUTTON_ID)) return
+    if (!available || document.getElementById(BUTTON_ID)) return
+
+    const { quickRequest } = available
 
     const button = document.createElement('button')
     button.id = BUTTON_ID
