@@ -383,6 +383,7 @@
     const { operatorNumber, state } = await readOperatorMetrics()
     const active = state.active
     const button = $('#start-workday')
+    const reopenButton = $('#reopen-systems')
 
     if (active) {
       $('#workday-title').textContent = 'Expediente em andamento'
@@ -391,6 +392,7 @@
       $('#workday-status').className = 'badge success'
       button.textContent = 'FINALIZAR EXPEDIENTE'
       button.className = 'danger-button start-button'
+      reopenButton.hidden = false
       renderWorkdayReport(null)
       return
     }
@@ -403,6 +405,7 @@
     $('#workday-status').className = 'badge'
     button.textContent = state.report ? 'INICIAR NOVO EXPEDIENTE' : 'INICIAR EXPEDIENTE'
     button.className = 'primary start-button'
+    reopenButton.hidden = true
     renderWorkdayReport(state.report)
   }
 
@@ -479,6 +482,77 @@
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao abrir os sistemas do expediente:', error)
       message('#webmail-credentials-message', 'O expediente foi iniciado, mas não foi possível abrir Webmail e SEI. Tente novamente.', 'error')
+    }
+  }
+
+  async function reopenWorkdaySystems () {
+    const button = $('#reopen-systems')
+    const metrics = await readOperatorMetrics()
+
+    if (!metrics.operatorNumber || !metrics.state.active) {
+      message(
+        '#workday-message',
+        'Inicie o expediente antes de reabrir os sistemas.',
+        'error'
+      )
+      await renderWorkday()
+      return
+    }
+
+    const stored = await get([
+      WEBMAIL_CREDENTIALS_KEY,
+      SEI_CREDENTIALS_KEY
+    ])
+    const webmail = stored[WEBMAIL_CREDENTIALS_KEY]
+    const sei = stored[SEI_CREDENTIALS_KEY]
+
+    if (
+      !webmail?.remember ||
+      !webmail?.user ||
+      !webmail?.password ||
+      !sei?.remember ||
+      !sei?.user ||
+      !sei?.password
+    ) {
+      message(
+        '#workday-message',
+        'Confirme as credenciais salvas do Webmail e do SEI.',
+        'error'
+      )
+      return
+    }
+
+    button.disabled = true
+    button.textContent = 'REABRINDO...'
+    message(
+      '#workday-message',
+      'Abrindo Webmail e SEI sem interromper o expediente...'
+    )
+
+    try {
+      await runtimeMessage({
+        type: OPEN_WORKDAY_SYSTEMS_MESSAGE
+      })
+      message(
+        '#workday-message',
+        `Sistemas reabertos. Expediente mantido desde ${
+          formatTime(metrics.state.active.startedAt)
+        }.`,
+        'success'
+      )
+    } catch (error) {
+      console.error(
+        '[SEI Protocolistas] Falha ao reabrir os sistemas:',
+        error
+      )
+      message(
+        '#workday-message',
+        'Não foi possível reabrir Webmail e SEI. Tente novamente.',
+        'error'
+      )
+    } finally {
+      button.disabled = false
+      button.textContent = 'REABRIR SISTEMAS'
     }
   }
 
@@ -643,6 +717,7 @@
     $('#open-fast-mail').addEventListener('click', openWebmail)
     $('#open-sei').addEventListener('click', openSei)
     $('#start-workday').addEventListener('click', startWorkday)
+    $('#reopen-systems').addEventListener('click', reopenWorkdaySystems)
     $('#export-workday').addEventListener('click', exportWorkdayReport)
     $('#feedback-form').addEventListener('submit', sendFeedback)
 
