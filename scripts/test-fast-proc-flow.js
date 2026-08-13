@@ -93,6 +93,11 @@ function testFastMailOperatorFallback () {
   assert.ok(source.includes('function isInvalidatedContextError (error)'))
   assert.ok(source.includes('function runSafely (operation, label)'))
   assert.ok(source.includes("'Falha ao iniciar o Fast Mail'"))
+  assert.ok(source.includes("const designModeBody = doc.designMode?.toLowerCase() === 'on'"))
+  assert.ok(source.includes("element.closest?.('tr')"))
+  assert.ok(source.includes('(?:Para|Cc|Bcc|Assunto)'))
+  assert.ok(source.includes('element === designModeBody'))
+  assert.ok(source.includes('? 1000000000'))
 }
 
 function testQuickAuthentication () {
