@@ -612,21 +612,38 @@
     for (const doc of allDocuments()) {
       const elements = Array.from(doc.querySelectorAll('[contenteditable="true"], body[contenteditable="true"]'))
 
-      if (doc.designMode?.toLowerCase() === 'on' && doc.body) elements.push(doc.body)
+      const designModeBody = doc.designMode?.toLowerCase() === 'on'
+        ? doc.body
+        : null
 
-      for (const element of elements) {
-        if (!isVisible(element)) continue
+      if (designModeBody) elements.unshift(designModeBody)
+
+      for (const element of [...new Set(elements)]) {
+        if (element !== designModeBody && !isVisible(element)) continue
         if (element.closest?.('#sei-protocolistas-fast-mail-status')) continue
         if (element.matches?.('input,textarea')) continue
 
+        const headerRow = element.closest?.('tr')
+        const headerText = elementText(headerRow)
+        if (/^\s*(?:Para|Cc|Bcc|Assunto)\.{0,3}:?/i.test(headerText)) continue
+
         const rect = element.getBoundingClientRect()
         const area = rect.width * rect.height
-        if (area < 12000) continue
+        if (element !== designModeBody && area < 12000) continue
 
         const label = `${element.getAttribute?.('aria-label') || ''} ${element.getAttribute?.('title') || ''}`
-        if (/assunto|subject|bcc|cc|destinat|recipient/i.test(label)) continue
+        if (/assunto|subject|bcc|\bcc\b|destinat|recipient|\bpara\b/i.test(label)) continue
 
-        candidates.push({ element, score: area + (element.innerText?.length || 0) })
+        const editorPriority = element === designModeBody
+          ? 1000000000
+          : element.matches?.('body[contenteditable="true"]')
+            ? 500000000
+            : 0
+
+        candidates.push({
+          element,
+          score: editorPriority + area + (element.innerText?.length || 0)
+        })
       }
     }
 
