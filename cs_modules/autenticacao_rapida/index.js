@@ -266,8 +266,14 @@
     }
   }
 
-  async function startAuthentication (nativeAuthentication) {
+  async function startAuthentication () {
     try {
+      const nativeAuthentication = findNativeAuthentication()
+
+      if (!nativeAuthentication) {
+        throw new Error('O botão nativo de autenticação não está disponível neste documento.')
+      }
+
       const stored = await storageGet(CREDENTIALS_KEY)
       const credentials = stored[CREDENTIALS_KEY]
 
@@ -322,8 +328,8 @@
     validExistingButtons.slice(1).forEach((button) => button.remove())
     if (validExistingButtons.length) return
 
-    const nativeAuthentication = findNativeAuthentication()
-    if (!nativeAuthentication?.parentElement) return
+    const quickRequest = document.querySelector('#sp-fast-proc-rq')
+    if (!quickRequest?.parentElement) return
 
     const button = document.createElement('button')
     button.id = BUTTON_ID
@@ -332,17 +338,11 @@
     button.setAttribute('aria-label', 'Autenticação rápida — autenticar e assinar')
     button.dataset.state = 'ready'
     button.appendChild(createStampIcon())
-    button.addEventListener('click', () => startAuthentication(nativeAuthentication))
+    button.addEventListener('click', () => startAuthentication())
 
     if (document.getElementById(BUTTON_ID)) return
 
-    const toolbar = findCommandToolbar(
-      nativeAuthentication
-    )
-
-    if (!toolbar) return
-
-    toolbar.appendChild(button)
+    quickRequest.insertAdjacentElement('afterend', button)
     quickButton = button
   }
 
