@@ -90,35 +90,60 @@
     return `${Date.now()}-${Math.random().toString(36).slice(2)}`
   }
 
-  function describeImage (image) {
+  function describeCommand (element) {
+    const images = element?.matches?.('img')
+      ? [element]
+      : Array.from(element?.querySelectorAll?.('img') || [])
+
     return normalize([
-      image?.getAttribute('src'),
-      image?.getAttribute('alt'),
-      image?.getAttribute('title')
+      element?.textContent,
+      element?.getAttribute?.('href'),
+      element?.getAttribute?.('onclick'),
+      element?.getAttribute?.('title'),
+      element?.getAttribute?.('aria-label'),
+      ...images.flatMap((image) => [
+        image.getAttribute('src'),
+        image.getAttribute('alt'),
+        image.getAttribute('title'),
+        image.getAttribute('aria-label')
+      ])
     ].filter(Boolean).join(' '))
   }
 
+  function isAuthenticationCommand (element) {
+    const description = describeCommand(element)
+
+    return description.includes('documento_autenticar') ||
+      description.includes('autenticar documento') ||
+      description.includes('autenticacao de documento') ||
+      description.includes('autenticacao1') ||
+      description.includes('autenticacao_documento') ||
+      (
+        description.includes('autenticar') &&
+        description.includes('documento')
+      )
+  }
+
   function nativeAuthenticationTrigger () {
-    const direct = Array.from(document.querySelectorAll(
-      'a[href*="documento_autenticar" i], [onclick*="documento_autenticar" i]'
-    )).find((element) =>
-      isVisible(element) &&
-      !element.closest('#divArvore, [id*="Arvore"]')
+    const clickableSelector =
+      'a, button, [role="button"], [onclick]'
+
+    const imageTriggers = Array.from(
+      document.querySelectorAll('img')
+    ).map((image) =>
+      image.closest(clickableSelector) || image
     )
 
-    if (direct) return direct
+    const candidates = Array.from(new Set([
+      ...document.querySelectorAll(clickableSelector),
+      ...imageTriggers
+    ]))
 
-    const nativeImage = Array.from(document.querySelectorAll('img'))
-      .find((image) =>
-        isVisible(image) &&
-        !image.closest('#divArvore, [id*="Arvore"]') &&
-        describeImage(image).includes('autenticacao1')
-      )
-
-    if (!nativeImage) return null
-
-    return nativeImage.closest(
-      'a, button, [role="button"], [onclick]'
+    return candidates.find((element) =>
+      element.id !== BUTTON_ID &&
+      isVisible(element) &&
+      !element.closest('#divArvore, [id*="Arvore"]') &&
+      isAuthenticationCommand(element)
     ) || null
   }
 
