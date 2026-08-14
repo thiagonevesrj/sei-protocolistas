@@ -1,5 +1,7 @@
 # Checkpoint operacional — SEI Protocolistas 0.5.0
 
+> **Checkpoint posterior:** para trabalhos iniciados após 14 de agosto de 2026, use primeiro `docs/CHECKPOINT-TRANSICAO-FAST-MAIL-TRELINHO-2026-08-14.md`.
+
 Data do fechamento: 10 de agosto de 2026.
 
 Este é o ponto oficial de continuidade do projeto. Um novo chat deve começar por este documento e pelo topo remoto da PR indicada abaixo. Não deve reconstruir o sistema, usar ZIP, trabalhar sobre cópias antigas nem repetir diagnósticos já encerrados.
