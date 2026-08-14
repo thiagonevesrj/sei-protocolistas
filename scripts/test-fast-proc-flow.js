@@ -107,6 +107,7 @@ function testNativeAuthenticationAutomation () {
   assert.ok(source.includes('dialog.sign.click()'))
   assert.ok(source.indexOf('dialog.sign.click()') < source.lastIndexOf('[SUCCESS_KEY]: {'))
   assert.ok(source.includes("toast.textContent = '✓ AUTENTICADO COM SUCESSO'"))
+  assert.ok(source.includes('window.setTimeout(() => toast.remove(), 2000)'))
   assert.ok(source.includes('chrome.storage.onChanged.addListener'))
   assert.ok(source.includes('new MutationObserver'))
   assert.ok(source.includes('if (document.querySelector(TOOLBAR_SELECTOR))'))
