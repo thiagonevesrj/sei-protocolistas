@@ -1,39 +1,34 @@
 (() => {
   'use strict'
 
-  const api = typeof browser === 'undefined' ? chrome : browser
   const CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
-  const PENDING_KEY = 'spAutenticacaoNativaPendente'
   const SUCCESS_KEY = 'spAutenticacaoNativaConcluida'
-  const TOAST_ID = 'sp-autenticacao-nativa-toast'
-  const MAX_PENDING_AGE = 20 * 1000
-  const DIALOG_WAIT = 12 * 1000
+  const LEGACY_KEYS = [
+    'spAutenticacaoNativaPendente',
+    'spAutenticacaoRapidaPendente'
+  ]
+  const TOOLBAR_SELECTOR = '#divArvoreAcoes.barraBotoesSEI'
+  const handledPasswords = new WeakSet()
 
-  let completing = false
-
-  const storageGet = (keys) => new Promise((resolve, reject) => {
-    api.storage.local.get(keys, (items) => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else resolve(items || {})
+  function storageGet (keys) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(keys, (result) => {
+        resolve(chrome.runtime.lastError ? {} : result)
+      })
     })
-  })
+  }
 
-  const storageSet = (items) => new Promise((resolve, reject) => {
-    api.storage.local.set(items, () => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else resolve()
+  function storageSet (items) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set(items, resolve)
     })
-  })
+  }
 
-  const storageRemove = (keys) => new Promise((resolve, reject) => {
-    api.storage.local.remove(keys, () => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else resolve()
+  function storageRemove (keys) {
+    return new Promise((resolve) => {
+      chrome.storage.local.remove(keys, resolve)
     })
-  })
+  }
 
   function normalize (value) {
     return String(value || '')
@@ -46,105 +41,52 @@
 
   function isVisible (element) {
     if (!element) return false
-    const style = element.ownerDocument.defaultView?.getComputedStyle(element)
-    if (!style || style.display === 'none' || style.visibility === 'hidden') return false
-    const rectangle = element.getBoundingClientRect()
-    return rectangle.width > 0 && rectangle.height > 0
-  }
-
-  function waitFor (test, timeout, interval = 150) {
-    const startedAt = Date.now()
-
-    return new Promise((resolve) => {
-      const check = () => {
-        let result = null
-
-        try {
-          result = test()
-        } catch (error) {}
-
-        if (result) {
-          resolve(result)
-          return
-        }
-
-        if (Date.now() - startedAt >= timeout) {
-          resolve(null)
-          return
-        }
-
-        window.setTimeout(check, interval)
-      }
-
-      check()
-    })
-  }
-
-  function processCommandToolbar () {
-    const quickRequest = document.querySelector('#sp-fast-proc-rq')
-    return quickRequest?.parentElement || null
-  }
-
-  function requestId () {
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  }
-
-  async function activePending () {
-    const stored = await storageGet(PENDING_KEY)
-    const pending = stored[PENDING_KEY]
-
-    if (
-      !pending?.requestId ||
-      !pending.createdAt ||
-      Date.now() - pending.createdAt > MAX_PENDING_AGE
-    ) {
-      if (pending) await storageRemove(PENDING_KEY)
-      return null
-    }
-
-    return pending
+    const view = element.ownerDocument?.defaultView || window
+    const style = view.getComputedStyle(element)
+    const rect = element.getBoundingClientRect()
+    return style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      rect.width > 0 &&
+      rect.height > 0
   }
 
   function buttonLabel (element) {
-    return normalize([
-      element?.textContent,
-      element?.value,
-      element?.getAttribute?.('title'),
-      element?.getAttribute?.('aria-label')
-    ].filter(Boolean).join(' '))
+    return normalize(
+      element.textContent ||
+      element.value ||
+      element.getAttribute?.('title') ||
+      element.getAttribute?.('aria-label')
+    )
   }
 
   function authenticationDialog () {
-    const password = Array.from(document.querySelectorAll(
-      '#pwdSenha, input[name="pwdSenha"], input[type="password"]'
-    )).find(isVisible)
+    if (!document.body || !normalize(document.body.innerText).includes('autenticacao de documento')) {
+      return null
+    }
 
+    const passwords = Array.from(document.querySelectorAll(
+      '#pwdSenha, input[name="pwdSenha"], input[type="password"], ' +
+      'input[id*="senha" i], input[name*="senha" i]'
+    ))
+    const password = passwords.find(isVisible)
     if (!password) return null
 
-    const sign = Array.from(document.querySelectorAll(
-      'button, input[type="button"], input[type="submit"], a, [role="button"]'
-    )).find((element) =>
+    const controls = Array.from(document.querySelectorAll(
+      'button, input[type="button"], input[type="submit"], a'
+    ))
+    const sign = controls.find((element) =>
       isVisible(element) && buttonLabel(element) === 'assinar'
     )
 
-    if (!sign) return null
-
-    const pageText = normalize(document.body?.innerText)
-    if (!pageText.includes('autenticacao de documento')) return null
-
-    return { password, sign }
+    return sign ? { password, sign } : null
   }
 
-  function fillPassword (field, value) {
+  function fillPassword (field, password) {
     field.focus()
-
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      'value'
-    )
-
-    if (descriptor?.set) descriptor.set.call(field, value)
-    else field.value = value
+    const prototype = window.HTMLInputElement?.prototype
+    const setter = prototype && Object.getOwnPropertyDescriptor(prototype, 'value')?.set
+    if (setter) setter.call(field, password)
+    else field.value = password
 
     ;['input', 'change', 'keyup'].forEach((eventName) => {
       field.dispatchEvent(new Event(eventName, { bubbles: true }))
@@ -152,145 +94,111 @@
   }
 
   async function completeAuthentication () {
-    if (completing) return false
-    completing = true
+    const dialog = authenticationDialog()
+    if (!dialog || handledPasswords.has(dialog.password)) return false
 
-    try {
-      const pending = await activePending()
-      if (!pending) return false
-
-      const dialog = await waitFor(authenticationDialog, DIALOG_WAIT)
-      if (!dialog) return false
-
-      const stored = await storageGet(CREDENTIALS_KEY)
-      const credentials = stored[CREDENTIALS_KEY]
-
-      if (!credentials?.remember || !credentials.password) {
-        await storageRemove(PENDING_KEY)
-        window.alert(
-          'Autenticação automática: salve a senha do SEI na Central do Protocolista.'
-        )
-        return false
-      }
-
-      fillPassword(dialog.password, credentials.password)
-      await storageRemove(PENDING_KEY)
-
-      window.setTimeout(() => {
-        dialog.sign.focus?.()
-        dialog.sign.click()
-
-        storageSet({
-          [SUCCESS_KEY]: {
-            requestId: pending.requestId,
-            createdAt: Date.now()
-          }
-        }).catch(() => {})
-      }, 180)
-
-      return true
-    } finally {
-      completing = false
+    handledPasswords.add(dialog.password)
+    const stored = await storageGet(CREDENTIALS_KEY)
+    const credentials = stored[CREDENTIALS_KEY]
+    if (!credentials?.remember || !credentials.password) {
+      handledPasswords.delete(dialog.password)
+      return false
     }
+
+    fillPassword(dialog.password, credentials.password)
+    window.setTimeout(async () => {
+      dialog.sign.focus()
+      dialog.sign.click()
+      await storageSet({
+        [SUCCESS_KEY]: {
+          at: Date.now(),
+          nonce: Math.random()
+        }
+      })
+    }, 180)
+
+    return true
   }
 
-  async function showSuccessToast () {
-    const quickRequest = await waitFor(
-      () => document.querySelector('#sp-fast-proc-rq'),
-      5000,
-      150
-    )
+  function waitFor (selector, timeout = 5000) {
+    const existing = document.querySelector(selector)
+    if (existing) return Promise.resolve(existing)
 
-    if (!quickRequest) return false
+    return new Promise((resolve) => {
+      if (!document.documentElement) return resolve(null)
 
-    document.getElementById(TOAST_ID)?.remove()
+      const observer = new MutationObserver(() => {
+        const element = document.querySelector(selector)
+        if (!element) return
+        observer.disconnect()
+        window.clearTimeout(timer)
+        resolve(element)
+      })
+      observer.observe(document.documentElement, { childList: true, subtree: true })
+
+      const timer = window.setTimeout(() => {
+        observer.disconnect()
+        resolve(null)
+      }, timeout)
+    })
+  }
+
+  async function showSuccessPopup () {
+    const quickRequest = await waitFor('#sp-fast-proc-rq')
+    if (!quickRequest || document.getElementById('sp-auth-native-success')) return false
 
     const toast = document.createElement('div')
-    toast.id = TOAST_ID
-    toast.setAttribute('role', 'status')
+    toast.id = 'sp-auth-native-success'
     toast.textContent = '✓ AUTENTICADO COM SUCESSO'
+    toast.setAttribute('role', 'status')
     toast.style.cssText = [
-      'align-items:center',
-      'background:#137a48',
-      'border:1px solid #6ee7a8',
-      'border-radius:10px',
-      'box-shadow:0 12px 32px rgb(0 0 0 / 38%)',
-      'color:#fff',
-      'display:flex',
-      'font:800 14px Arial,Helvetica,sans-serif',
-      'left:50%',
-      'letter-spacing:.5px',
-      'min-height:48px',
-      'padding:0 22px',
       'position:fixed',
-      'top:24px',
+      'top:16px',
+      'left:50%',
       'transform:translateX(-50%)',
-      'z-index:2147483647'
+      'z-index:2147483647',
+      'padding:12px 22px',
+      'border:1px solid #39d98a',
+      'border-radius:8px',
+      'background:#087f4f',
+      'color:#fff',
+      'font:700 14px Roboto,Arial,sans-serif',
+      'box-shadow:0 4px 18px rgba(0,0,0,.45)'
     ].join(';')
-
     document.body.appendChild(toast)
+    await storageRemove(SUCCESS_KEY)
     window.setTimeout(() => toast.remove(), 1000)
     return true
   }
 
-  function armFromToolbarClick (event) {
-    const toolbar = processCommandToolbar()
-    const target = event.target?.nodeType === Node.ELEMENT_NODE
-      ? event.target
-      : event.target?.parentElement
-
-    if (!toolbar || !target || !toolbar.contains(target)) return
-    if (target.closest?.('#sp-fast-proc-rq')) return
-
-    storageSet({
-      [PENDING_KEY]: {
-        requestId: requestId(),
-        createdAt: Date.now()
-      }
-    }).then(() => {
-      completeAuthentication().catch(() => {})
-    }).catch((error) => {
-      console.error(
-        '[SEI Protocolistas] Não foi possível iniciar a autenticação automática:',
-        error
-      )
+  function observeAuthenticationDialog () {
+    if (!document.body) return
+    const observer = new MutationObserver(() => {
+      completeAuthentication()
     })
+    observer.observe(document.body, { childList: true, subtree: true })
+    completeAuthentication()
   }
 
-  document.addEventListener('click', armFromToolbarClick, true)
+  async function init () {
+    await storageRemove(LEGACY_KEYS)
 
-  api.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== 'local') return
+    const stored = await storageGet(SUCCESS_KEY)
+    if (stored[SUCCESS_KEY]) showSuccessPopup()
 
-    if (changes[PENDING_KEY]?.newValue) {
-      completeAuthentication().catch(() => {})
+    if (document.querySelector(TOOLBAR_SELECTOR)) {
+      observeAuthenticationDialog()
+      return
     }
 
-    if (changes[SUCCESS_KEY]?.newValue) {
-      showSuccessToast()
-        .then((shown) => {
-          if (shown) {
-            storageRemove(SUCCESS_KEY)
-              .catch(() => {})
-          }
-        })
-        .catch(() => {})
+    completeAuthentication()
+  }
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes[SUCCESS_KEY]?.newValue) {
+      showSuccessPopup()
     }
   })
 
-  storageGet([PENDING_KEY, SUCCESS_KEY])
-    .then((stored) => {
-      const pending = stored[PENDING_KEY]
-      if (pending) completeAuthentication().catch(() => {})
-
-      if (stored[SUCCESS_KEY]) {
-        showSuccessToast()
-          .then((shown) => {
-            if (shown) return storageRemove(SUCCESS_KEY)
-            return undefined
-          })
-          .catch(() => {})
-      }
-    })
-    .catch(() => {})
+  init()
 })()
