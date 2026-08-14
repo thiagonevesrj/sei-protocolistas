@@ -167,7 +167,7 @@
     ].join(';')
     document.body.appendChild(toast)
     await storageRemove(SUCCESS_KEY)
-    window.setTimeout(() => toast.remove(), 1000)
+    window.setTimeout(() => toast.remove(), 2000)
     return true
   }
 
