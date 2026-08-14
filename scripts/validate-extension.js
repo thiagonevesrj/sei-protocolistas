@@ -546,6 +546,7 @@ if (curatedResponses && scriptCatalog) {
   'cs_modules/fast_mail/styles.css',
   'cs_modules/fast_proc_handoff/index.js',
   'docs/CHECKPOINT-OPERACIONAL-0.5.0.md',
+  'docs/CHECKPOINT-TRANSICAO-FAST-MAIL-TRELINHO-2026-08-14.md',
   'docs/CHECKLIST-REGRESSAO.md',
   'docs/PLANO-MESTRE.md',
   'docs/REGRAS-FUNCIONAIS.md'
