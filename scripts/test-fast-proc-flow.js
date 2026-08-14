@@ -96,24 +96,22 @@ function testNativeAuthenticationAutomation () {
   const source = read('cs_modules/autenticacao_nativa/index.js')
   const manifest = read('manifest.json')
 
-  assert.ok(source.includes("const PENDING_KEY = 'spAutenticacaoNativaPendente'"))
   assert.ok(source.includes("const SUCCESS_KEY = 'spAutenticacaoNativaConcluida'"))
-  assert.ok(source.includes('function processCommandToolbar ()'))
-  assert.ok(source.includes("document.querySelector('#sp-fast-proc-rq')"))
-  assert.ok(source.includes('function armFromToolbarClick (event)'))
-  assert.ok(source.includes('toolbar.contains(target)'))
-  assert.ok(source.includes("target.closest?.('#sp-fast-proc-rq')"))
-  assert.ok(source.includes("document.addEventListener('click', armFromToolbarClick, true)"))
-  assert.ok(!source.includes('isNativeAuthenticationCommand'))
-  assert.ok(!source.includes('autenticacao1'))
+  assert.ok(source.includes("const TOOLBAR_SELECTOR = '#divArvoreAcoes.barraBotoesSEI'"))
+  assert.ok(source.includes('const handledPasswords = new WeakSet()'))
+  assert.ok(source.includes("waitFor('#sp-fast-proc-rq')"))
   assert.ok(source.includes('function authenticationDialog ()'))
+  assert.ok(source.includes("includes('autenticacao de documento')"))
   assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
   assert.ok(source.includes('fillPassword(dialog.password, credentials.password)'))
   assert.ok(source.includes('dialog.sign.click()'))
   assert.ok(source.indexOf('dialog.sign.click()') < source.lastIndexOf('[SUCCESS_KEY]: {'))
   assert.ok(source.includes("toast.textContent = '✓ AUTENTICADO COM SUCESSO'"))
-  assert.ok(source.includes('api.storage.onChanged.addListener'))
-  assert.ok(!source.includes('MutationObserver'))
+  assert.ok(source.includes('chrome.storage.onChanged.addListener'))
+  assert.ok(source.includes('new MutationObserver'))
+  assert.ok(source.includes('if (document.querySelector(TOOLBAR_SELECTOR))'))
+  assert.ok(!source.includes("document.addEventListener('click'"))
+  assert.ok(!source.includes("const PENDING_KEY = 'spAutenticacaoNativaPendente'"))
   assert.ok(!source.includes('sp-autenticacao-rapida'))
   assert.ok(!source.includes('createStampIcon'))
   assert.ok(manifest.includes('cs_modules/autenticacao_nativa/index.js'))
@@ -131,9 +129,10 @@ async function testNativeAuthenticationBehavior () {
     }
   }
   const storageListeners = []
-  const documentListeners = new Map()
+  const mutationObservers = []
   let signClicks = 0
   let toastText = ''
+  let dialogOpen = false
 
   class FakeInput {}
   Object.defineProperty(FakeInput.prototype, 'value', {
@@ -162,19 +161,11 @@ async function testNativeAuthenticationBehavior () {
     focus: () => {},
     click: () => { signClicks += 1 }
   })
-  const quickRequest = { parentElement: null }
-  const toolbarTarget = {
-    nodeType: 1,
-    closest: () => null,
-    parentElement: null
-  }
-  const toolbar = {
-    contains: (element) => element === toolbarTarget
-  }
-  quickRequest.parentElement = toolbar
+  const quickRequest = {}
+  const toolbar = {}
 
   const body = {
-    innerText: 'Autenticação de Documento',
+    innerText: '',
     appendChild: (element) => { toastText = element.textContent }
   }
   const documentMock = {
@@ -182,8 +173,14 @@ async function testNativeAuthenticationBehavior () {
     defaultView: {
       getComputedStyle: () => ({ display: 'block', visibility: 'visible' })
     },
-    querySelector: (selector) => selector === '#sp-fast-proc-rq' ? quickRequest : null,
+    documentElement: {},
+    querySelector: (selector) => {
+      if (selector === '#divArvoreAcoes.barraBotoesSEI') return toolbar
+      if (selector === '#sp-fast-proc-rq') return quickRequest
+      return null
+    },
     querySelectorAll: (selector) => {
+      if (!dialogOpen) return []
       if (selector.includes('#pwdSenha')) return [password]
       if (selector.startsWith('button,')) return [sign]
       return []
@@ -195,10 +192,7 @@ async function testNativeAuthenticationBehavior () {
       setAttribute: () => {},
       style: { cssText: '' },
       textContent: ''
-    }),
-    addEventListener: (eventName, callback) => {
-      documentListeners.set(eventName, callback)
-    }
+    })
   }
   password.ownerDocument = documentMock
   sign.ownerDocument = documentMock
@@ -213,6 +207,15 @@ async function testNativeAuthenticationBehavior () {
     Node: { ELEMENT_NODE: 1 },
     Event: class Event {},
     HTMLInputElement: FakeInput,
+    MutationObserver: class MutationObserver {
+      constructor (callback) {
+        this.callback = callback
+        mutationObservers.push(this)
+      }
+
+      observe () {}
+      disconnect () {}
+    },
     document: documentMock,
     setTimeout: (callback) => { callback(); return 1 },
     clearTimeout: () => {},
@@ -260,7 +263,11 @@ async function testNativeAuthenticationBehavior () {
     context
   )
 
-  documentListeners.get('click')({ target: toolbarTarget })
+  await tick()
+  dialogOpen = true
+  body.innerText = 'Autenticação de Documento'
+  mutationObservers[0].callback()
+  mutationObservers[0].callback()
   await tick()
   await tick()
   await tick()
