@@ -55,6 +55,23 @@
     ]
   ]
 
+  const QUICK_PROCESS_TYPES = [
+    ['DEV. TAXAS', 'Detran: Devolução de Taxas'],
+    [
+      'DESIST. 1ª HAB.',
+      'DETRAN: Desistência de categoria na 1ª habilitação'
+    ],
+    ['PERÍCIA MÉDICA', 'Detran: Solicitação de Perícia Médica'],
+    [
+      'GERAL VEÍCULOS',
+      'Detran: Solicitações Gerais - Veículos'
+    ],
+    [
+      'GERAL HABILITAÇÃO',
+      'Detran: Solicitação Geral - Habilitação'
+    ]
+  ]
+
   function normalize(value) {
     return String(value || '')
       .normalize('NFD')
@@ -831,6 +848,58 @@
       (option) => option.value
     )
 
+    const typeShortcuts = createElement('div', {
+      className: 'sp-clique-type-shortcuts',
+      'aria-label': 'Tipos de processo mais usados'
+    })
+
+    const quickTypeButtons = QUICK_PROCESS_TYPES.map(
+      ([label, seiName]) => {
+        const option = typeOptions.find((candidate) =>
+          processName(
+            candidate.dataset.processLabel ||
+            candidate.textContent
+          ) === processName(seiName)
+        )
+        const button = createElement(
+          'button',
+          {
+            className: 'sp-clique-type-shortcut',
+            type: 'button',
+            'aria-pressed': 'false'
+          },
+          label
+        )
+
+        button.dataset.processType = seiName
+        button.addEventListener('click', () => {
+          selectTypeOption(option)
+          hideTypeSuggestions()
+          typeSearch.focus()
+        })
+        typeShortcuts.appendChild(button)
+
+        return button
+      }
+    )
+
+    const updateQuickTypeButtons = (selectedOption) => {
+      const selectedName = processName(
+        selectedOption?.dataset.processLabel ||
+        selectedOption?.textContent
+      )
+
+      quickTypeButtons.forEach((button) => {
+        const active = Boolean(selectedName) &&
+          processName(button.dataset.processType) === selectedName
+        button.classList.toggle(
+          'sp-clique-type-shortcut--active',
+          active
+        )
+        button.setAttribute('aria-pressed', String(active))
+      })
+    }
+
     const matchingTypeOptions = () => {
       const query = typeSearch.value
 
@@ -846,6 +915,7 @@
     const selectTypeOption = (option) => {
       if (!option) {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
         return false
       }
 
@@ -856,6 +926,7 @@
           bubbles: true
         })
       )
+      updateQuickTypeButtons(option)
 
       return true
     }
@@ -949,6 +1020,7 @@
         selectTypeOption(exactOption)
       } else {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
       }
     }
 
@@ -984,6 +1056,7 @@
       ) {
         typeSearch.value =
           selectedOption.textContent
+        updateQuickTypeButtons(selectedOption)
       }
     })
 
@@ -1053,6 +1126,7 @@
 
     typeWrapper.append(
       typeLabel,
+      typeShortcuts,
       typeSearchBox,
       typeSelect
     )
