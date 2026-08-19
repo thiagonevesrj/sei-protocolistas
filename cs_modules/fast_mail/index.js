@@ -35,6 +35,7 @@
   let responseScripts = []
   let responseScriptPhases = []
   let priorityResponseScriptIds = null
+  let selectedWorkflowPhaseId = ''
   let selectedPriorityAreaId = ''
   let activePriorityAction = ''
   let currentOperator = null
@@ -1241,9 +1242,10 @@
       option.textContent = phase.label
       select.appendChild(option)
     })
-    select.value = responseScriptPhases.some((phase) => phase.id === 'orientacao')
-      ? 'orientacao'
+    select.value = responseScriptPhases.some((phase) => phase.id === selectedWorkflowPhaseId)
+      ? selectedWorkflowPhaseId
       : ''
+    renderWorkflowPhases()
   }
 
   async function loadResponseScriptCatalog () {
@@ -1354,19 +1356,37 @@
     if (!catalog || !button) return
 
     const opening = catalog.hidden
+    if (opening && !selectedWorkflowPhaseId) {
+      const status = document.querySelector('#spfm-priority-status')
+      if (status) status.textContent = 'Selecione primeiro a fase do atendimento.'
+      return
+    }
     catalog.hidden = !catalog.hidden
     if (opening) {
       priorityResponseScriptIds = null
       activePriorityAction = 'catalog'
       const processSetup = document.querySelector('#spfm-process-setup')
       const identityFields = document.querySelector('#spfm-identity-fields')
-      if (processSetup) processSetup.hidden = false
-      if (identityFields) identityFields.hidden = false
-      setEmailPreparationVisible(true)
-      setManualRouteFieldsVisible(true)
-      syncRouteWithProcedure('')
+      const phaseField = document.querySelector('#spfm-script-phase-field')
+      const phaseSelect = document.querySelector('#spfm-script-phase')
+      if (selectedWorkflowPhaseId) {
+        if (processSetup) processSetup.hidden = true
+        if (identityFields) identityFields.hidden = true
+        if (phaseField) phaseField.hidden = true
+        if (phaseSelect) phaseSelect.value = selectedWorkflowPhaseId
+        setEmailPreparationVisible(false)
+        setManualRouteFieldsVisible(false)
+      } else {
+        if (processSetup) processSetup.hidden = false
+        if (identityFields) identityFields.hidden = false
+        if (phaseField) phaseField.hidden = false
+        setEmailPreparationVisible(true)
+        setManualRouteFieldsVisible(true)
+        syncRouteWithProcedure('')
+      }
       const missingBox = document.querySelector('#spfm-missing-box')
       if (missingBox) missingBox.hidden = true
+      renderResponseScriptResults()
     } else {
       activePriorityAction = ''
       setEmailPreparationVisible(false)
@@ -1393,6 +1413,109 @@
   function setEmailPreparationVisible (visible) {
     const emailPreparation = document.querySelector('#spfm-email-preparation')
     if (emailPreparation) emailPreparation.hidden = !visible
+  }
+
+  function workflowPhaseBadge (phase, index) {
+    return phase.id === 'atendimento' ? 'EXTRAS' : `FASE ${index + 1}`
+  }
+
+  function renderWorkflowPhases () {
+    const container = document.querySelector('#spfm-priority-phases')
+    if (!container) return
+
+    container.innerHTML = ''
+    responseScriptPhases.forEach((phase, index) => {
+      const button = document.createElement('button')
+      const badge = document.createElement('span')
+      const label = document.createElement('span')
+      button.type = 'button'
+      button.className = 'spfm-phase-button'
+      button.dataset.phaseId = phase.id
+      button.setAttribute('aria-pressed', String(phase.id === selectedWorkflowPhaseId))
+      button.classList.toggle('is-active', phase.id === selectedWorkflowPhaseId)
+      badge.className = 'spfm-phase-code'
+      badge.textContent = workflowPhaseBadge(phase, index)
+      label.className = 'spfm-phase-name'
+      label.textContent = phase.label
+      button.append(badge, label)
+      button.addEventListener('click', () => selectWorkflowPhase(phase.id))
+      container.appendChild(button)
+    })
+  }
+
+  function hidePriorityDetails () {
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    const actionStep = document.querySelector('#spfm-action-step')
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = true
+    if (missingBox) missingBox.hidden = true
+    if (actionStep) actionStep.hidden = true
+    setEmailPreparationVisible(false)
+  }
+
+  function openWorkflowPhaseCatalog (phaseId) {
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    const phaseField = document.querySelector('#spfm-script-phase-field')
+    const phaseSelect = document.querySelector('#spfm-script-phase')
+    const search = document.querySelector('#spfm-script-search')
+    const result = document.querySelector('#spfm-script-result')
+    if (!catalog || !toggleButton || !phaseSelect) return
+
+    priorityResponseScriptIds = null
+    activePriorityAction = 'catalog'
+    hidePriorityDetails()
+    catalog.hidden = false
+    if (phaseField) phaseField.hidden = true
+    phaseSelect.value = phaseId
+    if (search) search.value = ''
+    if (result) result.value = ''
+    renderResponseScriptResults()
+    toggleButton.textContent = CATALOG_CLOSE_LABEL
+    document.querySelector('#spfm-script-search')?.focus()
+  }
+
+  function selectWorkflowPhase (phaseId) {
+    if (!responseScriptPhases.some((phase) => phase.id === phaseId)) return
+
+    selectedWorkflowPhaseId = phaseId
+    selectedPriorityAreaId = ''
+    priorityResponseScriptIds = null
+    activePriorityAction = ''
+    document.querySelectorAll('.spfm-phase-button').forEach((button) => {
+      const isActive = button.dataset.phaseId === phaseId
+      button.classList.toggle('is-active', isActive)
+      button.setAttribute('aria-pressed', String(isActive))
+    })
+    document.querySelectorAll('.spfm-area-button').forEach((button) => {
+      button.classList.remove('is-active')
+      button.setAttribute('aria-pressed', 'false')
+    })
+
+    const areaStep = document.querySelector('#spfm-area-step')
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const phaseSelect = document.querySelector('#spfm-script-phase')
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    const status = document.querySelector('#spfm-priority-status')
+    if (areaStep) areaStep.hidden = phaseId !== 'orientacao'
+    if (phaseSelect) phaseSelect.value = phaseId
+    hidePriorityDetails()
+    renderPriorityTopics()
+
+    if (phaseId === 'orientacao') {
+      if (catalog) catalog.hidden = true
+      const phaseField = document.querySelector('#spfm-script-phase-field')
+      if (phaseField) phaseField.hidden = true
+      if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+      if (status) status.textContent = 'Selecione uma área de orientação.'
+      return
+    }
+
+    const phase = responseScriptPhases.find((item) => item.id === phaseId)
+    if (status) status.textContent = `${phase?.label || 'Fase'} selecionada. Escolha o script abaixo.`
+    openWorkflowPhaseCatalog(phaseId)
   }
 
   function renderPriorityAreas () {
@@ -1499,6 +1622,7 @@
   }
 
   function selectPriorityArea (areaId) {
+    if (selectedWorkflowPhaseId !== 'orientacao') return
     selectedPriorityAreaId = areaId
     activePriorityAction = ''
     document.querySelectorAll('.spfm-area-button').forEach((button) => {
@@ -1556,14 +1680,16 @@
     appendTopics(coreTopics, coreTopics.length && otherTopics.length ? 'PRINCIPAIS' : '')
     appendTopics(otherTopics, coreTopics.length && otherTopics.length ? 'OUTROS' : '')
     select.disabled = visibleTopics.length === 0
-    topicStep.hidden = !selectedPriorityAreaId
+    topicStep.hidden = selectedWorkflowPhaseId !== 'orientacao' || !selectedPriorityAreaId
     renderPriorityRoute()
     if (status) {
-      status.textContent = !selectedPriorityAreaId
-        ? 'Selecione uma área.'
-        : visibleTopics.length
-          ? 'Selecione o assunto.'
-          : 'Use a busca completa abaixo.'
+      status.textContent = !selectedWorkflowPhaseId
+        ? 'Selecione a fase do atendimento.'
+        : !selectedPriorityAreaId
+          ? 'Selecione uma área de orientação.'
+          : visibleTopics.length
+            ? 'Selecione o assunto.'
+            : 'Use a busca completa abaixo.'
     }
   }
 
@@ -1572,6 +1698,7 @@
     const catalog = document.querySelector('#spfm-script-catalog')
     const toggleButton = document.querySelector('#spfm-script-toggle')
     const phase = document.querySelector('#spfm-script-phase')
+    const phaseField = document.querySelector('#spfm-script-phase-field')
     const search = document.querySelector('#spfm-script-search')
     const result = document.querySelector('#spfm-script-result')
     const status = document.querySelector('#spfm-priority-status')
@@ -1588,6 +1715,7 @@
     const identityFields = document.querySelector('#spfm-identity-fields')
     if (processSetup) processSetup.hidden = true
     if (identityFields) identityFields.hidden = false
+    if (phaseField) phaseField.hidden = true
     setEmailPreparationVisible(true)
     toggleButton.textContent = CATALOG_CLOSE_LABEL
     priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
@@ -1600,7 +1728,7 @@
     if (mappedScriptAvailable) result.value = route.scriptId
     renderSelectedResponseScript()
     updateMissingDocumentsVisibility()
-    if (status) status.textContent = 'Resposta principal selecionada. Confira ou troque a fase antes de inserir.'
+    if (status) status.textContent = 'Resposta principal selecionada. Confira antes de inserir.'
     catalog.scrollIntoView?.({ block: 'nearest' })
   }
 
@@ -2371,10 +2499,14 @@
         </div>
 
         <section class="spfm-priority-workflow">
-          <div class="spfm-step-label">1. ÁREA</div>
-          <div id="spfm-priority-areas" class="spfm-area-grid"></div>
+          <div class="spfm-step-label">1. FASE DO ATENDIMENTO</div>
+          <div id="spfm-priority-phases" class="spfm-phase-grid"></div>
+          <div id="spfm-area-step" class="spfm-step" hidden>
+            <div class="spfm-step-label">2. ÁREA DE ORIENTAÇÃO</div>
+            <div id="spfm-priority-areas" class="spfm-area-grid"></div>
+          </div>
           <div id="spfm-topic-step" class="spfm-step" hidden>
-            <div class="spfm-step-label">2. ASSUNTO</div>
+            <div class="spfm-step-label">3. ASSUNTO</div>
             <select id="spfm-priority-topic">
               <option value="">Selecione o assunto</option>
             </select>
@@ -2384,7 +2516,7 @@
             </label>
           </div>
           <div id="spfm-action-step" class="spfm-step" hidden>
-            <div class="spfm-step-label">3. AÇÃO</div>
+            <div class="spfm-step-label">4. AÇÃO</div>
             <div class="spfm-decision-grid">
               <button id="spfm-priority-reply" type="button" disabled>RESPONDER</button>
               <button id="spfm-priority-missing" type="button" disabled hidden>COBRAR DOCUMENTOS</button>
@@ -2417,12 +2549,12 @@
           <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
             <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
           </section>
-          <div id="spfm-priority-status" class="spfm-mini-status">Selecione uma área.</div>
+          <div id="spfm-priority-status" class="spfm-mini-status">Selecione a fase do atendimento.</div>
         </section>
 
         <button id="spfm-script-toggle" class="spfm-catalog-toggle" type="button">BUSCAR OUTRO ATENDIMENTO</button>
         <div id="spfm-script-catalog" class="spfm-script-catalog" hidden>
-          <label>
+          <label id="spfm-script-phase-field">
             <span>Fase do atendimento</span>
             <select id="spfm-script-phase">
               <option value="">Carregando fases...</option>

@@ -327,7 +327,7 @@ if (catalog) {
   }
 
   const priorityTopics = catalog.fastMailPriorityTopics
-  expect(Array.isArray(priorityTopics) && priorityTopics.length === 16, 'FAST MAIL: 16 assuntos principais obrigatórios')
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 17, 'FAST MAIL: 17 assuntos principais obrigatórios')
   if (Array.isArray(priorityTopics)) {
     expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
     const priorityAreaIds = new Set((areas || []).map((area) => area.id))
@@ -385,11 +385,15 @@ if (catalog) {
       expect(processType?.missingDocuments?.length > 0, `FAST MAIL: ${topicId} deve ter checklist`)
     })
 
-    ;['cancelamento-comunicacao-venda', 'comunicacao-venda', 'intencao-venda', 'motor', 'chassi'].forEach((topicId) => {
+    ;['cancelamento-comunicacao-venda', 'comunicacao-venda', 'intencao-venda', 'motor', 'chassi', 'leilao-veiculos'].forEach((topicId) => {
       const topic = priorityTopics.find((item) => item.id === topicId)
       expect(topic?.canOpenProcess === false, `FAST MAIL: ${topicId} deve ser somente orientação`)
       expect(!topic?.processId, `FAST MAIL: ${topicId} não pode apontar para o FAST PROC`)
     })
+    const auctionTopic = priorityTopics.find((item) => item.id === 'leilao-veiculos')
+    const auctionScript = scriptCatalog?.scripts?.find((item) => item.id === auctionTopic?.scriptId)
+    expect(auctionScript?.phase === 'orientacao', 'FAST MAIL: leilão deve usar o script da fase de orientação')
+    expect(auctionScript?.group === 'Leilão', 'FAST MAIL: leilão deve preservar o grupo de origem do Trellinho')
 
     const expectedPriorityAreas = {
       'devolucao-taxas': 'taxas',
@@ -406,6 +410,7 @@ if (catalog) {
       'intencao-venda': 'veiculos',
       motor: 'veiculos',
       chassi: 'veiculos',
+      'leilao-veiculos': 'veiculos',
       'generico-veiculos': 'veiculos',
       oficios: 'oficios'
     }

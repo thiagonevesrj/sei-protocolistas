@@ -160,6 +160,46 @@
   padding-top: 2px;
 }
 
+#sei-protocolistas-fast-mail-status .spfm-phase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-phase-grid .spfm-phase-button {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 8px;
+  color: #e8eef7;
+  text-align: left;
+  background: #06172d;
+  border: 1px solid rgba(174, 189, 208, 0.24);
+  border-radius: 7px;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-phase-grid .spfm-phase-button.is-active {
+  color: #071224;
+  background: #f1c44f;
+  border-color: #f1c44f;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-phase-code {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-phase-name {
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #sei-protocolistas-fast-mail-status .spfm-area-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

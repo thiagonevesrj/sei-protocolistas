@@ -32,7 +32,7 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 - [ ] Salvar um número de protocolista fictício.
 - [ ] Fechar e reabrir a Central.
 - [ ] Confirmar que a configuração permaneceu no navegador.
-- [ ] Confirmar que o FAST MAIL mostra 16 assuntos operacionais e destaca os sete principais.
+- [ ] Confirmar que o FAST MAIL mostra 17 assuntos operacionais e destaca os sete principais.
 - [ ] Confirmar `Devolução de Taxas → DIVAF → DAF`.
 - [ ] Abrir cada um dos cinco modelos de resposta.
 - [ ] Editar um modelo, salvar e confirmar que ele permanece após reabrir a Central.
