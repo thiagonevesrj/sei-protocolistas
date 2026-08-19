@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "updatedAt": "2026-08-10",
+  "updatedAt": "2026-08-19",
   "catalogScope": "priority",
   "catalogLabel": "Procedimentos prioritários — navegação por área",
   "usageSample": {
@@ -407,16 +407,31 @@
       "quickTrigger": "TROCA-CLIN",
       "priority": true,
       "responseModel": "standard",
-      "documentsStatus": "operator-confirmed-2026-08-10",
+      "documentsStatus": "operator-confirmed-2026-08-19",
       "category": "habilitacao",
       "citizenObjective": "Solicitar troca ou retirada de clínica",
       "missingDocuments": [
         {
-          "id": "general-request",
-          "label": "Requerimento Geral",
-          "text": "Requerimento Geral com a exposição dos fatos e da solicitação, devidamente preenchido e assinado.",
-          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
-          "linkLabel": "Acessar o Requerimento Geral"
+          "id": "clinic-change-form",
+          "label": "Formulário de Troca de Clínica",
+          "text": "Formulário de Troca de Clínica devidamente preenchido e assinado a caneta ou por Certificação Digital."
+        },
+        {
+          "id": "supporting-document",
+          "label": "Documento probatório, quando houver",
+          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver."
+        },
+        {
+          "id": "renach",
+          "label": "Formulário RENACH, caso possua",
+          "text": "Formulário RENACH do condutor ou candidato, caso possua."
+        },
+        {
+          "id": "workplace-declaration",
+          "label": "Declaração do trabalho, quando aplicável",
+          "text": "Declaração do trabalho contendo o endereço laboral do condutor ou candidato, quando aplicável.",
+          "link": "https://www.detran.rj.gov.br/images/ascom/pdf/formularios/HAB0135_comprovacao_local_trabalho.pdf",
+          "linkLabel": "Acessar a Declaração de Comprovação de Local de Trabalho"
         },
         {
           "id": "identification",
@@ -437,14 +452,24 @@
           "linkIntro": "Caso não possua comprovante de residência em seu nome, utilize a Declaração de Residência disponível abaixo:"
         },
         {
-          "id": "renach",
-          "label": "Formulário RENACH",
-          "text": "Formulário RENACH do condutor ou candidato."
+          "id": "lawyer-representation",
+          "label": "Representação por advogado",
+          "text": "Procuração Simples e Carteira da Ordem dos Advogados do Brasil, quando houver representação por advogado."
         },
         {
-          "id": "workplace-declaration",
-          "label": "Declaração do trabalho, quando aplicável",
-          "text": "Declaração emitida pelo trabalho contendo o endereço laboral do condutor ou candidato, quando aplicável."
+          "id": "documentary-agent-representation",
+          "label": "Representação por despachante documentalista",
+          "text": "Anotação de Serviço Documental (ASD) e Carteira do Conselho Regional dos Despachantes Documentalistas do Estado do Rio de Janeiro, quando houver representação por despachante documentalista."
+        },
+        {
+          "id": "public-agent-representation",
+          "label": "Representação por despachante público",
+          "text": "Certificado Analítico e Carteira do Sindicato dos Despachantes, quando houver representação por despachante público."
+        },
+        {
+          "id": "other-representation",
+          "label": "Representação por outro procurador",
+          "text": "Procuração Pública, Documento de Identidade e CPF do procurador, quando houver representação por terceiro que não seja advogado ou despachante."
         }
       ],
       "source": {
@@ -453,7 +478,7 @@
         "card": "Troca de clínica",
         "cardId": "64fe3bd5d6087d02fc82d184",
         "lastActivity": "2026-07-14",
-        "bodyReference": "Script real confirmado pelo operador em 2026-08-10",
+        "bodyReference": "Script atual confirmado pelo operador em 2026-08-19; substitui a resposta antiga extraída do Trello",
         "destinationReference": "Trello HAB - TROCA DE CLINICA: SETOR DESTINO SERVMT, confirmado pelo operador em 2026-08-10"
       }
     },

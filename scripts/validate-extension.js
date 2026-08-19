@@ -455,10 +455,10 @@ if (catalog) {
 
   const clinic = processTypes.find((item) => item.id === 'troca-retirada-clinica')
   const clinicDocumentIds = (clinic?.missingDocuments || []).map((document) => document.id)
-  expect(clinic?.documentsStatus === 'operator-confirmed-2026-08-10', 'Troca de clínica: fonte real deve estar confirmada')
-  expect(clinicDocumentIds.join(',') === 'general-request,identification,cpf,residence,renach,workplace-declaration', 'Troca de clínica: checklist deve seguir o script real')
+  expect(clinic?.documentsStatus === 'operator-confirmed-2026-08-19', 'Troca de clínica: fonte real atual deve estar confirmada')
+  expect(clinicDocumentIds.join(',') === 'clinic-change-form,supporting-document,renach,workplace-declaration,identification,cpf,residence,lawyer-representation,documentary-agent-representation,public-agent-representation,other-representation', 'Troca de clínica: checklist deve seguir o script confirmado em 19/08/2026')
   expect(clinic?.destinationUnit === 'SERVMT', 'Troca de clínica: destino deve ser SERVMT conforme Trello e SEI')
-  expect(!JSON.stringify(clinic).includes('HAB0135'), 'Troca de clínica: link inexistente da declaração de trabalho deve ser removido')
+  expect(JSON.stringify(clinic).includes('HAB0135_comprovacao_local_trabalho.pdf'), 'Troca de clínica: declaração de trabalho HAB0135 obrigatória')
 }
 
 if (responseModels) {
@@ -525,12 +525,17 @@ if (curatedResponses && scriptCatalog) {
 
   const clinicResponse = curatedScripts.find((script) => script.id === 'trello-64fe3bd5d6087d02fc82d184')
   const clinicBody = clinicResponse?.bodyLines?.join('\n') || ''
-  expect(clinicBody.includes('Requerimento Geral'), 'Troca de clínica: resposta deve usar Requerimento Geral')
-  expect(clinicBody.includes('Formulário RENACH'), 'Troca de clínica: RENACH deve ser obrigatório')
-  expect(clinicBody.includes('100 DPI'), 'Troca de clínica: regra de 100 DPI obrigatória')
-  expect(clinicBody.includes('2,9 MB'), 'Troca de clínica: limite de 2,9 MB obrigatório')
-  expect(!clinicBody.includes('FORMULÁRIO DE TROCA DE CLÍNICA'), 'Troca de clínica: formulário incorreto não pode retornar')
-  expect(!clinicBody.includes('HAB0135'), 'Troca de clínica: link inexistente não pode retornar')
+  expect(clinicResponse?.validation === 'operator-confirmed-2026-08-19', 'Troca de clínica: confirmação atual do operador obrigatória')
+  expect(clinicBody.includes('PRESENCIALMENTE ou POR E-MAIL'), 'Troca de clínica: duas formas de abertura obrigatórias')
+  expect(clinicBody.includes('agendamento-recursos-e-protocolo.html'), 'Troca de clínica: link de agendamento obrigatório')
+  expect(clinicBody.includes('FORMULÁRIO DE TROCA DE CLÍNICA'), 'Troca de clínica: formulário específico obrigatório')
+  expect(clinicBody.includes('Formulário RENACH; (Caso possua)'), 'Troca de clínica: RENACH deve permanecer condicional')
+  expect(clinicBody.includes('HAB0135_comprovacao_local_trabalho.pdf'), 'Troca de clínica: declaração de trabalho HAB0135 obrigatória')
+  expect(clinicBody.includes('arquivos que estão em NUVEM'), 'Troca de clínica: proibição de arquivos em nuvem obrigatória')
+  expect(clinicBody.includes('Os arquivos devem ser enviados em um único e-mail'), 'Troca de clínica: envio em um único e-mail obrigatório')
+  expect(!clinicBody.includes('Requerimento Geral'), 'Troca de clínica: resposta antiga com Requerimento Geral não pode retornar')
+  expect(!clinicBody.includes('100 DPI'), 'Troca de clínica: regra antiga de 100 DPI não pode retornar')
+  expect(!clinicBody.includes('2,9 MB'), 'Troca de clínica: limite antigo de 2,9 MB não pode retornar')
 }
 
 [
