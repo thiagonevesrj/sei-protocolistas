@@ -25,7 +25,7 @@
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
   const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
-  const PRIORITY_AREA_ORDER = ['habilitacao', 'veiculos', 'taxas', 'oficios']
+  const PRIORITY_AREA_ORDER = ['habilitacao', 'pericia-medica', 'veiculos', 'taxas', 'oficios']
   const CATALOG_OPEN_LABEL = 'BUSCAR OUTRO ATENDIMENTO'
   const CATALOG_CLOSE_LABEL = 'FECHAR BUSCA'
 

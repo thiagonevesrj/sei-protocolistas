@@ -398,7 +398,7 @@ if (catalog) {
     const expectedPriorityAreas = {
       'devolucao-taxas': 'taxas',
       'desistencia-categoria': 'habilitacao',
-      'pericia-medica-pcd': 'habilitacao',
+      'pericia-medica-pcd': 'pericia-medica',
       'troca-clinica': 'habilitacao',
       'rebaixamento-categoria': 'habilitacao',
       'retorno-categoria': 'habilitacao',

@@ -927,7 +927,7 @@
     {
       "id": "pericia-medica-pcd",
       "label": "Perícia médica — CNH PCD",
-      "area": "habilitacao",
+      "area": "pericia-medica",
       "corePriority": true,
       "corePriorityRank": 3,
       "recentUsageCount": 10,
@@ -1187,6 +1187,11 @@
         ]
       },
       {
+        "id": "pericia-medica",
+        "label": "Perícia médica",
+        "processId": "solicitacao-pericia-medica"
+      },
+      {
         "id": "veiculos",
         "label": "Veículos",
         "manualSelection": true,
@@ -1212,7 +1217,6 @@
         "manualSelection": true,
         "processIds": [
           "certidao-identificacao-civil",
-          "solicitacao-pericia-medica",
           "isencao-taxa",
           "averbacao-cnh-estrangeira"
         ]
