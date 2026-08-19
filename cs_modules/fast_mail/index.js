@@ -25,7 +25,9 @@
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
   const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
-  const PRIORITY_AREA_ORDER = ['habilitacao', 'veiculos', 'taxas', 'oficios', 'outros']
+  const PRIORITY_AREA_ORDER = ['habilitacao', 'veiculos', 'taxas', 'oficios']
+  const CATALOG_OPEN_LABEL = 'BUSCAR OUTRO ATENDIMENTO'
+  const CATALOG_CLOSE_LABEL = 'FECHAR BUSCA'
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
@@ -1369,7 +1371,7 @@
       activePriorityAction = ''
       setEmailPreparationVisible(false)
     }
-    button.textContent = catalog.hidden ? 'OUTRO ATENDIMENTO' : 'FECHAR OUTRO ATENDIMENTO'
+    button.textContent = catalog.hidden ? CATALOG_OPEN_LABEL : CATALOG_CLOSE_LABEL
     if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
   }
 
@@ -1403,6 +1405,7 @@
       button.type = 'button'
       button.className = 'spfm-area-button'
       button.dataset.areaId = areaId
+      button.setAttribute('aria-pressed', 'false')
       button.textContent = priorityAreaLabel(areaId)
       button.addEventListener('click', () => selectPriorityArea(areaId))
       container.appendChild(button)
@@ -1462,14 +1465,16 @@
     const hasMissingDocuments = Boolean(route?.processId && missingDocumentsForProcedure(route.processId).length)
     actionStep.hidden = !route
     replyButton.disabled = !route?.scriptId
+    replyButton.classList.toggle('is-primary', Boolean(route && !route.canOpenProcess))
     missingButton.disabled = !hasMissingDocuments
     missingButton.hidden = !hasMissingDocuments
     openButton.disabled = !route?.canOpenProcess || !route?.processId
+    openButton.classList.toggle('is-primary', Boolean(route?.canOpenProcess && route?.processId))
     status.textContent = !route
-      ? 'Escolha o assunto do e-mail.'
+      ? 'Selecione o assunto.'
       : route.canOpenProcess
-        ? 'Escolha: orientar, solicitar documentos faltantes ou abrir o processo.'
-        : route.blockedReason || 'Este atendimento deve ser respondido por e-mail.'
+        ? 'Selecione uma ação.'
+        : route.blockedReason || 'Atendimento somente por resposta.'
 
     if (route?.processId) syncRouteWithProcedure(route.processId)
     else syncRouteWithProcedure('')
@@ -1489,7 +1494,7 @@
     if (missingBox) missingBox.hidden = true
     setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
-    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
     renderPriorityRoute()
   }
 
@@ -1497,7 +1502,9 @@
     selectedPriorityAreaId = areaId
     activePriorityAction = ''
     document.querySelectorAll('.spfm-area-button').forEach((button) => {
-      button.classList.toggle('is-active', button.dataset.areaId === areaId)
+      const isActive = button.dataset.areaId === areaId
+      button.classList.toggle('is-active', isActive)
+      button.setAttribute('aria-pressed', String(isActive))
     })
     const topicSelect = document.querySelector('#spfm-priority-topic')
     if (topicSelect) topicSelect.value = ''
@@ -1514,7 +1521,7 @@
     if (actionStep) actionStep.hidden = true
     setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
-    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
 
     renderPriorityTopics()
 
@@ -1553,10 +1560,10 @@
     renderPriorityRoute()
     if (status) {
       status.textContent = !selectedPriorityAreaId
-        ? 'Escolha primeiro a área do atendimento.'
+        ? 'Selecione uma área.'
         : visibleTopics.length
-          ? 'Agora escolha o assunto do e-mail.'
-          : 'Nenhum atalho principal nesta área. Use Outro atendimento.'
+          ? 'Selecione o assunto.'
+          : 'Use a busca completa abaixo.'
     }
   }
 
@@ -1582,7 +1589,7 @@
     if (processSetup) processSetup.hidden = true
     if (identityFields) identityFields.hidden = false
     setEmailPreparationVisible(true)
-    toggleButton.textContent = 'FECHAR RESPOSTAS'
+    toggleButton.textContent = CATALOG_CLOSE_LABEL
     priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
     const mappedScript = responseScripts.find((script) => script.id === route.scriptId)
     phase.value = mappedScript?.phase || ''
@@ -1615,7 +1622,7 @@
     if (identityFields) identityFields.hidden = false
     setEmailPreparationVisible(true)
     const toggleButton = document.querySelector('#spfm-script-toggle')
-    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
     syncRouteWithProcedure(route.processId)
     setManualRouteFieldsVisible(false)
     updateMissingDocumentsVisibility()
@@ -1642,7 +1649,7 @@
     if (identityFields) identityFields.hidden = false
     setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
-    if (toggleButton) toggleButton.textContent = 'OUTRO ATENDIMENTO'
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
     syncRouteWithProcedure(route.processId)
     setManualRouteFieldsVisible(false)
     if (status) status.textContent = 'Confira os dados abaixo e abra o processo no FAST PROC.'
@@ -2348,23 +2355,26 @@
     panel.innerHTML = `
       <div id="spfm-drag-handle" class="spfm-header">
         <div>
-          <div class="spfm-title">SEI PROTOCOLISTAS</div>
-          <div class="spfm-subtitle">FAST MAIL</div>
+          <div class="spfm-brand-line">
+            <div class="spfm-title">SEI PROTOCOLISTAS</div>
+            <div class="spfm-subtitle">FAST MAIL</div>
+          </div>
         </div>
         <button id="spfm-collapse" class="spfm-icon-button" type="button" title="Recolher FAST MAIL">−</button>
       </div>
 
       <div id="spfm-panel-body" class="spfm-panel-body">
-        <div class="spfm-summary">
+        <div class="spfm-summary" title="Contexto do atendimento atual">
           <strong id="spfm-operator">Identificando...</strong>
+          <span class="spfm-summary-divider" aria-hidden="true">•</span>
           <span id="spfm-email">Abra uma mensagem</span>
         </div>
 
         <section class="spfm-priority-workflow">
-          <div class="spfm-section-title">1. ESCOLHA A ÁREA</div>
+          <div class="spfm-step-label">1. ÁREA</div>
           <div id="spfm-priority-areas" class="spfm-area-grid"></div>
           <div id="spfm-topic-step" class="spfm-step" hidden>
-            <div class="spfm-section-title">2. ESCOLHA O ASSUNTO</div>
+            <div class="spfm-step-label">2. ASSUNTO</div>
             <select id="spfm-priority-topic">
               <option value="">Selecione o assunto</option>
             </select>
@@ -2374,10 +2384,10 @@
             </label>
           </div>
           <div id="spfm-action-step" class="spfm-step" hidden>
-            <div class="spfm-section-title">3. ESCOLHA A AÇÃO</div>
+            <div class="spfm-step-label">3. AÇÃO</div>
             <div class="spfm-decision-grid">
-              <button id="spfm-priority-reply" type="button" disabled>ORIENTAR / RESPONDER</button>
-              <button id="spfm-priority-missing" type="button" disabled hidden>DOCUMENTOS FALTANTES</button>
+              <button id="spfm-priority-reply" type="button" disabled>RESPONDER</button>
+              <button id="spfm-priority-missing" type="button" disabled hidden>COBRAR DOCUMENTOS</button>
               <button id="spfm-priority-open" type="button" disabled>ABRIR PROCESSO</button>
             </div>
           </div>
@@ -2407,10 +2417,10 @@
           <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
             <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
           </section>
-          <div id="spfm-priority-status" class="spfm-mini-status">Escolha primeiro a área do atendimento.</div>
+          <div id="spfm-priority-status" class="spfm-mini-status">Selecione uma área.</div>
         </section>
 
-        <button id="spfm-script-toggle" class="spfm-secondary" type="button">OUTRO ATENDIMENTO</button>
+        <button id="spfm-script-toggle" class="spfm-catalog-toggle" type="button">BUSCAR OUTRO ATENDIMENTO</button>
         <div id="spfm-script-catalog" class="spfm-script-catalog" hidden>
           <label>
             <span>Fase do atendimento</span>
@@ -2537,6 +2547,9 @@
     if (emailElement) {
       emailElement.textContent = senderEmail ||
         'Não identificado no cabeçalho atual'
+      emailElement.title = senderEmail
+        ? `Remetente: ${senderEmail}`
+        : 'Remetente não identificado no cabeçalho atual'
     }
 
     if (IS_COMPOSE_WINDOW) {
