@@ -550,11 +550,16 @@ if (curatedResponses && scriptCatalog) {
   'cs_modules/fast_mail/index.js',
   'cs_modules/fast_mail/styles.css',
   'cs_modules/fast_proc_handoff/index.js',
+  'data/relatorio-importacao-trellinho.json',
+  'data/trellinho-import-rules.json',
+  'docs/ATUALIZACAO-TRELLINHO.md',
   'docs/CHECKPOINT-OPERACIONAL-0.5.0.md',
   'docs/CHECKPOINT-TRANSICAO-FAST-MAIL-TRELINHO-2026-08-14.md',
   'docs/CHECKLIST-REGRESSAO.md',
   'docs/PLANO-MESTRE.md',
-  'docs/REGRAS-FUNCIONAIS.md'
+  'docs/REGRAS-FUNCIONAIS.md',
+  'scripts/import-trellinho-html.js',
+  'scripts/test-trellinho-import.js'
 ].forEach((file) => expectFile(file, 'Linha de base funcional'))
 
 if (errors.length) {
