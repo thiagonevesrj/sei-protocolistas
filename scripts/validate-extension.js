@@ -394,6 +394,7 @@ if (catalog) {
     const auctionScript = scriptCatalog?.scripts?.find((item) => item.id === auctionTopic?.scriptId)
     expect(auctionScript?.phase === 'orientacao', 'FAST MAIL: leilão deve usar o script da fase de orientação')
     expect(auctionScript?.group === 'Leilão', 'FAST MAIL: leilão deve preservar o grupo de origem do Trellinho')
+    expect(auctionTopic?.blockedReason?.includes('destino COMISLE estão confirmados'), 'FAST MAIL: leilão deve informar que o destino COMISLE está confirmado')
 
     const expectedPriorityAreas = {
       'devolucao-taxas': 'taxas',

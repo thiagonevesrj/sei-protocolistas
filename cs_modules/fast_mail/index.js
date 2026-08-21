@@ -1863,7 +1863,7 @@
     const procedureId = document.querySelector('#spfm-procedure')?.value || ''
     const processType = processTypeById(procedureId)
     const manualDestination = cleanValue(document.querySelector('#spfm-destination')?.value)
-    const scriptDestination = activePriorityAction === 'catalog'
+    const scriptDestination = ['catalog', 'reply'].includes(activePriorityAction)
       ? cleanValue(selectedResponseScript()?.routing?.destinationUnit)
       : ''
     return manualDestination || processType?.destinationUnit || scriptDestination

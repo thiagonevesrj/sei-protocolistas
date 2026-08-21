@@ -1101,7 +1101,7 @@
       "recentUsageCount": 0,
       "searchQuery": "leilão",
       "canOpenProcess": false,
-      "blockedReason": "A orientação está disponível. A abertura de processo depende da confirmação do tipo SEI e do destino.",
+      "blockedReason": "A orientação e o destino COMISLE estão confirmados. A abertura de processo depende da confirmação do tipo SEI.",
       "scriptId": "trello-64fa2d423054d29c17159a38",
       "responseScriptIds": [
         "trello-64fa2d423054d29c17159a38"
