@@ -1,5 +1,11 @@
 {
   "schemaVersion": 1,
   "aliases": {},
-  "duplicateChoices": {}
+  "duplicateChoices": {},
+  "routingOverrides": {
+    "orientacao|leilao|leilao geral comisle": {
+      "destinationUnit": "COMISLE",
+      "validation": "operator-confirmed-2026-08-21"
+    }
+  }
 }

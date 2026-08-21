@@ -31,6 +31,16 @@ const incomingRaw = [
   },
   {
     fase: 'FASE 02 - Orientação',
+    lista: 'Leilão',
+    nome: 'Leilão - Geral (COMISLE)',
+    texto: 'Resposta para leilão.',
+    presencial: false,
+    nao_abre: false,
+    destino_processo: null,
+    tipologia_processual: null
+  },
+  {
+    fase: 'FASE 02 - Orientação',
     lista: 'Veículos',
     nome: 'Novo atendimento',
     texto: 'Resposta nova.',
@@ -92,6 +102,16 @@ const currentCatalog = {
       body: 'Resposta preservada.',
       status: 'legado-vigente',
       source: { cardId: 'card-missing' }
+    },
+    {
+      id: 'trello-auction',
+      title: 'Leilão - Geral (COMISLE)',
+      phase: 'orientacao',
+      phaseLabel: 'Orientação',
+      group: 'Leilão',
+      body: 'Resposta para leilão.',
+      status: 'legado-vigente',
+      source: { cardId: 'card-auction' }
     }
   ]
 }
@@ -141,6 +161,12 @@ const conflict = first.report.conflictingDuplicates[0]
 const selectedHash = conflict.candidates[1].bodyHash
 const rules = {
   aliases: {},
+  routingOverrides: {
+    [stableKey('orientacao', 'Leilão', 'Leilão - Geral (COMISLE)')]: {
+      destinationUnit: 'COMISLE',
+      validation: 'operator-confirmed'
+    }
+  },
   duplicateChoices: {
     [stableKey('identificacao', 'Triagem', 'Duplicidade conflitante')]: {
       bodyHash: selectedHash
@@ -161,5 +187,13 @@ assert.strictEqual(resolved.report.summary.conflictingDuplicates, 0)
 assert.ok(resolved.catalog.scripts.some((script) => script.body === 'Versão B.'))
 assert.ok(resolved.catalog.scripts.some((script) => script.id === existingId))
 assert.ok(resolved.catalog.scripts.some((script) => script.id === missingId))
+assert.strictEqual(
+  resolved.catalog.scripts.find((script) => script.title === 'Leilão - Geral (COMISLE)')?.routing?.destinationUnit,
+  'COMISLE'
+)
+assert.strictEqual(
+  resolved.catalog.scripts.find((script) => script.title === 'Leilão - Geral (COMISLE)')?.routing?.validation,
+  'operator-confirmed'
+)
 
 console.log('Importação segura do Trellinho validada.')

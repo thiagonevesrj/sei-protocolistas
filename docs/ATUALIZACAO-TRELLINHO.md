@@ -29,6 +29,7 @@ Cartões idênticos duplicados são consolidados automaticamente. Um cartão ant
 - Scripts novos recebem um ID determinístico derivado de sua chave estrutural.
 - Renomeações ou mudanças de grupo podem ser ligadas ao ID anterior por `aliases` em `data/trellinho-import-rules.json`.
 - Duplicidades conflitantes só podem ser resolvidas por uma escolha explícita de `bodyHash` em `duplicateChoices`.
+- Rotas confirmadas pelo operador que ainda não existam no HTML podem ser preservadas por `routingOverrides`, usando a chave estrutural do script. A regra atual mantém `Leilão - Geral (COMISLE)` com destino `COMISLE`.
 - Destinos divergentes são relatados, mas nunca substituem automaticamente um destino confirmado pelo operador.
 - Respostas curadas são relatadas como protegidas e continuam prevalecendo no FAST MAIL.
 
@@ -45,7 +46,7 @@ O Trellinho atual fornece:
 - `destino_processo` → destino informado na fonte;
 - `tipologia_processual` → nomenclatura e link do tipo de processo, quando disponíveis.
 
-Esses dados tornam todas as respostas pesquisáveis de forma dinâmica. O botão de abertura no FAST PROC continua condicionado à existência de processo, destino e checklist confirmados no catálogo operacional.
+Esses dados tornam todas as respostas pesquisáveis de forma dinâmica. Ao preparar o assunto, o FAST MAIL pode usar o destino estruturado do script selecionado. O botão de abertura no FAST PROC continua condicionado à existência de processo, destino e checklist confirmados no catálogo operacional.
 
 ## Validação
 

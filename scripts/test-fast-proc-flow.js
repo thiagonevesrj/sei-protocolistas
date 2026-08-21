@@ -529,6 +529,9 @@ function testFastMailProgressiveNavigation () {
   assert.ok(styles.includes('.spfm-decision-grid button.is-primary'))
   assert.ok(styles.includes('.spfm-priority-workflow .spfm-check'))
   assert.ok(!source.includes('spfm-topic-button'))
+  assert.ok(source.includes("activePriorityAction === 'catalog'"))
+  assert.ok(source.includes('selectedResponseScript()?.routing?.destinationUnit'))
+  assert.ok(source.includes("button.textContent = destination\n          ? 'TRIAGEM PREPARADA'"))
 }
 
 function testUnusedSeiFieldsAreHidden () {

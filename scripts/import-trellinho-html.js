@@ -97,10 +97,28 @@ function normalizeIncomingScript (script, index) {
     destinationUnit: String(script.destino_processo || '').trim() || null,
     seiProcessType: tipologia.name,
     seiProcessTypeUrl: tipologia.url,
+    routingValidation: null,
     presencialOnly: Boolean(script.presencial),
     noProcess: Boolean(script.nao_abre),
     stableKey: stableKey(phase?.id || '', group, title)
   }
+}
+
+function applyRoutingOverrides (incomingScripts, rules) {
+  const overrides = rules.routingOverrides || {}
+
+  return incomingScripts.map((script) => {
+    const override = overrides[script.stableKey]
+    if (!override) return script
+
+    return {
+      ...script,
+      destinationUnit: String(override.destinationUnit || script.destinationUnit || '').trim() || null,
+      seiProcessType: String(override.seiProcessType || script.seiProcessType || '').trim() || null,
+      seiProcessTypeUrl: String(override.seiProcessTypeUrl || script.seiProcessTypeUrl || '').trim() || null,
+      routingValidation: String(override.validation || '').trim() || null
+    }
+  })
 }
 
 function duplicateSignature (script) {
@@ -208,7 +226,8 @@ function createCatalogScript (incoming, current, inputName, matchType) {
     routing: {
       destinationUnit: incoming.destinationUnit,
       seiProcessType: incoming.seiProcessType,
-      seiProcessTypeUrl: incoming.seiProcessTypeUrl
+      seiProcessTypeUrl: incoming.seiProcessTypeUrl,
+      validation: incoming.routingValidation
     },
     source: {
       ...currentSource,
@@ -248,7 +267,7 @@ function collectRequiredScriptIds (processCatalog) {
 }
 
 function buildImport ({ incomingRaw, currentCatalog, processCatalog, curatedResponses, rules, inputName }) {
-  const incoming = incomingRaw.map(normalizeIncomingScript)
+  const incoming = applyRoutingOverrides(incomingRaw.map(normalizeIncomingScript), rules)
   const unknownPhases = [...new Set(incoming.filter((script) => !script.phase).map((script) => script.originalPhase))]
   const duplicates = resolveDuplicates(incoming, rules)
   const currentByKey = new Map(currentCatalog.scripts.map((script) => [currentScriptKey(script), script]))

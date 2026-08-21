@@ -1863,7 +1863,10 @@
     const procedureId = document.querySelector('#spfm-procedure')?.value || ''
     const processType = processTypeById(procedureId)
     const manualDestination = cleanValue(document.querySelector('#spfm-destination')?.value)
-    return manualDestination || processType?.destinationUnit || ''
+    const scriptDestination = activePriorityAction === 'catalog'
+      ? cleanValue(selectedResponseScript()?.routing?.destinationUnit)
+      : ''
+    return manualDestination || processType?.destinationUnit || scriptDestination
   }
 
   function updateDestinationField (useProcedureDefault = true) {
@@ -2367,7 +2370,6 @@
       if (!field) throw new Error('Abra a tela de resposta para editar o assunto.')
 
       const currentSubject = cleanValue(field.value || field.textContent)
-      const procedureId = document.querySelector('#spfm-procedure')?.value || ''
       const destination = selectedDestination()
 
       if (/\bTRIAGEM\b/i.test(currentSubject)) {
@@ -2389,7 +2391,7 @@
       await sleep(350)
 
       if (button) {
-        button.textContent = procedureId
+        button.textContent = destination
           ? 'TRIAGEM PREPARADA'
           : 'TRIAGEM CRIADA COMO UNDEFINED'
       }

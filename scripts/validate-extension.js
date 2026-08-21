@@ -513,6 +513,10 @@ if (scriptCatalog) {
     expect(typeof script.body === 'string', `${prefix}: body deve ser texto`)
     expect(Boolean(script.source?.cardId), `${prefix}: origem do Trello obrigatória`)
   })
+
+  const auction = scripts.find((script) => script.id === 'trello-64fa2d423054d29c17159a38')
+  expect(Boolean(auction), 'Leilão: script geral da COMISLE obrigatório')
+  expect(auction?.routing?.destinationUnit === 'COMISLE', 'Leilão: destino estruturado deve ser COMISLE')
 }
 
 if (curatedResponses && scriptCatalog) {
