@@ -10,13 +10,13 @@
   const CATALOG_PATH = '../data/catalogo-processos.json'
   const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
   const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
+  const OPEN_WEBMAIL_MESSAGE = 'sei-protocolistas:open-webmail'
   const FEEDBACK_SENSITIVE_PATTERNS = [
     { label: 'e-mail', pattern: /[\w.+-]+@[\w.-]+\.[a-z]{2,}/i },
     { label: 'CPF', pattern: /\b\d{3}[.\s-]?\d{3}[.\s-]?\d{3}[-\s]?\d{2}\b/ },
     { label: 'número de processo', pattern: /\b(?:SEI[-\s:]*)?\d{5,6}[./-]\d{5,7}[./-]\d{4}(?:-\d{2})?\b/i }
   ]
 
-  const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 
   let processes = []
@@ -188,8 +188,17 @@
     }
   }
 
-  function openWebmail () {
-    window.open(WEBMAIL_URL, '_blank', 'noopener')
+  async function openWebmail () {
+    try {
+      await runtimeMessage({ type: OPEN_WEBMAIL_MESSAGE })
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha ao abrir ou localizar o Webmail:', error)
+      message(
+        '#webmail-credentials-message',
+        'Não foi possível abrir o Webmail. Feche abas com erro e tente novamente.',
+        'error'
+      )
+    }
   }
 
   function openSei () {
@@ -240,7 +249,7 @@
     }
 
     await setConfiguredOperatorFromWebmail(operator.email)
-    openWebmail()
+    await openWebmail()
   }
 
   async function saveSeiCredentialsAndOpen (event) {

@@ -8,10 +8,12 @@ const RETURN_TO_EMAIL_MESSAGE = 'sei-protocolistas:return-fast-mail'
 const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
 const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
 const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
+const OPEN_WEBMAIL_MESSAGE = 'sei-protocolistas:open-webmail'
 const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
 const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
 const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
 const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
+const WEBMAIL_MATCH_PATTERN = 'https://venus2.detran.rj.gov.br/owa/*'
 const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
 
@@ -25,6 +27,50 @@ function callApi (target, method, ...args) {
       else resolve(result)
     })
   })
+}
+
+function webmailTabScore (tab) {
+  const isCompose = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(tab.url || '')
+  return (isCompose ? 0 : 100) +
+    (tab.active ? 10 : 0) +
+    Number(tab.lastAccessed || 0) / 1e15
+}
+
+async function focusBrowserTab (tab) {
+  await callApi(api.tabs, 'update', tab.id, { active: true })
+
+  if (tab.windowId != null && api.windows?.update) {
+    try {
+      await callApi(api.windows, 'update', tab.windowId, { focused: true })
+    } catch (error) {
+      console.warn('[SEI Protocolistas] A aba existe, mas a janela não pôde receber foco:', error)
+    }
+  }
+}
+
+async function openOrReuseWebmail (active = true) {
+  const tabs = await callApi(api.tabs, 'query', {
+    url: WEBMAIL_MATCH_PATTERN
+  })
+  const existing = (tabs || [])
+    .filter((tab) => tab?.id)
+    .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0]
+
+  if (existing) {
+    if (active) await focusBrowserTab(existing)
+    return { tab: existing, reused: true }
+  }
+
+  const tab = await callApi(api.tabs, 'create', {
+    url: WEBMAIL_URL,
+    active
+  })
+  return { tab, reused: false }
+}
+
+async function openWebmail () {
+  const result = await openOrReuseWebmail(true)
+  return { ok: true, tabId: result.tab.id, reused: result.reused }
 }
 
 async function readRoutes () {
@@ -147,19 +193,22 @@ async function openFeedbackCompose (message) {
 }
 
 async function openWorkdaySystems () {
-  const webmailTab = await callApi(api.tabs, 'create', {
-    url: WEBMAIL_URL,
-    active: false
-  })
+  const webmailResult = await openOrReuseWebmail(false)
+  const webmailTab = webmailResult.tab
 
   try {
     const seiTab = await callApi(api.tabs, 'create', {
       url: SEI_LOGIN_URL,
       active: true
     })
-    return { ok: true, webmailTabId: webmailTab.id, seiTabId: seiTab.id }
+    return {
+      ok: true,
+      webmailTabId: webmailTab.id,
+      webmailReused: webmailResult.reused,
+      seiTabId: seiTab.id
+    }
   } catch (error) {
-    await callApi(api.tabs, 'update', webmailTab.id, { active: true })
+    await focusBrowserTab(webmailTab)
     throw error
   }
 }
@@ -180,6 +229,8 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     task = openFeedbackCompose(message)
   } else if (message?.type === OPEN_WORKDAY_SYSTEMS_MESSAGE) {
     task = openWorkdaySystems()
+  } else if (message?.type === OPEN_WEBMAIL_MESSAGE) {
+    task = openWebmail()
   } else if (message?.type === GET_CURRENT_TAB_MESSAGE) {
     task = Promise.resolve(currentTab(sender))
   } else {
