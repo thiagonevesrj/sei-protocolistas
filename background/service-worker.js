@@ -30,10 +30,23 @@ function callApi (target, method, ...args) {
 }
 
 function webmailTabScore (tab) {
-  const isCompose = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(tab.url || '')
+  const isCompose = isWebmailComposeTab(tab)
   return (isCompose ? 0 : 100) +
     (tab.active ? 10 : 0) +
     Number(tab.lastAccessed || 0) / 1e15
+}
+
+function isWebmailComposeTab (tab) {
+  return /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(tab?.url || '')
+}
+
+async function findReusableWebmailTab (includeCompose = true) {
+  const tabs = await callApi(api.tabs, 'query', {
+    url: WEBMAIL_MATCH_PATTERN
+  })
+  return (tabs || [])
+    .filter((tab) => tab?.id && (includeCompose || !isWebmailComposeTab(tab)))
+    .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0] || null
 }
 
 async function focusBrowserTab (tab) {
@@ -49,12 +62,7 @@ async function focusBrowserTab (tab) {
 }
 
 async function openOrReuseWebmail (active = true) {
-  const tabs = await callApi(api.tabs, 'query', {
-    url: WEBMAIL_MATCH_PATTERN
-  })
-  const existing = (tabs || [])
-    .filter((tab) => tab?.id)
-    .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0]
+  const existing = await findReusableWebmailTab()
 
   if (existing) {
     if (active) await focusBrowserTab(existing)
@@ -166,6 +174,27 @@ async function openFeedbackCompose (message) {
   }
 
   try {
+    const reusableTab = await findReusableWebmailTab(false)
+    if (reusableTab) {
+      await callApi(api.storage.local, 'set', {
+        [FEEDBACK_KEY]: {
+          ...feedback,
+          status: 'opening-webmail',
+          webmailTabId: reusableTab.id,
+          openedAt: Date.now()
+        }
+      })
+      await callApi(api.tabs, 'update', reusableTab.id, {
+        url: FEEDBACK_COMPOSE_URL,
+        active: true
+      })
+      return { ok: true, tabId: reusableTab.id, reused: true }
+    }
+
+    if (await findReusableWebmailTab(true)) {
+      throw new Error('Conclua ou feche a resposta aberta no Webmail antes de enviar o relato.')
+    }
+
     const tab = await callApi(api.tabs, 'create', {
       url: 'about:blank',
       active: false
@@ -179,7 +208,7 @@ async function openFeedbackCompose (message) {
       }
     })
     await callApi(api.tabs, 'update', tab.id, { url: FEEDBACK_COMPOSE_URL })
-    return { ok: true, tabId: tab.id }
+    return { ok: true, tabId: tab.id, reused: false }
   } catch (error) {
     await callApi(api.storage.local, 'set', {
       [FEEDBACK_KEY]: {

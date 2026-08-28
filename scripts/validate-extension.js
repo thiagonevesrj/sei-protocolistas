@@ -183,6 +183,8 @@ expect(!reopenSystemsSource.includes('beginWorkday('), 'Central: reabertura não
 expect(!reopenSystemsSource.includes('finishWorkday('), 'Central: reabertura não pode finalizar o expediente')
 expect(!centralSource.includes('window.setTimeout(openSei, 350)'), 'Central: expediente não pode depender de duas janelas sujeitas a bloqueio de popup')
 expect(returnCoordinatorSource.includes('openFeedbackCompose'), 'Webmail: abertura da mensagem de relato não encontrada')
+expect(returnCoordinatorSource.includes('findReusableWebmailTab(false)'), 'Webmail: relato não reutiliza a sessão principal existente')
+expect(returnCoordinatorSource.includes('Conclua ou feche a resposta aberta'), 'Webmail: relato não bloqueia segunda sessão durante uma resposta')
 expect(returnCoordinatorSource.includes('url: \'about:blank\'') && returnCoordinatorSource.includes('{ url: FEEDBACK_COMPOSE_URL }'), 'Webmail: aba exclusiva do relato deve ser identificada antes de carregar o formulário')
 expect(returnCoordinatorSource.includes('/owa/?ae=Item&a=New&t=IPM.Note'), 'Webmail: relato deve usar a rota de composição compatível com o Exchange')
 expect(!returnCoordinatorSource.includes('/owa/?ae=PreFormAction&a=New&t=IPM.Note'), 'Webmail: rota PreFormAction incompatível não pode ser usada no relato')
