@@ -221,7 +221,7 @@ A navegação V2 já implementada no topo `d0e87ed` expõe esses atalhos e mant�
 
 ## Fase 3 — situação atual
 
-Não foi recebida, neste conjunto, uma captura direta do quadro público da Fase 3. O HTML contém cinco modelos candidatos:
+Uma captura direta do quadro público `SCRIPTS - FASE03 - Protocolos` confirmou a lista `FASE 3 (TEMPORÁRIO - PESQUISA PÚBLICA)` com exatamente cinco cartões:
 
 - Protocolo — Padrão;
 - Protocolo — DAF;
@@ -229,7 +229,7 @@ Não foi recebida, neste conjunto, uma captura direta do quadro público da Fase
 - Protocolo — AGEM;
 - Protocolo — DIVMED.
 
-Tratar os cinco como referência provisória até a evidência visual do Trello público.
+Os cinco nomes do Trello público coincidem com os cinco registros do HTML. Não há divergência nem duplicidade visível nesta fase.
 
 Regra de produto já decidida:
 
@@ -469,12 +469,11 @@ Na extensão, manter a mesma finalidade visual quando aplicável, mas usar o mec
 
 ## Próximas decisões para Thiago
 
-1. Confirmar por captura do Trello público os cinco cartões da Fase 3.
-2. Confirmar se as cores do PDF realmente indicam frequência/uso ou possuem outro significado.
-3. Escolher a regra final do campo Assunto e resolver a diferença entre fase e destino operacional.
-4. Validar o checklist da Certidão de Identificação Civil para liberar FAST PROC.
-5. Informar o tipo SEI exato de Leilão de Veículos para liberar FAST PROC.
-6. Em lote futuro, desenhar a exceção de direito de petição no FAST PROC.
+1. Confirmar se as cores do PDF realmente indicam frequência/uso ou possuem outro significado.
+2. Escolher a regra final do campo Assunto e resolver a diferença entre fase e destino operacional.
+3. Validar o checklist da Certidão de Identificação Civil para liberar FAST PROC.
+4. Informar o tipo SEI exato de Leilão de Veículos para liberar FAST PROC.
+5. Em lote futuro, desenhar a exceção de direito de petição no FAST PROC.
 
 ## Orientação para o próximo chat
 
