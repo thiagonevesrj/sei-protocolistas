@@ -16,6 +16,7 @@ const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
 const WEBMAIL_MATCH_PATTERN = 'https://venus2.detran.rj.gov.br/owa/*'
 const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
+const MAX_CLOSED_WEBMAIL_AGE_SECONDS = 30 * 60
 
 function callApi (target, method, ...args) {
   if (usingBrowserPromises) return target[method](...args)
@@ -49,6 +50,44 @@ async function findReusableWebmailTab (includeCompose = true) {
     .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0] || null
 }
 
+async function restoreRecentWebmailTab (active = true) {
+  if (!api.sessions?.getRecentlyClosed || !api.sessions?.restore) return null
+
+  try {
+    const sessions = await callApi(api.sessions, 'getRecentlyClosed', {
+      maxResults: 25
+    })
+    const nowSeconds = Date.now() / 1000
+    const recentWebmail = (sessions || [])
+      .filter((session) =>
+        session?.tab?.sessionId &&
+        String(session.tab.url || '').startsWith(WEBMAIL_URL) &&
+        nowSeconds - Number(session.lastModified || 0) <= MAX_CLOSED_WEBMAIL_AGE_SECONDS
+      )
+      .sort((a, b) => {
+        const mainTabDifference =
+          Number(!isWebmailComposeTab(b.tab)) -
+          Number(!isWebmailComposeTab(a.tab))
+        return mainTabDifference || Number(b.lastModified || 0) - Number(a.lastModified || 0)
+      })[0]
+
+    if (!recentWebmail) return null
+
+    const restored = await callApi(
+      api.sessions,
+      'restore',
+      recentWebmail.tab.sessionId
+    )
+    const tab = restored?.tab || null
+    if (!tab?.id) return null
+    if (active) await focusBrowserTab(tab)
+    return tab
+  } catch (error) {
+    console.warn('[SEI Protocolistas] Não foi possível restaurar a aba fechada do Webmail:', error)
+    return null
+  }
+}
+
 async function focusBrowserTab (tab) {
   await callApi(api.tabs, 'update', tab.id, { active: true })
 
@@ -66,19 +105,29 @@ async function openOrReuseWebmail (active = true) {
 
   if (existing) {
     if (active) await focusBrowserTab(existing)
-    return { tab: existing, reused: true }
+    return { tab: existing, reused: true, restored: false }
+  }
+
+  const restored = await restoreRecentWebmailTab(active)
+  if (restored) {
+    return { tab: restored, reused: true, restored: true }
   }
 
   const tab = await callApi(api.tabs, 'create', {
     url: WEBMAIL_URL,
     active
   })
-  return { tab, reused: false }
+  return { tab, reused: false, restored: false }
 }
 
 async function openWebmail () {
   const result = await openOrReuseWebmail(true)
-  return { ok: true, tabId: result.tab.id, reused: result.reused }
+  return {
+    ok: true,
+    tabId: result.tab.id,
+    reused: result.reused,
+    restored: result.restored
+  }
 }
 
 async function readRoutes () {
@@ -234,6 +283,7 @@ async function openWorkdaySystems () {
       ok: true,
       webmailTabId: webmailTab.id,
       webmailReused: webmailResult.reused,
+      webmailRestored: webmailResult.restored,
       seiTabId: seiTab.id
     }
   } catch (error) {

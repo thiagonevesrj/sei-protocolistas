@@ -90,6 +90,13 @@ if (manifest && packageJson) {
   expect(/^\d+\.\d+\.\d+$/.test(manifest.version), 'Manifesto: versão deve usar o formato X.Y.Z')
   expect(manifest.manifest_version === 3, 'Manifesto: manifest_version deve ser 3')
   expect(!/[ÃÂ]/.test(manifest.description || ''), 'Manifesto: descrição contém texto corrompido')
+  const expectedPermissions = ['storage', 'sessions']
+  const permissions = manifest.permissions || []
+  expect(
+    expectedPermissions.length === permissions.length &&
+      expectedPermissions.every((permission) => permissions.includes(permission)),
+    `Manifesto: permissions deve conter somente ${expectedPermissions.join(' e ')}`
+  )
 
   const expectedHostPermissions = [
     '*://sei.rj.gov.br/*',
@@ -192,6 +199,9 @@ expect(returnCoordinatorSource.includes('openWorkdaySystems'), 'Central: coorden
 expect(returnCoordinatorSource.includes('openOrReuseWebmail'), 'Central: coordenador não reutiliza a aba existente do Webmail')
 expect(returnCoordinatorSource.includes("callApi(api.tabs, 'query'"), 'Central: coordenador não consulta abas existentes do Webmail')
 expect(returnCoordinatorSource.includes('WEBMAIL_MATCH_PATTERN'), 'Central: padrão de busca da aba do Webmail não encontrado')
+expect(returnCoordinatorSource.includes('restoreRecentWebmailTab'), 'Central: restauração da aba fechada do Webmail não encontrada')
+expect(returnCoordinatorSource.includes("callApi(api.sessions, 'getRecentlyClosed'"), 'Central: consulta de abas fechadas do Webmail não encontrada')
+expect(returnCoordinatorSource.includes("'restore'"), 'Central: restauração da sessão fechada do Webmail não encontrada')
 expect(returnCoordinatorSource.includes('url: SEI_LOGIN_URL'), 'Central: abertura do SEI pelo coordenador não encontrada')
 expect(fastMailSource.includes('processPendingFeedback'), 'Webmail: processamento do relato pendente não encontrado')
 expect(fastMailSource.includes('currentTab.tabId !== feedback.webmailTabId'), 'Webmail: relato pendente precisa ficar restrito à aba exclusiva do envio')

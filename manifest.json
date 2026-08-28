@@ -13,7 +13,8 @@
         "128": "icons/protocolistas-128.png"
     },
     "permissions": [
-        "storage"
+        "storage",
+        "sessions"
     ],
     "host_permissions": [
         "*://sei.rj.gov.br/*",
