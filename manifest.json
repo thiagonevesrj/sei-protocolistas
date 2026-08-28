@@ -219,7 +219,6 @@
                 "cs_modules/procedimento_visualizar/alterarTitulo.js",
                 "cs_modules/procedimento_visualizar/documentoModelo.js",
                 "cs_modules/procedimento_visualizar/ajustarElementosNativos.js",
-                "cs_modules/procedimento_visualizar/consultarAtribuicao.js",
                 "cs_modules/procedimento_visualizar/index.js"
             ]
         },
@@ -312,10 +311,12 @@
             "run_at": "document_idle",
             "all_frames": false,
             "css": [
-                "cs_modules/fast_mail/styles.css"
+                "cs_modules/fast_mail/styles.css",
+                "cs_modules/fast_mail/navigation-v2.css"
             ],
             "js": [
-                "cs_modules/fast_mail/index.js"
+                "cs_modules/fast_mail/index.js",
+                "cs_modules/fast_mail/navigation-v2.js"
             ]
         }
     ],
