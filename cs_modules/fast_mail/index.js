@@ -40,6 +40,7 @@
   let activePriorityAction = ''
   let currentOperator = null
   let attendanceSenderEmail = ''
+  let attendanceInitialized = false
   let processResultAutofillRunning = false
   const recordedMetricEvents = new Set()
 
@@ -2696,7 +2697,7 @@
       await autoInsertPendingProcessResponse()
     }
 
-    if (senderEmail) {
+    if (senderEmail && !attendanceInitialized) {
       const stored = await storageGet(ATTENDANCE_KEY)
       const current = stored[ATTENDANCE_KEY] || {}
 
@@ -2737,6 +2738,8 @@
         if (status) status.textContent = ''
         updateMissingDocumentsVisibility()
       }
+
+      attendanceInitialized = true
     }
   }
 
