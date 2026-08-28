@@ -100,7 +100,17 @@ async function focusBrowserTab (tab) {
   }
 }
 
-async function openOrReuseWebmail (active = true) {
+async function moveTabToWindow (tab, windowId) {
+  if (!tab?.id || windowId == null || tab.windowId === windowId) return tab
+
+  const moved = await callApi(api.tabs, 'move', tab.id, {
+    windowId,
+    index: -1
+  })
+  return Array.isArray(moved) ? moved[0] : moved
+}
+
+async function openOrReuseWebmail (active = true, windowId = null) {
   const existing = await findReusableWebmailTab()
 
   if (existing) {
@@ -108,20 +118,21 @@ async function openOrReuseWebmail (active = true) {
     return { tab: existing, reused: true, restored: false }
   }
 
-  const restored = await restoreRecentWebmailTab(active)
+  const restored = await restoreRecentWebmailTab(false)
   if (restored) {
-    return { tab: restored, reused: true, restored: true }
+    const placed = await moveTabToWindow(restored, windowId)
+    if (active) await focusBrowserTab(placed)
+    return { tab: placed, reused: true, restored: true }
   }
 
-  const tab = await callApi(api.tabs, 'create', {
-    url: WEBMAIL_URL,
-    active
-  })
+  const createProperties = { url: WEBMAIL_URL, active }
+  if (windowId != null) createProperties.windowId = windowId
+  const tab = await callApi(api.tabs, 'create', createProperties)
   return { tab, reused: false, restored: false }
 }
 
-async function openWebmail () {
-  const result = await openOrReuseWebmail(true)
+async function openWebmail (sender) {
+  const result = await openOrReuseWebmail(true, sender.tab?.windowId)
   return {
     ok: true,
     tabId: result.tab.id,
@@ -270,15 +281,18 @@ async function openFeedbackCompose (message) {
   }
 }
 
-async function openWorkdaySystems () {
-  const webmailResult = await openOrReuseWebmail(false)
+async function openWorkdaySystems (sender) {
+  const targetWindowId = sender.tab?.windowId
+  const webmailResult = await openOrReuseWebmail(false, targetWindowId)
   const webmailTab = webmailResult.tab
 
   try {
-    const seiTab = await callApi(api.tabs, 'create', {
+    const seiProperties = {
       url: SEI_LOGIN_URL,
       active: true
-    })
+    }
+    if (targetWindowId != null) seiProperties.windowId = targetWindowId
+    const seiTab = await callApi(api.tabs, 'create', seiProperties)
     return {
       ok: true,
       webmailTabId: webmailTab.id,
@@ -307,9 +321,9 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message?.type === SEND_FEEDBACK_MESSAGE) {
     task = openFeedbackCompose(message)
   } else if (message?.type === OPEN_WORKDAY_SYSTEMS_MESSAGE) {
-    task = openWorkdaySystems()
+    task = openWorkdaySystems(sender)
   } else if (message?.type === OPEN_WEBMAIL_MESSAGE) {
-    task = openWebmail()
+    task = openWebmail(sender)
   } else if (message?.type === GET_CURRENT_TAB_MESSAGE) {
     task = Promise.resolve(currentTab(sender))
   } else {
