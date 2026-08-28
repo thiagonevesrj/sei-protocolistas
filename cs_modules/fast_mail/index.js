@@ -39,6 +39,7 @@
   let selectedPriorityAreaId = ''
   let activePriorityAction = ''
   let currentOperator = null
+  let attendanceSenderEmail = ''
   let processResultAutofillRunning = false
   const recordedMetricEvents = new Set()
 
@@ -301,6 +302,7 @@
       const email = extractEmailFromCurrentHeaderText(text)
       if (!email) return
       if (/^protocolista\d+@detran\.rj\.gov\.br$/i.test(email)) return
+      if (email === normalizeEmail(BCC_EMAIL)) return
 
       const paraIndex = text.search(/(?:^|\n)\s*Para:\s*/i)
       candidates.push({
@@ -2666,7 +2668,11 @@
 
   async function scan () {
     const operator = await resolveOperator()
-    const senderEmail = findSenderEmail()
+    const detectedSenderEmail = findSenderEmail()
+    if (detectedSenderEmail && !attendanceSenderEmail) {
+      attendanceSenderEmail = detectedSenderEmail
+    }
+    const senderEmail = attendanceSenderEmail || detectedSenderEmail
     currentOperator = operator
 
     const operatorElement = document.querySelector('#spfm-operator')
