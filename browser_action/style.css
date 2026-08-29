@@ -36,21 +36,42 @@ body {
     color: #aebdd0;
 }
 
-#open-central {
+#open-central,
+#open-fast-mail-lab {
     width: 100%;
-    margin-bottom: 16px;
     padding: 11px 12px;
-    color: #071224;
-    background: #f1c44f;
-    border: 1px solid #f1c44f;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
 }
 
+#open-central {
+    margin-bottom: 8px;
+    color: #071224;
+    background: #f1c44f;
+    border: 1px solid #f1c44f;
+}
+
 #open-central:hover,
 #open-central:focus {
     background: #ffd66a;
+}
+
+#open-fast-mail-lab {
+    display: block;
+    margin: 0 0 16px;
+    color: #e8eef7;
+    text-align: center;
+    text-decoration: none;
+    background: #102944;
+    border: 1px solid rgba(174, 189, 208, 0.35);
+    box-sizing: border-box;
+}
+
+#open-fast-mail-lab:hover,
+#open-fast-mail-lab:focus {
+    color: #fff;
+    border-color: #f1c44f;
 }
 
 .field {
