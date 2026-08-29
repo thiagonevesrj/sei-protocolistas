@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAST MAIL LAB — SEI Protocolistas</title>
+  <link rel="stylesheet" href="../../cs_modules/fast_mail/styles.css">
+  <link rel="stylesheet" href="../../cs_modules/fast_mail/navigation-v2.css">
+  <link rel="stylesheet" href="../../cs_modules/fast_mail/action-state-v2.css">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body>
+  <header class="lab-header">
+    <div>
+      <span class="lab-kicker">SEI PROTOCOLISTAS</span>
+      <h1>FAST MAIL LAB</h1>
+      <p>Ambiente local de teste. Nenhum dado é enviado ao OWA ou ao SEI.</p>
+    </div>
+    <div class="lab-header-actions">
+      <span class="lab-badge">SIMULAÇÃO</span>
+      <button id="lab-reset" type="button">REINICIAR TESTE</button>
+    </div>
+  </header>
+
+  <main class="lab-layout">
+    <aside class="lab-sidebar" aria-label="Cenário simulado">
+      <div class="lab-sidebar-title">CENÁRIO DE TESTE</div>
+      <strong>Resposta de e-mail</strong>
+      <span>Conta: protocolista31@detran.rj.gov.br</span>
+      <span>Remetente fictício: maria.exemplo@cidadao.test</span>
+      <div class="lab-divider"></div>
+      <p>Use o FAST MAIL à direita como se estivesse dentro do Venus2.</p>
+      <p>Teste principalmente: Fase 1, Fase 2, Ofícios, estados presenciais e os botões Abrir / Cobrar / Orientar.</p>
+      <div class="lab-divider"></div>
+      <div class="lab-sidebar-title">LOG DO LAB</div>
+      <pre id="lab-log">Pronto para testar.</pre>
+    </aside>
+
+    <section class="lab-mail" aria-label="Mensagem simulada do OWA">
+      <div class="lab-mail-toolbar">
+        <strong>Responder</strong>
+        <span>Mensagem simulada — não será enviada</span>
+      </div>
+
+      <div class="lab-mail-fields">
+        <div class="lab-mail-row">
+          <span>De:</span>
+          <strong>Maria Exemplo [maria.exemplo@cidadao.test]</strong>
+        </div>
+        <div class="lab-mail-row">
+          <span>Para:</span>
+          <strong>protocolista31@detran.rj.gov.br</strong>
+        </div>
+        <label class="lab-mail-row lab-field-row">
+          <span>Assunto:</span>
+          <input name="subject" id="lab-subject" type="text" value="RE: Solicitação de protocolo">
+        </label>
+        <label class="lab-mail-row lab-field-row">
+          <span>Bcc:</span>
+          <input name="bcc" id="lab-bcc" type="text" value="">
+        </label>
+      </div>
+
+      <div
+        id="lab-editor"
+        class="lab-editor"
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Corpo da mensagem"
+      >Olá, gostaria de protocolar uma solicitação junto ao DETRAN-RJ. Seguem os documentos para análise.<br><br>Atenciosamente,<br>Maria Exemplo</div>
+
+      <div class="lab-mail-footer">
+        <button id="lab-clear-body" type="button">RESTAURAR E-MAIL FICTÍCIO</button>
+        <span>As inserções feitas pelo FAST MAIL aparecem no editor acima.</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="lab.js"></script>
+  <script src="../../cs_modules/fast_mail/index.js"></script>
+  <script src="../../cs_modules/fast_mail/navigation-v2.js"></script>
+  <script src="../../cs_modules/fast_mail/action-state-v2.js"></script>
+</body>
+</html>
