@@ -6,9 +6,11 @@
   const api = typeof browser === 'undefined' ? chrome : browser
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
   const READY_TIMEOUT = 10000
+  const TRANSFER_PROCESS_ID = 'transferencia-prontuario-habilitacao'
 
   const state = {
-    topics: []
+    topics: [],
+    processTypes: []
   }
 
   function cleanText (value) {
@@ -26,6 +28,14 @@
     const response = await fetch(api.runtime.getURL(path))
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     return response.json()
+  }
+
+  function processTypeById (processId) {
+    return state.processTypes.find((item) => item.id === processId) || null
+  }
+
+  function topicByProcessId (processId) {
+    return state.topics.find((item) => item.processId === processId) || null
   }
 
   function currentRoute () {
@@ -79,6 +89,21 @@
     return badge
   }
 
+  function ensureRouteMeta () {
+    const selected = document.querySelector('#spfm-v2-selected')
+    if (!selected) return null
+
+    let meta = document.querySelector('#spfm-v2-route-meta')
+    if (meta) return meta
+
+    meta = document.createElement('div')
+    meta.id = 'spfm-v2-route-meta'
+    meta.className = 'spfm-v2-route-meta'
+    meta.hidden = true
+    selected.appendChild(meta)
+    return meta
+  }
+
   function renderOperationalBadge (value, reason = '') {
     const badge = ensureOperationalBadge()
     if (!badge) return
@@ -95,6 +120,37 @@
     badge.dataset.state = value
     badge.textContent = stateLabel(value)
     badge.title = cleanText(reason)
+  }
+
+  function renderRouteMeta (route) {
+    const meta = ensureRouteMeta()
+    if (!meta) return
+
+    const processType = processTypeById(route?.processId)
+    if (!processType) {
+      meta.hidden = true
+      meta.textContent = ''
+      meta.removeAttribute('title')
+      return
+    }
+
+    const destination = cleanText(processType.destinationUnit)
+    const seiName = cleanText(Array.isArray(processType.seiNames) ? processType.seiNames[0] : '')
+      .replace(/^DETRAN:\s*/i, '')
+    const parts = []
+
+    if (destination) parts.push(destination)
+    if (seiName) parts.push(`SEI: ${seiName}`)
+
+    if (!parts.length) {
+      meta.hidden = true
+      meta.textContent = ''
+      return
+    }
+
+    meta.hidden = false
+    meta.textContent = parts.join(' · ')
+    meta.title = `Atendimento: ${cleanText(processType.name)}${destination ? ` | Destino: ${destination}` : ''}${seiName ? ` | Tipo SEI: ${seiName}` : ''}`
   }
 
   function applyNativeActions (route) {
@@ -147,21 +203,105 @@
     if (buttons[2]) buttons[2].textContent = 'ABERTURA INDISPONÍVEL'
 
     renderOperationalBadge('unavailable', 'Checklist documental ainda não validado para abertura do processo.')
+    renderRouteMeta({ processId: 'certidao-identificacao-civil' })
     return true
   }
 
+  function selectPriorityTopic (topic) {
+    if (!topic) return false
+
+    const phase = document.querySelector('.spfm-phase-button[data-phase-id="orientacao"]')
+    const area = document.querySelector(`.spfm-area-button[data-area-id="${topic.area}"]`)
+    if (!phase || !area) return false
+
+    phase.click()
+    area.click()
+
+    const nativeTopic = document.querySelector('#spfm-priority-topic')
+    const available = nativeTopic && Array.from(nativeTopic.options).some((option) => option.value === topic.id)
+    if (!available) return false
+
+    const special = document.querySelector('#spfm-v2-special-actions')
+    const variantField = document.querySelector('#spfm-v2-variant-field')
+    const selected = document.querySelector('#spfm-v2-selected-topic')
+    const status = document.querySelector('#spfm-v2-status')
+    const nativeStatus = document.querySelector('#spfm-priority-status')
+
+    if (special) special.hidden = true
+    if (variantField) variantField.hidden = true
+    if (selected) selected.textContent = topic.label
+
+    nativeTopic.value = topic.id
+    nativeTopic.dispatchEvent(new Event('change', { bubbles: true }))
+
+    if (status) status.textContent = `Atendimento selecionado: ${topic.label}. Escolha a ação abaixo.`
+    if (nativeStatus) nativeStatus.textContent = `${topic.label}: escolha Orientar, Cobrar documentos ou Abrir processo.`
+
+    window.setTimeout(refresh, 0)
+    return true
+  }
+
+  function ensureTransferShortcut () {
+    const container = document.querySelector('#spfm-v2-orientation-shortcuts')
+    const topic = topicByProcessId(TRANSFER_PROCESS_ID)
+    if (!container || !topic) return false
+
+    const buttons = Array.from(container.querySelectorAll('button'))
+    const existing = buttons.find((button) =>
+      button.dataset.spfmV2ProcessId === TRANSFER_PROCESS_ID ||
+      normalizeText(button.textContent).includes('transferencia de prontuario')
+    )
+
+    if (existing) {
+      existing.dataset.spfmV2ProcessId = TRANSFER_PROCESS_ID
+      return true
+    }
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'spfm-v2-quick-button is-emphasis'
+    button.dataset.spfmV2ProcessId = TRANSFER_PROCESS_ID
+    button.textContent = 'Transferência de prontuário'
+    button.title = 'Atendimento específico. O FAST PROC usa Solicitação Geral - Habilitação e encaminha para NUCRA.'
+    button.addEventListener('click', () => selectPriorityTopic(topic))
+
+    const target = buttons.find((item) => normalizeText(item.textContent).includes('desistencia de categoria')) ||
+      buttons.find((item) => normalizeText(item.textContent).includes('generico de habilitacao'))
+
+    if (target) container.insertBefore(button, target)
+    else container.appendChild(button)
+    return true
+  }
+
+  function markGenericFallbacks () {
+    const container = document.querySelector('#spfm-v2-orientation-shortcuts')
+    if (!container) return
+
+    Array.from(container.querySelectorAll('.spfm-v2-quick-button')).forEach((button) => {
+      const label = normalizeText(button.textContent)
+      const isFallback = label.includes('generico de habilitacao') || label.includes('generico de veiculos')
+      button.classList.toggle('spfm-v2-fallback-button', isFallback)
+      if (isFallback) button.title = 'Use quando o serviço não possuir um atendimento específico disponível acima.'
+    })
+  }
+
   function refresh () {
+    ensureTransferShortcut()
+    markGenericFallbacks()
+
     if (applySyntheticActions()) return
 
     const route = currentRoute()
     const value = routeState(route)
     renderOperationalBadge(value, route?.blockedReason || '')
+    renderRouteMeta(route)
     applyNativeActions(route)
   }
 
   function bind () {
     const panel = document.querySelector('#sei-protocolistas-fast-mail-status')
-    if (!panel || panel.dataset.spfmV2ActionStateBound === 'true') return false
+    const shortcuts = document.querySelector('#spfm-v2-orientation-shortcuts')
+    if (!panel || !shortcuts || panel.dataset.spfmV2ActionStateBound === 'true') return false
 
     panel.dataset.spfmV2ActionStateBound = 'true'
 
@@ -182,6 +322,7 @@
     const special = document.querySelector('#spfm-v2-special-actions')
     if (actionStep) observer.observe(actionStep, { attributes: true, attributeFilter: ['hidden'] })
     if (special) observer.observe(special, { attributes: true, attributeFilter: ['hidden'] })
+    observer.observe(shortcuts, { childList: true })
 
     refresh()
     return true
@@ -191,6 +332,7 @@
     try {
       const catalog = await fetchJson(PROCESS_CATALOG_PATH)
       state.topics = Array.isArray(catalog.fastMailPriorityTopics) ? catalog.fastMailPriorityTopics : []
+      state.processTypes = Array.isArray(catalog.processTypes) ? catalog.processTypes : []
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao carregar estados operacionais do FAST MAIL V2:', error)
       return
