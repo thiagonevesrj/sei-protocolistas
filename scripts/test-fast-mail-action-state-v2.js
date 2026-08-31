@@ -23,6 +23,7 @@ const manifest = readJson('manifest.json')
 const catalog = readJson('data/catalogo-processos.json')
 const source = readText('cs_modules/fast_mail/action-state-v2.js')
 const topics = catalog.fastMailPriorityTopics || []
+const processTypes = catalog.processTypes || []
 
 const webmailEntry = (manifest.content_scripts || []).find((entry) =>
   (entry.matches || []).includes('https://venus2.detran.rj.gov.br/owa/*')
@@ -60,6 +61,23 @@ expect(semProcesso?.canOpenProcess === false, 'FAST MAIL ações V2: serviço se
 const leilao = topics.find((topic) => topic.id === 'leilao-veiculos')
 expect(leilao?.canOpenProcess === false, 'FAST MAIL ações V2: Leilão deve continuar bloqueado')
 expect(/tipo SEI/i.test(leilao?.blockedReason || ''), 'FAST MAIL ações V2: Leilão deve explicar a pendência do tipo SEI')
+
+const transferencia = processTypes.find((process) => process.id === 'transferencia-prontuario-habilitacao')
+const transferenciaTopic = topics.find((topic) => topic.processId === 'transferencia-prontuario-habilitacao')
+const transferenciaMissingIds = (transferencia?.missingDocuments || []).map((item) => item.id)
+
+expect(Boolean(transferencia), 'FAST MAIL ações V2: Transferência de Prontuário deve existir como procedimento próprio')
+expect(transferencia?.destinationUnit === 'NUCRA', 'FAST MAIL ações V2: Transferência de Prontuário deve manter destino NUCRA')
+expect((transferencia?.seiNames || []).includes('Detran: Solicitação Geral - Habilitação'), 'FAST MAIL ações V2: Transferência de Prontuário deve manter o mapeamento técnico para Solicitação Geral - Habilitação')
+expect(transferenciaMissingIds.includes('duda-206-2'), 'FAST MAIL ações V2: checklist de Transferência deve conter DUDA 206-2')
+expect(transferenciaMissingIds.includes('duda-payment-proof'), 'FAST MAIL ações V2: checklist de Transferência deve conter comprovante de pagamento do DUDA')
+expect(Boolean(transferenciaTopic), 'FAST MAIL ações V2: Transferência de Prontuário deve possuir tópico operacional')
+expect(transferenciaTopic?.canOpenProcess === true, 'FAST MAIL ações V2: Transferência de Prontuário deve permitir abertura por e-mail')
+
+expect(source.includes("TRANSFER_PROCESS_ID = 'transferencia-prontuario-habilitacao'"), 'FAST MAIL ações V2: atalho rápido de Transferência não está configurado')
+expect(source.includes('Transferência de prontuário'), 'FAST MAIL ações V2: rótulo visual de Transferência de Prontuário está ausente')
+expect(source.includes('spfm-v2-route-meta'), 'FAST MAIL ações V2: metadados compactos de destino/tipo SEI estão ausentes')
+expect(source.includes('spfm-v2-fallback-button'), 'FAST MAIL ações V2: genéricos não estão marcados visualmente como fallback')
 
 if (errors.length) {
   console.error('Falhas na validação dos estados operacionais do FAST MAIL V2:')
