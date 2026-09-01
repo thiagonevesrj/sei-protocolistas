@@ -1,0 +1,358 @@
+(() => {
+  'use strict'
+
+  const MENU_ID = 'sp-arvore-context-menu'
+  const DIALOG_ID = 'sp-arvore-rename-dialog'
+  const TOAST_ID = 'sp-arvore-toast'
+  const ACTION_PATTERN = /documento_(?:alterar|alterar_recebido)/i
+  const WAIT_TIMEOUT = 7000
+
+  let selectedAnchor = null
+
+  function cleanText (value) {
+    return String(value || '').replace(/\s+/g, ' ').trim()
+  }
+
+  function normalizeSeiUrl (value) {
+    return String(value || '')
+      .replace(/\\u0026|\\x26/gi, '&')
+      .replace(/\\\//g, '/')
+      .replace(/&amp;|&#38;|&#x26;/gi, '&')
+      .replace(/&quot;|&#34;|&#x22;/gi, '"')
+      .trim()
+  }
+
+  function absoluteUrl (value) {
+    try {
+      return new URL(normalizeSeiUrl(value), window.location.href).href
+    } catch (error) {
+      return ''
+    }
+  }
+
+  function documentIdFromUrl (value) {
+    try {
+      return new URL(absoluteUrl(value)).searchParams.get('id_documento') || ''
+    } catch (error) {
+      return ''
+    }
+  }
+
+  function isDocumentAnchor (element) {
+    if (!(element instanceof Element)) return null
+    const anchor = element.closest('a[target$="Visualizacao"], a[target="ifrVisualizacao"]')
+    if (!anchor) return null
+    const href = anchor.getAttribute('href') || ''
+    if (!documentIdFromUrl(href)) return null
+    return anchor
+  }
+
+  function hideMenu () {
+    document.getElementById(MENU_ID)?.remove()
+  }
+
+  function hideDialog () {
+    document.getElementById(DIALOG_ID)?.remove()
+  }
+
+  function showToast (message, type = '') {
+    document.getElementById(TOAST_ID)?.remove()
+    const toast = document.createElement('div')
+    toast.id = TOAST_ID
+    toast.className = type ? `sp-arvore-toast is-${type}` : 'sp-arvore-toast'
+    toast.textContent = message
+    document.body.appendChild(toast)
+    window.setTimeout(() => toast.remove(), 4200)
+  }
+
+  function fitToViewport (element, clientX, clientY) {
+    const margin = 8
+    const rect = element.getBoundingClientRect()
+    const left = Math.min(clientX, window.innerWidth - rect.width - margin)
+    const top = Math.min(clientY, window.innerHeight - rect.height - margin)
+    element.style.left = `${Math.max(margin, left)}px`
+    element.style.top = `${Math.max(margin, top)}px`
+  }
+
+  function showContextMenu (anchor, event) {
+    hideMenu()
+    hideDialog()
+    selectedAnchor = anchor
+
+    const menu = document.createElement('div')
+    menu.id = MENU_ID
+    menu.className = 'sp-arvore-context-menu'
+    menu.setAttribute('role', 'menu')
+
+    const title = document.createElement('div')
+    title.className = 'sp-arvore-context-title'
+    title.textContent = cleanText(anchor.textContent) || 'Documento'
+
+    const rename = document.createElement('button')
+    rename.type = 'button'
+    rename.className = 'sp-arvore-context-action'
+    rename.textContent = 'Renomear na árvore…'
+    rename.addEventListener('click', () => showRenameDialog(anchor, event.clientX, event.clientY))
+
+    menu.append(title, rename)
+    document.body.appendChild(menu)
+    fitToViewport(menu, event.clientX, event.clientY)
+    rename.focus()
+  }
+
+  function showRenameDialog (anchor, clientX, clientY) {
+    hideMenu()
+    hideDialog()
+
+    const dialog = document.createElement('form')
+    dialog.id = DIALOG_ID
+    dialog.className = 'sp-arvore-rename-dialog'
+
+    const title = document.createElement('strong')
+    title.textContent = 'Nome na Árvore'
+
+    const current = document.createElement('small')
+    current.textContent = cleanText(anchor.textContent)
+
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.maxLength = 100
+    input.autocomplete = 'off'
+    input.placeholder = 'Ex.: CNH, DUDA, Requerimento'
+    input.setAttribute('aria-label', 'Novo Nome na Árvore')
+
+    const actions = document.createElement('div')
+    actions.className = 'sp-arvore-rename-actions'
+
+    const cancel = document.createElement('button')
+    cancel.type = 'button'
+    cancel.className = 'sp-arvore-cancel'
+    cancel.textContent = 'Cancelar'
+    cancel.addEventListener('click', hideDialog)
+
+    const save = document.createElement('button')
+    save.type = 'submit'
+    save.className = 'sp-arvore-save'
+    save.textContent = 'Salvar'
+
+    actions.append(cancel, save)
+    dialog.append(title, current, input, actions)
+    document.body.appendChild(dialog)
+    fitToViewport(dialog, clientX, clientY)
+
+    dialog.addEventListener('submit', async (submitEvent) => {
+      submitEvent.preventDefault()
+      const newName = cleanText(input.value)
+      if (!newName) {
+        input.focus()
+        return
+      }
+      save.disabled = true
+      cancel.disabled = true
+      input.disabled = true
+      save.textContent = 'Salvando…'
+      const result = await renameDocument(anchor, newName)
+      if (!result.ok) {
+        save.disabled = false
+        cancel.disabled = false
+        input.disabled = false
+        save.textContent = 'Salvar'
+        showToast(result.message, 'error')
+        input.focus()
+        return
+      }
+      hideDialog()
+      showToast('Nome na Árvore enviado ao SEI. Atualizando o processo…', 'success')
+      window.setTimeout(() => window.location.reload(), 1300)
+    })
+
+    input.focus()
+  }
+
+  function collectActionUrls (doc, documentId) {
+    const candidates = []
+
+    doc.querySelectorAll('a[href], area[href], form[action]').forEach((element) => {
+      const value = element.getAttribute('href') || element.getAttribute('action') || ''
+      if (ACTION_PATTERN.test(value)) candidates.push(value)
+    })
+
+    const html = doc.documentElement?.innerHTML || ''
+    const regex = /(?:https?:\\?\/\\?\/[^'"\s<>]+|controlador\.php\?[^'"\s<>]+)/gi
+    let match
+    while ((match = regex.exec(html)) !== null) {
+      if (ACTION_PATTERN.test(match[0])) candidates.push(match[0])
+    }
+
+    return candidates
+      .map(absoluteUrl)
+      .filter(Boolean)
+      .filter((url) => {
+        try {
+          const parsed = new URL(url)
+          const action = parsed.searchParams.get('acao') || ''
+          const id = parsed.searchParams.get('id_documento') || ''
+          return ACTION_PATTERN.test(action) && (!documentId || id === documentId)
+        } catch (error) {
+          return false
+        }
+      })
+  }
+
+  function sameOriginFrames (rootWindow) {
+    const results = []
+    const visit = (candidate) => {
+      try {
+        if (!candidate || results.includes(candidate)) return
+        void candidate.document
+        results.push(candidate)
+        for (let index = 0; index < candidate.frames.length; index++) visit(candidate.frames[index])
+      } catch (error) {}
+    }
+    visit(rootWindow)
+    return results
+  }
+
+  function findVisualizationFrame () {
+    const frames = sameOriginFrames(window.top)
+    return frames.find((frame) => {
+      try {
+        const element = frame.frameElement
+        return frame.name === 'ifrVisualizacao' || element?.name === 'ifrVisualizacao' || element?.id === 'ifrVisualizacao'
+      } catch (error) {
+        return false
+      }
+    }) || null
+  }
+
+  async function waitFor (test, timeout = WAIT_TIMEOUT) {
+    const startedAt = Date.now()
+    while (Date.now() - startedAt < timeout) {
+      try {
+        const value = test()
+        if (value) return value
+      } catch (error) {}
+      await new Promise((resolve) => window.setTimeout(resolve, 100))
+    }
+    return null
+  }
+
+  async function resolveNativeEditUrl (anchor) {
+    const documentId = documentIdFromUrl(anchor.getAttribute('href') || '')
+    if (!documentId) return ''
+
+    for (const frame of sameOriginFrames(window.top)) {
+      const urls = collectActionUrls(frame.document, documentId)
+      if (urls.length) return urls[0]
+    }
+
+    anchor.click()
+    const visualFrame = await waitFor(findVisualizationFrame, 2500)
+    if (!visualFrame) return ''
+
+    return await waitFor(() => collectActionUrls(visualFrame.document, documentId)[0] || '', 4500) || ''
+  }
+
+  function findTreeNameField (doc) {
+    const direct = Array.from(doc.querySelectorAll('input[type="text"], input:not([type]), textarea')).find((field) => {
+      const key = `${field.id || ''} ${field.name || ''}`
+      return /nome.*arvore|arvore.*nome/i.test(key)
+    })
+    if (direct) return direct
+
+    const labels = Array.from(doc.querySelectorAll('label, td, th, span, div')).filter((element) =>
+      /nome\s+na\s+[áa]rvore/i.test(cleanText(element.textContent))
+    )
+
+    for (const label of labels) {
+      if (label.htmlFor) {
+        const linked = doc.getElementById(label.htmlFor)
+        if (linked && /^(INPUT|TEXTAREA)$/.test(linked.tagName)) return linked
+      }
+      const row = label.closest('tr, .infraTr, .row, .form-group') || label.parentElement
+      const field = row?.querySelector?.('input[type="text"], input:not([type]), textarea')
+      if (field) return field
+    }
+    return null
+  }
+
+  function findNativeSaveControl (doc, field) {
+    const form = field.closest('form') || doc.querySelector('form')
+    if (!form) return null
+
+    const controls = Array.from(form.querySelectorAll('button, input[type="submit"], input[type="button"], a'))
+    const preferred = controls.find((control) => {
+      const label = cleanText(control.textContent || control.value || control.title || control.getAttribute('aria-label'))
+      return /confirmar\s+dados|salvar/i.test(label)
+    })
+    if (preferred) return preferred
+
+    return controls.find((control) => {
+      const label = cleanText(control.textContent || control.value || control.title || control.getAttribute('aria-label'))
+      return /^confirmar$/i.test(label)
+    }) || null
+  }
+
+  async function renameDocument (anchor, newName) {
+    const editUrl = await resolveNativeEditUrl(anchor)
+    if (!editUrl) {
+      return { ok: false, message: 'O SEI não disponibilizou a ação nativa de alterar este documento.' }
+    }
+
+    const visualFrame = findVisualizationFrame()
+    if (!visualFrame) {
+      return { ok: false, message: 'Não foi possível localizar a área de visualização do documento no SEI.' }
+    }
+
+    visualFrame.location.href = editUrl
+    const field = await waitFor(() => {
+      try {
+        return findTreeNameField(visualFrame.document)
+      } catch (error) {
+        return null
+      }
+    })
+
+    if (!field) {
+      return { ok: false, message: 'A tela nativa abriu, mas o campo “Nome na Árvore” não foi localizado. Nada foi alterado.' }
+    }
+
+    field.value = newName
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+    field.dispatchEvent(new Event('change', { bubbles: true }))
+
+    const saveControl = findNativeSaveControl(visualFrame.document, field)
+    if (!saveControl) {
+      return { ok: false, message: 'O campo foi localizado, mas o botão nativo de confirmação não foi encontrado. Nada foi enviado.' }
+    }
+
+    saveControl.click()
+    return { ok: true }
+  }
+
+  document.addEventListener('contextmenu', (event) => {
+    const anchor = isDocumentAnchor(event.target)
+    if (!anchor) {
+      hideMenu()
+      return
+    }
+    event.preventDefault()
+    event.stopPropagation()
+    showContextMenu(anchor, event)
+  }, true)
+
+  document.addEventListener('click', (event) => {
+    const menu = document.getElementById(MENU_ID)
+    const dialog = document.getElementById(DIALOG_ID)
+    if (menu && !menu.contains(event.target)) hideMenu()
+    if (dialog && !dialog.contains(event.target)) hideDialog()
+  })
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return
+    hideMenu()
+    hideDialog()
+  })
+
+  window.addEventListener('blur', hideMenu)
+})()
