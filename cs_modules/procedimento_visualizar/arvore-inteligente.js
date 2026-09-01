@@ -92,7 +92,11 @@
     rename.type = 'button'
     rename.className = 'sp-arvore-context-action'
     rename.textContent = 'Renomear na árvore…'
-    rename.addEventListener('click', () => showRenameDialog(anchor, event.clientX, event.clientY))
+    rename.addEventListener('click', (clickEvent) => {
+      clickEvent.preventDefault()
+      clickEvent.stopPropagation()
+      showRenameDialog(anchor, event.clientX, event.clientY)
+    })
 
     menu.append(title, rename)
     document.body.appendChild(menu)
