@@ -113,7 +113,7 @@
     dialog.className = 'sp-arvore-rename-dialog'
 
     const title = document.createElement('strong')
-    title.textContent = 'Nome na Árvore'
+    title.textContent = 'Renomear na Árvore'
 
     const current = document.createElement('small')
     current.textContent = cleanText(anchor.textContent)
@@ -123,7 +123,7 @@
     input.maxLength = 100
     input.autocomplete = 'off'
     input.placeholder = 'Ex.: CNH, DUDA, Requerimento'
-    input.setAttribute('aria-label', 'Novo Nome na Árvore')
+    input.setAttribute('aria-label', 'Novo nome visível na árvore')
 
     const actions = document.createElement('div')
     actions.className = 'sp-arvore-rename-actions'
@@ -166,7 +166,7 @@
         return
       }
       hideDialog()
-      showToast('Nome na Árvore confirmado pelo SEI. Atualizando o processo…', 'success')
+      showToast('Nome visível na árvore confirmado pelo SEI. Atualizando o processo…', 'success')
       window.setTimeout(() => window.location.reload(), 500)
     })
 
@@ -257,15 +257,15 @@
     return await waitFor(() => collectActionUrls(visualFrame.document, documentId)[0] || '', 4500) || ''
   }
 
-  function findTreeNameField (doc) {
+  function findDocumentNumberField (doc) {
     const direct = Array.from(doc.querySelectorAll('input[type="text"], input:not([type]), textarea')).find((field) => {
       const key = `${field.id || ''} ${field.name || ''}`
-      return /nome.*arvore|arvore.*nome/i.test(key)
+      return /(^|[^a-z])numero([^a-z]|$)|(^|[^a-z])n[uú]mero([^a-z]|$)/i.test(key)
     })
     if (direct) return direct
 
     const labels = Array.from(doc.querySelectorAll('label, td, th, span, div')).filter((element) =>
-      /nome\s+na\s+[áa]rvore/i.test(cleanText(element.textContent))
+      /^n[uú]mero\s*:?$/i.test(cleanText(element.textContent))
     )
 
     for (const label of labels) {
@@ -274,8 +274,8 @@
         if (linked && /^(INPUT|TEXTAREA)$/.test(linked.tagName)) return linked
       }
       const row = label.closest('tr, .infraTr, .row, .form-group') || label.parentElement
-      const field = row?.querySelector?.('input[type="text"], input:not([type]), textarea')
-      if (field) return field
+      const fields = Array.from(row?.querySelectorAll?.('input[type="text"], input:not([type]), textarea') || [])
+      if (fields.length) return fields[0]
     }
     return null
   }
@@ -349,25 +349,25 @@
     visualFrame.location.href = editUrl
     const field = await waitFor(() => {
       try {
-        return findTreeNameField(visualFrame.document)
+        return findDocumentNumberField(visualFrame.document)
       } catch (error) {
         return null
       }
     })
 
     if (!field) {
-      return { ok: false, message: 'A tela nativa abriu, mas o campo “Nome na Árvore” não foi localizado. Nada foi alterado.' }
+      return { ok: false, message: 'A tela nativa abriu, mas o campo “Número” não foi localizado. Nada foi alterado.' }
     }
 
     setNativeFieldValue(field, newName)
 
     if (cleanText(field.value) !== newName) {
-      return { ok: false, message: 'O SEI não aceitou o novo valor no campo “Nome na Árvore”. Nada foi enviado.' }
+      return { ok: false, message: 'O SEI não aceitou o novo valor no campo “Número”. Nada foi enviado.' }
     }
 
     const saveControl = findNativeSaveControl(visualFrame.document, field)
     if (!saveControl) {
-      return { ok: false, message: 'O campo foi localizado, mas o botão nativo de confirmação não foi encontrado. Nada foi enviado.' }
+      return { ok: false, message: 'O campo “Número” foi localizado, mas o botão nativo de confirmação não foi encontrado. Nada foi enviado.' }
     }
 
     const loadPromise = waitForFrameLoad(visualFrame)
@@ -375,12 +375,12 @@
     const loaded = await loadPromise
 
     if (!loaded) {
-      return { ok: false, message: 'O SEI não confirmou o salvamento do Nome na Árvore dentro do prazo. O processo não foi recarregado.' }
+      return { ok: false, message: 'O SEI não confirmou o salvamento do novo nome visível dentro do prazo. O processo não foi recarregado.' }
     }
 
     try {
       if (nativePageHasError(visualFrame.document)) {
-        return { ok: false, message: 'O SEI respondeu com erro ao tentar alterar o Nome na Árvore.' }
+        return { ok: false, message: 'O SEI respondeu com erro ao tentar alterar o nome visível do documento.' }
       }
     } catch (error) {}
 
