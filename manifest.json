@@ -133,7 +133,8 @@
                 "cs_modules/clique_protocolista/styles.css"
             ],
             "js": [
-                "cs_modules/clique_protocolista/index.js"
+                "cs_modules/clique_protocolista/index.js",
+                "cs_modules/clique_protocolista/next-click-guide.js"
             ]
         },
         {
