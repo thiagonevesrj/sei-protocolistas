@@ -16,7 +16,6 @@ const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
 const WEBMAIL_MATCH_PATTERN = 'https://venus2.detran.rj.gov.br/owa/*'
 const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
-const MAX_CLOSED_WEBMAIL_AGE_SECONDS = 30 * 60
 
 function callApi (target, method, ...args) {
   if (usingBrowserPromises) return target[method](...args)
@@ -41,51 +40,35 @@ function isWebmailComposeTab (tab) {
   return /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(tab?.url || '')
 }
 
+function isReusableWebmailTab (tab) {
+  const url = String(tab?.url || '')
+  const title = String(tab?.title || '')
+
+  if (!tab?.id || !url.startsWith(WEBMAIL_URL)) return false
+
+  if (/\/owa\/auth\/(?:logoff|logon)\.aspx/i.test(url)) return false
+
+  if (
+    /outlook web app\s*-\s*sair/i.test(title) ||
+    /server error in ['"]?\/owa/i.test(title) ||
+    /mapiexceptionsessionlimit/i.test(title)
+  ) {
+    return false
+  }
+
+  return true
+}
+
 async function findReusableWebmailTab (includeCompose = true) {
   const tabs = await callApi(api.tabs, 'query', {
     url: WEBMAIL_MATCH_PATTERN
   })
   return (tabs || [])
-    .filter((tab) => tab?.id && (includeCompose || !isWebmailComposeTab(tab)))
-    .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0] || null
-}
-
-async function restoreRecentWebmailTab (active = true) {
-  if (!api.sessions?.getRecentlyClosed || !api.sessions?.restore) return null
-
-  try {
-    const sessions = await callApi(api.sessions, 'getRecentlyClosed', {
-      maxResults: 25
-    })
-    const nowSeconds = Date.now() / 1000
-    const recentWebmail = (sessions || [])
-      .filter((session) =>
-        session?.tab?.sessionId &&
-        String(session.tab.url || '').startsWith(WEBMAIL_URL) &&
-        nowSeconds - Number(session.lastModified || 0) <= MAX_CLOSED_WEBMAIL_AGE_SECONDS
-      )
-      .sort((a, b) => {
-        const mainTabDifference =
-          Number(!isWebmailComposeTab(b.tab)) -
-          Number(!isWebmailComposeTab(a.tab))
-        return mainTabDifference || Number(b.lastModified || 0) - Number(a.lastModified || 0)
-      })[0]
-
-    if (!recentWebmail) return null
-
-    const restored = await callApi(
-      api.sessions,
-      'restore',
-      recentWebmail.tab.sessionId
+    .filter((tab) =>
+      isReusableWebmailTab(tab) &&
+      (includeCompose || !isWebmailComposeTab(tab))
     )
-    const tab = restored?.tab || null
-    if (!tab?.id) return null
-    if (active) await focusBrowserTab(tab)
-    return tab
-  } catch (error) {
-    console.warn('[SEI Protocolistas] Não foi possível restaurar a aba fechada do Webmail:', error)
-    return null
-  }
+    .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0] || null
 }
 
 async function focusBrowserTab (tab) {
@@ -100,29 +83,12 @@ async function focusBrowserTab (tab) {
   }
 }
 
-async function moveTabToWindow (tab, windowId) {
-  if (!tab?.id || windowId == null || tab.windowId === windowId) return tab
-
-  const moved = await callApi(api.tabs, 'move', tab.id, {
-    windowId,
-    index: -1
-  })
-  return Array.isArray(moved) ? moved[0] : moved
-}
-
 async function openOrReuseWebmail (active = true, windowId = null) {
   const existing = await findReusableWebmailTab()
 
   if (existing) {
     if (active) await focusBrowserTab(existing)
     return { tab: existing, reused: true, restored: false }
-  }
-
-  const restored = await restoreRecentWebmailTab(false)
-  if (restored) {
-    const placed = await moveTabToWindow(restored, windowId)
-    if (active) await focusBrowserTab(placed)
-    return { tab: placed, reused: true, restored: true }
   }
 
   const createProperties = { url: WEBMAIL_URL, active }
@@ -137,7 +103,7 @@ async function openWebmail (sender) {
     ok: true,
     tabId: result.tab.id,
     reused: result.reused,
-    restored: result.restored
+    restored: false
   }
 }
 
@@ -297,7 +263,7 @@ async function openWorkdaySystems (sender) {
       ok: true,
       webmailTabId: webmailTab.id,
       webmailReused: webmailResult.reused,
-      webmailRestored: webmailResult.restored,
+      webmailRestored: false,
       seiTabId: seiTab.id
     }
   } catch (error) {
