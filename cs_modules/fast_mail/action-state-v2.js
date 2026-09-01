@@ -207,6 +207,30 @@
     return true
   }
 
+  function ensureMissingDocumentsGuidance () {
+    const list = document.querySelector('#spfm-missing-list')
+    const options = document.querySelector('#spfm-missing-options')
+    const insert = document.querySelector('#spfm-insert-requirement')
+    if (!list || !options || !insert) return
+
+    let helper = document.querySelector('#spfm-missing-only-helper')
+    if (!helper) {
+      helper = document.createElement('div')
+      helper.id = 'spfm-missing-only-helper'
+      helper.className = 'spfm-mini-status'
+      helper.style.margin = '0 0 8px 0'
+      helper.style.fontWeight = '700'
+      helper.textContent = 'MARQUE SOMENTE OS DOCUMENTOS QUE AINDA ESTÃO FALTANDO. Não peça o reenvio do que já foi recebido.'
+      options.insertAdjacentElement('beforebegin', helper)
+    }
+
+    const checked = options.querySelectorAll('.spfm-missing-doc:checked').length
+    insert.disabled = checked === 0
+    insert.title = checked === 0
+      ? 'Marque pelo menos um documento que esteja faltando.'
+      : 'Inserir exigência somente com os itens marcados.'
+  }
+
   function selectPriorityTopic (topic) {
     if (!topic) return false
 
@@ -288,6 +312,7 @@
   function refresh () {
     ensureTransferShortcut()
     markGenericFallbacks()
+    ensureMissingDocumentsGuidance()
 
     if (applySyntheticActions()) return
 
@@ -309,10 +334,13 @@
       if (event.target.matches('#spfm-priority-topic, #spfm-topic-variant, #spfm-v2-variant, #spfm-v2-orientation-topic')) {
         window.setTimeout(refresh, 0)
       }
+      if (event.target.matches('.spfm-missing-doc')) {
+        window.setTimeout(ensureMissingDocumentsGuidance, 0)
+      }
     })
 
     panel.addEventListener('click', (event) => {
-      if (event.target.closest('.spfm-v2-quick-button, #spfm-v2-orientation-open, [data-spfm-v2-mode]')) {
+      if (event.target.closest('.spfm-v2-quick-button, #spfm-v2-orientation-open, [data-spfm-v2-mode], #spfm-priority-missing')) {
         window.setTimeout(refresh, 0)
       }
     })
@@ -320,8 +348,10 @@
     const observer = new MutationObserver(() => refresh())
     const actionStep = document.querySelector('#spfm-action-step')
     const special = document.querySelector('#spfm-v2-special-actions')
+    const missingList = document.querySelector('#spfm-missing-list')
     if (actionStep) observer.observe(actionStep, { attributes: true, attributeFilter: ['hidden'] })
     if (special) observer.observe(special, { attributes: true, attributeFilter: ['hidden'] })
+    if (missingList) observer.observe(missingList, { attributes: true, attributeFilter: ['hidden'] })
     observer.observe(shortcuts, { childList: true })
 
     refresh()
