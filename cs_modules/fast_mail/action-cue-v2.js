@@ -5,7 +5,7 @@
 
   const api = typeof browser === 'undefined' ? chrome : browser
   const READY_TIMEOUT = 10000
-  const CUE_DURATION = 1650
+  const CUE_DURATION = 2600
   const INVENTORY_CHOOSER_ID = 'spfm-v2-inventory-chooser'
   const INVENTORY_TITLES = {
     heirs: 'Baixa de restrição referente a inventário (PARA HERDEIROS)',
@@ -68,6 +68,44 @@
   function setStatus (message) {
     const status = document.querySelector('#spfm-v2-status')
     if (status) status.textContent = message
+  }
+
+  function selectDefaultTaxVariant () {
+    const select = document.querySelector('#spfm-v2-variant')
+    if (!select || select.hidden || select.closest('[hidden]')) return false
+
+    const options = Array.from(select.options || []).filter((option) => option.value)
+    if (!options.length) return false
+
+    const scored = options.map((option) => {
+      const label = normalizeText(option.textContent)
+      let score = 0
+      if (label.includes('pessoa fisica')) score += 100
+      if (label.includes('duda')) score += 25
+      if (label.includes('grt')) score -= 5
+      if (label.includes('pessoa juridica')) score -= 100
+      return { option, score }
+    }).sort((a, b) => b.score - a.score)
+
+    const best = scored[0]
+    if (!best || best.score < 100) return false
+
+    if (select.value !== best.option.value) {
+      select.value = best.option.value
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+
+    setStatus(best.score >= 125
+      ? 'Devolução de taxas: Pessoa Física / DUDA selecionado por padrão. Altere somente se o caso for diferente.'
+      : 'Devolução de taxas: Pessoa Física selecionada por padrão. Altere somente se o caso for diferente.')
+    scheduleCue()
+    return true
+  }
+
+  function scheduleDefaultTaxVariant () {
+    ;[80, 180, 360, 650].forEach((delay) => {
+      window.setTimeout(() => selectDefaultTaxVariant(), delay)
+    })
   }
 
   async function loadScriptCatalog () {
@@ -216,6 +254,11 @@
     panel.addEventListener('click', (event) => {
       const orientationShortcut = event.target.closest('#spfm-v2-orientation .spfm-v2-quick-button')
       const orientationOpen = event.target.closest('#spfm-v2-orientation-open')
+
+      if (orientationShortcut && normalizeText(orientationShortcut.textContent) === 'devolucao de taxas') {
+        scheduleDefaultTaxVariant()
+      }
+
       if (orientationShortcut || orientationOpen) scheduleCue()
     })
 
