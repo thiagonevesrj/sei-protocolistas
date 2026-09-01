@@ -49,8 +49,12 @@ ModuleInit(BaseName).then((options) => {
   /* Mostra a anotação */
   if (options.CheckTypes.includes('mostraranotacao')) MostrarAnotacao(BaseName)
 
-  /* Adiciona a funcionalidade de incluir documentos externos ao arrastar arquivos  */
-  if (options.CheckTypes.includes('incluirdocaoarrastar')) dropzone.iniciar(BaseName)
+  /*
+   * No fluxo Protocolistas, anexar documentos por arraste faz parte do FAST PROC
+   * e não pode depender de uma preferência antiga salva no navegador. Sem estes
+   * listeners, o Chrome aplica o comportamento padrão e abre o PDF em nova aba.
+   */
+  dropzone.iniciar(BaseName)
 
   /*
    * A função herdada que abria documentos em nova aba com Ctrl foi desativada.
