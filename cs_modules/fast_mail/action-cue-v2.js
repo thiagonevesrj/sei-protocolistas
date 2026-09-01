@@ -7,13 +7,19 @@
   const READY_TIMEOUT = 10000
   const CUE_DURATION = 2800
   const INVENTORY_CHOOSER_ID = 'spfm-v2-inventory-chooser'
+  const OFICIO_CHOOSER_ID = 'spfm-v2-oficio-chooser'
   const INVENTORY_TITLES = {
     heirs: 'Baixa de restrição referente a inventário (PARA HERDEIROS)',
     thirdParty: 'Transferência de propriedade com baixa de restrição de inventário (PARA TERCEIROS)'
   }
+  const OFICIO_TITLES = {
+    missing: 'Falta de Ofício/Documento endereçado ao DETRAN.RJ',
+    wrongDestination: 'CRITICA - OFICIO NÃO DIRECIONADO AO DETRAN-RJ'
+  }
   let cueTimer = null
   let cueRequest = 0
   let scriptCatalogPromise = null
+  let allowOficioShortcut = false
 
   function cleanText (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -37,6 +43,9 @@
   function visibleNextTarget () {
     const inventory = document.getElementById(INVENTORY_CHOOSER_ID)
     if (isVisible(inventory)) return inventory
+
+    const oficio = document.getElementById(OFICIO_CHOOSER_ID)
+    if (isVisible(oficio)) return oficio
 
     const variant = document.querySelector('#spfm-v2-variant-field')
     if (isVisible(variant)) return variant
@@ -141,10 +150,14 @@
     return scriptCatalogPromise
   }
 
-  async function findInventoryScript (title) {
+  async function findScriptByTitle (title, phase) {
     const scripts = await loadScriptCatalog()
     const normalizedTitle = normalizeText(title)
-    return scripts.find((script) => script.phase === 'orientacao' && normalizeText(script.title) === normalizedTitle) || null
+    return scripts.find((script) => (!phase || script.phase === phase) && normalizeText(script.title) === normalizedTitle) || null
+  }
+
+  async function findInventoryScript (title) {
+    return findScriptByTitle(title, 'orientacao')
   }
 
   function openOrientationMode () {
@@ -163,8 +176,16 @@
     return false
   }
 
-  function selectNativeScript (script) {
-    if (!script || !openOrientationMode()) return false
+  function openNativePhase (phase) {
+    if (phase === 'orientacao') return openOrientationMode()
+    const nativeButton = document.querySelector(`.spfm-phase-button[data-phase-id="${phase}"]`)
+    if (!nativeButton) return false
+    nativeButton.click()
+    return true
+  }
+
+  function selectScriptInCurrentPhase (script, statusMessage) {
+    if (!script || !openNativePhase(script.phase)) return false
 
     const catalog = document.querySelector('#spfm-script-catalog')
     const toggle = document.querySelector('#spfm-script-toggle')
@@ -183,9 +204,13 @@
     result.value = script.id
     result.dispatchEvent(new Event('change', { bubbles: true }))
     catalog?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
-    setStatus(`Inventário: ${script.title}. Confira a orientação e siga para a próxima ação disponível.`)
+    setStatus(statusMessage || `Script selecionado: ${script.title}. Confira antes de inserir.`)
     scheduleCue()
     return true
+  }
+
+  function selectNativeScript (script) {
+    return selectScriptInCurrentPhase(script, `Inventário: ${script.title}. Confira a orientação e siga para a próxima ação disponível.`)
   }
 
   async function chooseInventoryFlow (title) {
@@ -201,15 +226,30 @@
     }
   }
 
+  async function chooseOficioResponse (title, phase, statusMessage) {
+    setStatus('Carregando a resposta correta para o ofício…')
+    try {
+      const script = await findScriptByTitle(title, phase)
+      if (!script || !selectScriptInCurrentPhase(script, statusMessage)) {
+        setStatus('Não foi possível abrir automaticamente esta resposta de Ofícios. Use a busca do catálogo.')
+      }
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha ao abrir resposta de Ofícios:', error)
+      setStatus('Não foi possível carregar a resposta de Ofícios. Use a busca do catálogo.')
+    }
+  }
+
   function removeInventoryChooser () {
     document.getElementById(INVENTORY_CHOOSER_ID)?.remove()
   }
 
-  function showInventoryChooser (anchorButton) {
-    removeInventoryChooser()
+  function removeOficioChooser () {
+    document.getElementById(OFICIO_CHOOSER_ID)?.remove()
+  }
 
+  function createChooserShell (id, heading, helperText) {
     const chooser = document.createElement('div')
-    chooser.id = INVENTORY_CHOOSER_ID
+    chooser.id = id
     chooser.style.display = 'grid'
     chooser.style.gap = '7px'
     chooser.style.margin = '8px 0'
@@ -219,14 +259,27 @@
     chooser.style.background = 'rgba(7, 24, 44, 0.96)'
 
     const title = document.createElement('strong')
-    title.textContent = 'INVENTÁRIO — QUAL É O CASO?'
+    title.textContent = heading
     title.style.fontSize = '12px'
     title.style.color = '#f1c44f'
 
     const helper = document.createElement('span')
-    helper.textContent = 'Escolha a situação para abrir diretamente a orientação correta.'
+    helper.textContent = helperText
     helper.style.fontSize = '11px'
     helper.style.opacity = '0.85'
+
+    chooser.append(title, helper)
+    return chooser
+  }
+
+  function showInventoryChooser (anchorButton) {
+    removeInventoryChooser()
+
+    const chooser = createChooserShell(
+      INVENTORY_CHOOSER_ID,
+      'INVENTÁRIO — QUAL É O CASO?',
+      'Escolha a situação para abrir diretamente a orientação correta.'
+    )
 
     const heirs = document.createElement('button')
     heirs.type = 'button'
@@ -250,11 +303,67 @@
       chooseInventoryFlow(INVENTORY_TITLES.thirdParty)
     })
 
-    chooser.append(title, helper, heirs, thirdParty)
+    chooser.append(heirs, thirdParty)
     const shortcutContainer = anchorButton.closest('#spfm-v2-identification-shortcuts')
     shortcutContainer?.insertAdjacentElement('afterend', chooser)
     chooser.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
     setStatus('Inventário identificado. Agora escolha: herdeiros/baixa da restrição ou transferência para terceiro.')
+    scheduleCue()
+  }
+
+  function showOficioChooser (anchorButton) {
+    removeOficioChooser()
+
+    const chooser = createChooserShell(
+      OFICIO_CHOOSER_ID,
+      'OFÍCIOS — CONFIRA O DOCUMENTO',
+      'Antes de protocolar, confirme se existe documento oficial e se ele está endereçado ao DETRAN.RJ.'
+    )
+
+    const correct = document.createElement('button')
+    correct.type = 'button'
+    correct.className = 'spfm-v2-quick-button'
+    correct.textContent = 'DOCUMENTO CORRETO / ENDEREÇADO AO DETRAN.RJ'
+
+    const missing = document.createElement('button')
+    missing.type = 'button'
+    missing.className = 'spfm-v2-quick-button'
+    missing.textContent = 'FALTA OFÍCIO / DOCUMENTO OFICIAL'
+
+    const wrongDestination = document.createElement('button')
+    wrongDestination.type = 'button'
+    wrongDestination.className = 'spfm-v2-quick-button'
+    wrongDestination.textContent = 'DOCUMENTO NÃO ESTÁ ENDEREÇADO AO DETRAN.RJ'
+
+    correct.addEventListener('click', () => {
+      removeOficioChooser()
+      allowOficioShortcut = true
+      anchorButton.click()
+    })
+
+    missing.addEventListener('click', () => {
+      removeOficioChooser()
+      chooseOficioResponse(
+        OFICIO_TITLES.missing,
+        'orientacao',
+        'Ofícios: falta documento oficial endereçado ao DETRAN.RJ. Confira a resposta antes de inserir.'
+      )
+    })
+
+    wrongDestination.addEventListener('click', () => {
+      removeOficioChooser()
+      chooseOficioResponse(
+        OFICIO_TITLES.wrongDestination,
+        'atendimento',
+        'Ofícios: o documento não está direcionado ao DETRAN.RJ. Confira a crítica antes de inserir.'
+      )
+    })
+
+    chooser.append(correct, missing, wrongDestination)
+    const shortcutContainer = anchorButton.closest('#spfm-v2-orientation-shortcuts')
+    shortcutContainer?.insertAdjacentElement('afterend', chooser)
+    chooser.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+    setStatus('Ofícios: confirme primeiro se o documento existe e está corretamente endereçado ao DETRAN.RJ.')
     scheduleCue()
   }
 
@@ -277,6 +386,20 @@
       event.preventDefault()
       event.stopImmediatePropagation()
       showInventoryChooser(inventoryButton)
+    }, true)
+
+    panel.addEventListener('click', (event) => {
+      const oficioButton = event.target.closest('#spfm-v2-orientation-shortcuts .spfm-v2-quick-button')
+      if (!oficioButton || normalizeText(oficioButton.textContent) !== 'oficios') return
+
+      if (allowOficioShortcut) {
+        allowOficioShortcut = false
+        return
+      }
+
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      showOficioChooser(oficioButton)
     }, true)
 
     panel.addEventListener('click', (event) => {
