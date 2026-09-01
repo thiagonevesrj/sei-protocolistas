@@ -5,6 +5,20 @@
 */
 const BaseName = 'procedimento_visualizar'
 
+/*
+ * O upload por arraste é parte do fluxo operacional do FAST PROC e precisa
+ * registrar seus listeners antes de qualquer outro recurso desta tela.
+ * Não pode depender de ModuleInit, preferências locais ou da execução bem-
+ * sucedida dos demais módulos; sem preventDefault no drop, o navegador abre
+ * o PDF diretamente em uma nova aba.
+ */
+try {
+  dropzone.iniciar(BaseName + '.DropzoneBootstrap')
+  document.documentElement.setAttribute('data-sei-protocolistas-dropzone', 'ready')
+} catch (error) {
+  console.error('[SEI Protocolistas] Falha ao iniciar anexos por arraste:', error)
+}
+
 // eslint-disable-next-line no-unused-vars
 function ExecutarNaArvore (Modlog, func) {
   EsperaCarregar(Modlog, '#divArvore > div', "a[target$='Visualizacao']", function () {
@@ -48,13 +62,6 @@ ModuleInit(BaseName).then((options) => {
 
   /* Mostra a anotação */
   if (options.CheckTypes.includes('mostraranotacao')) MostrarAnotacao(BaseName)
-
-  /*
-   * No fluxo Protocolistas, anexar documentos por arraste faz parte do FAST PROC
-   * e não pode depender de uma preferência antiga salva no navegador. Sem estes
-   * listeners, o Chrome aplica o comportamento padrão e abre o PDF em nova aba.
-   */
-  dropzone.iniciar(BaseName)
 
   /*
    * A função herdada que abria documentos em nova aba com Ctrl foi desativada.
