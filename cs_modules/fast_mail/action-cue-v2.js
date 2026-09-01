@@ -5,7 +5,7 @@
 
   const api = typeof browser === 'undefined' ? chrome : browser
   const READY_TIMEOUT = 10000
-  const CUE_DURATION = 2600
+  const CUE_DURATION = 2800
   const INVENTORY_CHOOSER_ID = 'spfm-v2-inventory-chooser'
   const INVENTORY_TITLES = {
     heirs: 'Baixa de restrição referente a inventário (PARA HERDEIROS)',
@@ -28,18 +28,39 @@
       .trim()
   }
 
-  function visibleActionTarget () {
+  function isVisible (element) {
+    if (!element || element.hidden || element.closest('[hidden]')) return false
+    const style = window.getComputedStyle(element)
+    return style.display !== 'none' && style.visibility !== 'hidden'
+  }
+
+  function visibleNextTarget () {
+    const inventory = document.getElementById(INVENTORY_CHOOSER_ID)
+    if (isVisible(inventory)) return inventory
+
+    const variant = document.querySelector('#spfm-v2-variant-field')
+    if (isVisible(variant)) return variant
+
     const special = document.querySelector('#spfm-v2-special-actions')
-    if (special && !special.hidden) return special
+    if (isVisible(special)) return special
 
     const actionStep = document.querySelector('#spfm-action-step')
-    if (actionStep && !actionStep.hidden) return actionStep
+    if (isVisible(actionStep)) return actionStep
+
+    const catalog = document.querySelector('#spfm-script-catalog')
+    if (isVisible(catalog)) return catalog
+
+    const identificationResults = document.querySelector('#spfm-v2-identification-result')?.closest('label, .spfm-v2-field, div')
+    if (isVisible(identificationResults)) return identificationResults
+
+    const orientationTopic = document.querySelector('#spfm-v2-orientation-topic')?.closest('label, .spfm-v2-field, div')
+    if (isVisible(orientationTopic)) return orientationTopic
 
     return null
   }
 
-  function cueActions () {
-    const target = visibleActionTarget()
+  function cueNextClick () {
+    const target = visibleNextTarget()
     if (!target) return false
 
     target.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
@@ -57,10 +78,10 @@
 
   function scheduleCue () {
     const request = ++cueRequest
-    ;[60, 160, 320].forEach((delay) => {
+    ;[80, 190, 380, 650].forEach((delay) => {
       window.setTimeout(() => {
         if (request !== cueRequest) return
-        if (cueActions()) cueRequest += 1
+        if (cueNextClick()) cueRequest += 1
       }, delay)
     })
   }
@@ -234,6 +255,13 @@
     shortcutContainer?.insertAdjacentElement('afterend', chooser)
     chooser.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
     setStatus('Inventário identificado. Agora escolha: herdeiros/baixa da restrição ou transferência para terceiro.')
+    scheduleCue()
+  }
+
+  function isGuidedControl (target) {
+    return Boolean(target.closest(
+      '.spfm-v2-quick-button, #spfm-v2-identification-open, #spfm-v2-orientation-open, #spfm-v2-orientation-unknown, #spfm-v2-identification-unknown, [data-spfm-v2-mode]'
+    ))
   }
 
   function bind () {
@@ -253,17 +281,16 @@
 
     panel.addEventListener('click', (event) => {
       const orientationShortcut = event.target.closest('#spfm-v2-orientation .spfm-v2-quick-button')
-      const orientationOpen = event.target.closest('#spfm-v2-orientation-open')
 
       if (orientationShortcut && normalizeText(orientationShortcut.textContent) === 'devolucao de taxas') {
         scheduleDefaultTaxVariant()
       }
 
-      if (orientationShortcut || orientationOpen) scheduleCue()
+      if (isGuidedControl(event.target)) scheduleCue()
     })
 
     panel.addEventListener('change', (event) => {
-      if (event.target.matches('#spfm-v2-variant, #spfm-topic-variant')) scheduleCue()
+      if (event.target.matches('select, input[type="radio"], input[type="checkbox"]')) scheduleCue()
     })
 
     return true
