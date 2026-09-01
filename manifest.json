@@ -185,7 +185,7 @@
                 "*://sei.rj.gov.br/*controlador.php?acao=controle_unidade_gerar*"
             ],
             "js": [
-                "cs_modules/lib/selecionarMultiplosProcessos.js",
+                "cs_modules/lib/filtra_processos/index.js",
                 "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js",
                 "cs_modules/controle_unidade_gerar/index.js"
             ]
@@ -290,7 +290,8 @@
                 "cs_modules/requerimento_rapido/styles.css"
             ],
             "js": [
-                "cs_modules/requerimento_rapido/index.js"
+                "cs_modules/requerimento_rapido/index.js",
+                "cs_modules/requerimento_rapido/resgate-rq.js"
             ]
         },
         {
