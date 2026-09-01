@@ -206,7 +206,8 @@
             ],
             "all_frames": true,
             "css": [
-                "cs_modules/procedimento_visualizar/styles.css"
+                "cs_modules/procedimento_visualizar/styles.css",
+                "cs_modules/procedimento_visualizar/arvore-inteligente.css"
             ],
             "js": [
                 "cs_modules/lib/pontoControleCores.js",
@@ -219,7 +220,8 @@
                 "cs_modules/procedimento_visualizar/alterarTitulo.js",
                 "cs_modules/procedimento_visualizar/documentoModelo.js",
                 "cs_modules/procedimento_visualizar/ajustarElementosNativos.js",
-                "cs_modules/procedimento_visualizar/index.js"
+                "cs_modules/procedimento_visualizar/index.js",
+                "cs_modules/procedimento_visualizar/arvore-inteligente.js"
             ]
         },
         {
