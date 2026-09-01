@@ -166,8 +166,8 @@
         return
       }
       hideDialog()
-      showToast('Nome na Árvore enviado ao SEI. Atualizando o processo…', 'success')
-      window.setTimeout(() => window.location.reload(), 1300)
+      showToast('Nome na Árvore confirmado pelo SEI. Atualizando o processo…', 'success')
+      window.setTimeout(() => window.location.reload(), 500)
     })
 
     input.focus()
@@ -280,6 +280,22 @@
     return null
   }
 
+  function setNativeFieldValue (field, value) {
+    const view = field.ownerDocument?.defaultView || window
+    const prototype = field.tagName === 'TEXTAREA'
+      ? view.HTMLTextAreaElement?.prototype
+      : view.HTMLInputElement?.prototype
+    const descriptor = prototype && Object.getOwnPropertyDescriptor(prototype, 'value')
+
+    field.focus()
+    if (descriptor?.set) descriptor.set.call(field, value)
+    else field.value = value
+
+    ;['input', 'change', 'keyup', 'blur'].forEach((eventName) => {
+      field.dispatchEvent(new view.Event(eventName, { bubbles: true }))
+    })
+  }
+
   function findNativeSaveControl (doc, field) {
     const form = field.closest('form') || doc.querySelector('form')
     if (!form) return null
@@ -295,6 +311,28 @@
       const label = cleanText(control.textContent || control.value || control.title || control.getAttribute('aria-label'))
       return /^confirmar$/i.test(label)
     }) || null
+  }
+
+  function waitForFrameLoad (frame, timeout = WAIT_TIMEOUT) {
+    return new Promise((resolve) => {
+      let settled = false
+      const finish = (value) => {
+        if (settled) return
+        settled = true
+        window.clearTimeout(timer)
+        try { frame.removeEventListener('load', onLoad) } catch (error) {}
+        resolve(value)
+      }
+      const onLoad = () => finish(true)
+      const timer = window.setTimeout(() => finish(false), timeout)
+      frame.addEventListener('load', onLoad, { once: true })
+    })
+  }
+
+  function nativePageHasError (doc) {
+    const text = cleanText(doc?.body?.innerText)
+    if (!text) return false
+    return /(?:erro|falha|não foi possível|nao foi possivel|inválid|invalido|exceção|excecao)/i.test(text)
   }
 
   async function renameDocument (anchor, newName) {
@@ -321,16 +359,31 @@
       return { ok: false, message: 'A tela nativa abriu, mas o campo “Nome na Árvore” não foi localizado. Nada foi alterado.' }
     }
 
-    field.value = newName
-    field.dispatchEvent(new Event('input', { bubbles: true }))
-    field.dispatchEvent(new Event('change', { bubbles: true }))
+    setNativeFieldValue(field, newName)
+
+    if (cleanText(field.value) !== newName) {
+      return { ok: false, message: 'O SEI não aceitou o novo valor no campo “Nome na Árvore”. Nada foi enviado.' }
+    }
 
     const saveControl = findNativeSaveControl(visualFrame.document, field)
     if (!saveControl) {
       return { ok: false, message: 'O campo foi localizado, mas o botão nativo de confirmação não foi encontrado. Nada foi enviado.' }
     }
 
+    const loadPromise = waitForFrameLoad(visualFrame)
     saveControl.click()
+    const loaded = await loadPromise
+
+    if (!loaded) {
+      return { ok: false, message: 'O SEI não confirmou o salvamento do Nome na Árvore dentro do prazo. O processo não foi recarregado.' }
+    }
+
+    try {
+      if (nativePageHasError(visualFrame.document)) {
+        return { ok: false, message: 'O SEI respondeu com erro ao tentar alterar o Nome na Árvore.' }
+      }
+    } catch (error) {}
+
     return { ok: true }
   }
 
