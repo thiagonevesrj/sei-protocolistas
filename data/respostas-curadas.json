@@ -1,8 +1,33 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-19",
+  "updatedAt": "2026-09-02",
   "policy": "Respostas confirmadas pelo operador prevalecem sobre descrições antigas exportadas do Trello.",
   "scripts": [
+    {
+      "id": "trello-663108835c955877c54e89a6",
+      "title": "TRIAGEM - Perícia Médica",
+      "validation": "editorial-source-preserving-2026-09-02",
+      "bodyLines": [
+        "Para identificarmos corretamente sua solicitação de Perícia Médica, responda, por favor, às perguntas abaixo:",
+        "",
+        "- Informe seu nome completo e CPF;",
+        "- A solicitação é para Primeira Habilitação ou para inclusão de restrição médica em uma CNH já existente?",
+        "- A restrição está relacionada a Visão Monocular e/ou Deficiência Auditiva?",
+        "- Ou se trata de outra restrição? Se for outra, informe qual.",
+        "",
+        "Importante: Conforme a CI DETRAN/NUCAPHAB nº 24/2024, os candidatos à renovação que já possuem em suas CNHs as observações médicas C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, X, Y e Z não precisam abrir processo administrativo para obter isenção da taxa de serviço. Nesses casos, o condutor deve realizar o agendamento do serviço de renovação de CNH e será direcionado às clínicas credenciadas para exame de aptidão física e mental e, quando aplicável, avaliação psicológica.",
+        "",
+        "Por questões de segurança e logística interna, eventuais arquivos encaminhados anteriormente a esta mensagem foram excluídos. Caso seja necessária documentação para abertura do processo, ela será solicitada na próxima etapa do atendimento.",
+        "",
+        "Durante o atendimento, responda sempre a esta mesma conversa, sem alterar o assunto e sem criar um novo e-mail para a mesma solicitação.",
+        "",
+        "Após a identificação do serviço, orientaremos a documentação e a forma correta de prosseguimento.",
+        "",
+        "Atenciosamente,",
+        "",
+        "Atendimento do Serviço de Protocolo - DETRAN-RJ."
+      ]
+    },
     {
       "id": "trello-64fe3bd5d6087d02fc82d184",
       "title": "Troca de clínica",
