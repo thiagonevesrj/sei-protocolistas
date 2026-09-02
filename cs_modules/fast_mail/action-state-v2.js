@@ -30,25 +30,6 @@
     return response.json()
   }
 
-  function allDocuments () {
-    const documents = [document]
-
-    const visit = (win) => {
-      for (let index = 0; index < win.frames.length; index += 1) {
-        try {
-          const frame = win.frames[index]
-          if (frame.document && !documents.includes(frame.document)) {
-            documents.push(frame.document)
-            visit(frame)
-          }
-        } catch (_) {}
-      }
-    }
-
-    visit(window)
-    return documents
-  }
-
   function processTypeById (processId) {
     return state.processTypes.find((item) => item.id === processId) || null
   }
@@ -239,7 +220,7 @@
       helper.className = 'spfm-mini-status'
       helper.style.margin = '0 0 8px 0'
       helper.style.fontWeight = '700'
-      helper.textContent = 'MARQUE SOMENTE OS DOCUMENTOS QUE AINDA ESTÃO FALTANDO. Não peça o reenvio do que já foi recebido.'
+      helper.textContent = 'MARQUE SOMENTE OS DOCUMENTOS QUE ESTÃO FALTANDO. O cidadão será orientado a reenviar o conjunto completo da documentação em um único e-mail.'
       options.insertAdjacentElement('beforebegin', helper)
     }
 
@@ -247,42 +228,7 @@
     insert.disabled = checked === 0
     insert.title = checked === 0
       ? 'Marque pelo menos um documento que esteja faltando.'
-      : 'Inserir exigência somente com os itens marcados.'
-  }
-
-  function fixInsertedMissingRequirement () {
-    let changed = false
-
-    allDocuments().forEach((doc) => {
-      doc.querySelectorAll('[data-sei-protocolistas="missing-documents-requirement"]').forEach((box) => {
-        if (box.dataset.spfmMissingOnlyFixed === 'true') return
-
-        const paragraphs = Array.from(box.querySelectorAll('p'))
-        paragraphs.forEach((paragraph) => {
-          const text = normalizeText(paragraph.textContent)
-
-          if (text.includes('todos os documentos necessarios') && text.includes('ja foram enviados anteriormente')) {
-            paragraph.innerHTML = 'Para prosseguirmos com o atendimento, responda a esta mesma mensagem e encaminhe, em um único e-mail, <strong>somente os documentos indicados acima como faltantes</strong>.'
-            changed = true
-          }
-
-          if (text.includes('envio apenas dos documentos indicados como faltantes nao sera suficiente')) {
-            paragraph.remove()
-            changed = true
-          }
-        })
-
-        box.dataset.spfmMissingOnlyFixed = 'true'
-      })
-    })
-
-    return changed
-  }
-
-  function scheduleMissingRequirementFix () {
-    ;[0, 50, 140, 300].forEach((delay) => {
-      window.setTimeout(() => fixInsertedMissingRequirement(), delay)
-    })
+      : 'Inserir exigência destacando somente as pendências identificadas.'
   }
 
   function selectPriorityTopic (topic) {
@@ -367,7 +313,6 @@
     ensureTransferShortcut()
     markGenericFallbacks()
     ensureMissingDocumentsGuidance()
-    fixInsertedMissingRequirement()
 
     if (applySyntheticActions()) return
 
@@ -397,9 +342,6 @@
     panel.addEventListener('click', (event) => {
       if (event.target.closest('.spfm-v2-quick-button, #spfm-v2-orientation-open, [data-spfm-v2-mode], #spfm-priority-missing')) {
         window.setTimeout(refresh, 0)
-      }
-      if (event.target.closest('#spfm-insert-requirement')) {
-        scheduleMissingRequirementFix()
       }
     })
 
