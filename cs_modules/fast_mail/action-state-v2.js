@@ -7,6 +7,7 @@
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
   const READY_TIMEOUT = 10000
   const TRANSFER_PROCESS_ID = 'transferencia-prontuario-habilitacao'
+  const CERTIDAO_PROCESS_ID = 'certidao-identificacao-civil'
 
   const state = {
     topics: [],
@@ -192,6 +193,34 @@
     open.textContent = 'ABRIR PROCESSO'
   }
 
+  function prepareSyntheticProcess (processId) {
+    const processType = processTypeById(processId)
+    const procedure = document.querySelector('#spfm-procedure')
+    const destination = document.querySelector('#spfm-destination')
+    const destinationField = document.querySelector('#spfm-destination-field')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const status = document.querySelector('#spfm-v2-status')
+    const nativeStatus = document.querySelector('#spfm-priority-status')
+
+    if (!processType || !procedure) return false
+
+    const hasOption = Array.from(procedure.options || []).some((option) => option.value === processId)
+    if (!hasOption) return false
+
+    procedure.value = processId
+    procedure.dispatchEvent(new Event('change', { bubbles: true }))
+    if (destination) destination.value = processType.destinationUnit || ''
+    if (destinationField) destinationField.hidden = false
+    if (processSetup) processSetup.hidden = false
+    if (identityFields) identityFields.hidden = false
+
+    if (status) status.textContent = `${processType.name}: confira nome/CPF e clique em ABRIR NO FAST PROC.`
+    if (nativeStatus) nativeStatus.textContent = `${processType.name} liberada para abertura por e-mail.`
+    processSetup?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+    return true
+  }
+
   function applySyntheticActions () {
     const special = document.querySelector('#spfm-v2-special-actions')
     if (!special || special.hidden) return false
@@ -199,11 +228,21 @@
     const buttons = Array.from(special.querySelectorAll('button'))
     const reply = document.querySelector('#spfm-v2-certidao-reply')
     if (reply) reply.textContent = 'ORIENTAR'
-    if (buttons[1]) buttons[1].textContent = 'CHECKLIST PENDENTE'
-    if (buttons[2]) buttons[2].textContent = 'ABERTURA INDISPONÍVEL'
+    if (buttons[1]) {
+      buttons[1].textContent = 'COBRAR DOCUMENTOS'
+      buttons[1].disabled = true
+      buttons[1].title = 'Checklist estruturado ainda não foi transcrito para o painel. Use ORIENTAR para conferir a lista completa do script.'
+    }
+    if (buttons[2]) {
+      buttons[2].textContent = 'ABRIR PROCESSO'
+      buttons[2].disabled = false
+      buttons[2].dataset.spfmCertidaoOpen = 'true'
+    }
 
-    renderOperationalBadge('unavailable', 'Checklist documental ainda não validado para abertura do processo.')
-    renderRouteMeta({ processId: 'certidao-identificacao-civil' })
+    renderOperationalBadge('open')
+    renderRouteMeta({ processId: CERTIDAO_PROCESS_ID })
+    const reason = document.querySelector('#spfm-v2-special-reason')
+    if (reason) reason.textContent = 'Abertura por e-mail liberada. Tipo SEI e destino DIRIC já estão definidos; confira a documentação antes de abrir.'
     return true
   }
 
@@ -340,6 +379,11 @@
     })
 
     panel.addEventListener('click', (event) => {
+      if (event.target.closest('[data-spfm-certidao-open="true"]')) {
+        event.preventDefault()
+        prepareSyntheticProcess(CERTIDAO_PROCESS_ID)
+        return
+      }
       if (event.target.closest('.spfm-v2-quick-button, #spfm-v2-orientation-open, [data-spfm-v2-mode], #spfm-priority-missing')) {
         window.setTimeout(refresh, 0)
       }
