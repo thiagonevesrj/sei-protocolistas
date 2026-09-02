@@ -33,14 +33,6 @@
     return 'veiculos'
   }
 
-  function processKey (item) {
-    return normalize([
-      item?.name,
-      ...(Array.isArray(item?.seiNames) ? item.seiNames : []),
-      item?.destinationUnit
-    ].join(' '))
-  }
-
   function findExistingProcess (processTypes, record) {
     const title = normalize(record.title)
     const sei = normalize(record.seiProcessName)
@@ -88,11 +80,29 @@
     return { canOpenProcess: true, blockedReason: '' }
   }
 
+  function operationalRecords (payload) {
+    const records = Array.isArray(payload?.records) ? payload.records.slice() : []
+    const leilaoTitle = 'Leilão - Geral (COMISLE)'
+
+    if (!records.some((record) => normalize(record.title) === normalize(leilaoTitle))) {
+      records.push({
+        id: 'trellinho-leilao-geral-comisle',
+        title: leilaoTitle,
+        group: 'Leilão',
+        destinationUnit: 'COMISLE',
+        seiProcessName: '',
+        manualSeiTypeSelection: true
+      })
+    }
+
+    return records
+  }
+
   function mergeOperationalCatalog (catalog, operationalPayload, scriptPayload) {
     const processTypes = Array.isArray(catalog.processTypes) ? catalog.processTypes.slice() : []
     const topics = Array.isArray(catalog.fastMailPriorityTopics) ? catalog.fastMailPriorityTopics.slice() : []
     const scripts = Array.isArray(scriptPayload?.scripts) ? scriptPayload.scripts : []
-    const records = Array.isArray(operationalPayload?.records) ? operationalPayload.records : []
+    const records = operationalRecords(operationalPayload)
     const usedProcessIds = new Set(processTypes.map((item) => item.id))
     const usedTopicIds = new Set(topics.map((item) => item.id))
 
@@ -104,15 +114,16 @@
 
       if (!record.noProcess && !record.presential && !process) {
         const processId = uniqueId(`trellinho-${slug(record.title)}`, usedProcessIds)
+        const area = areaForRecord(record)
         process = {
           id: processId,
           name: record.title,
-          category: areaForRecord(record),
+          category: area,
           seiNames: record.seiProcessName ? [record.seiProcessName] : [],
           destinationUnit: record.destinationUnit || '',
-          responseModel: areaForRecord(record) === 'veiculos' ? 'drv' : areaForRecord(record) === 'pericia-medica' ? 'divmed' : areaForRecord(record) === 'taxas' ? 'daf' : 'standard',
+          responseModel: area === 'veiculos' ? 'drv' : area === 'pericia-medica' ? 'divmed' : area === 'taxas' ? 'daf' : 'standard',
           source: 'trellinho-2808',
-          manualSeiTypeSelection: !record.seiProcessName
+          manualSeiTypeSelection: Boolean(record.manualSeiTypeSelection || !record.seiProcessName)
         }
         processTypes.push(process)
       }
