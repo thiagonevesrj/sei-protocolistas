@@ -40,9 +40,11 @@
 
     return processTypes.find((item) => {
       const names = [item?.name, ...(Array.isArray(item?.seiNames) ? item.seiNames : [])].map(normalize)
-      if (sei && names.includes(sei)) return true
-      if (title && names.includes(title)) return true
-      return Boolean(destination && normalize(item?.destinationUnit) === destination && names.some((name) => name === title || name === sei))
+      const itemDestination = normalize(item?.destinationUnit)
+
+      if (title && names.includes(title) && (!destination || itemDestination === destination)) return true
+      if (sei && names.includes(sei) && destination && itemDestination === destination) return true
+      return false
     }) || null
   }
 
