@@ -4,6 +4,16 @@
   if (window.top !== window) return
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
+  const BAIXA_BUTTON_ID = 'spfm-p0-baixa-restricao'
+  const HIDDEN_IDENTIFICATION_SHORTCUTS = new Set([
+    'identificar o servico',
+    'identificar servico',
+    'simples identificacao',
+    'devolucao de taxas',
+    'pericia medica',
+    'inventario'
+  ])
+
   const normalize = (value) => String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -17,26 +27,39 @@
 
     const buttons = Array.from(container.querySelectorAll('.spfm-v2-quick-button'))
 
-    const complete = buttons.find((button) => {
+    buttons.forEach((button) => {
       const text = normalize(button.textContent)
-      return text === 'solicitar identificacao' || text === 'identificacao completa'
+      const isComplete = text === 'solicitar identificacao' || text === 'identificacao completa'
+      const isBaixa = button.id === BAIXA_BUTTON_ID
+
+      if (isComplete) {
+        if (button.textContent !== 'IDENTIFICAÇÃO COMPLETA') {
+          button.textContent = 'IDENTIFICAÇÃO COMPLETA'
+        }
+        button.hidden = false
+        button.style.removeProperty('display')
+        button.removeAttribute('aria-hidden')
+        button.title = 'Inserir o Script de Identificação Completo'
+        return
+      }
+
+      if (isBaixa) {
+        button.hidden = false
+        button.style.removeProperty('display')
+        button.removeAttribute('aria-hidden')
+        return
+      }
+
+      if (HIDDEN_IDENTIFICATION_SHORTCUTS.has(text)) {
+        button.hidden = true
+        button.style.display = 'none'
+        button.setAttribute('aria-hidden', 'true')
+      }
     })
 
-    const service = buttons.find((button) => normalize(button.textContent) === 'identificar servico')
-
-    if (complete) {
-      if (complete.textContent !== 'IDENTIFICAÇÃO COMPLETA') {
-        complete.textContent = 'IDENTIFICAÇÃO COMPLETA'
-      }
-      complete.hidden = false
-      complete.style.removeProperty('display')
-      complete.title = 'Inserir o Script de Identificação Completo'
-    }
-
-    if (service) {
-      service.hidden = true
-      service.style.display = 'none'
-      service.setAttribute('aria-hidden', 'true')
+    const state = document.querySelector('#spfm-p0-identity-state')
+    if (state && /use identificar servi[cç]o/i.test(state.textContent || '')) {
+      state.innerHTML = '<strong style="color:#f1c44f;">IDENTIDADE CONFIRMADA</strong><br><span>Serviço/destino ainda não identificado. Use a busca do FAST MAIL ou IDENTIFICAÇÃO COMPLETA se precisar solicitar esclarecimentos ao requerente.</span>'
     }
   }
 
