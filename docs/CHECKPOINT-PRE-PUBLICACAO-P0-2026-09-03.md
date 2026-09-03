@@ -2,17 +2,47 @@
 
 ## Objetivo
 
-Congelar uma candidata operacional recuperável imediatamente antes da promoção ao modo publicado, sem depender de ZIP, sem reescrever funcionalidades já validadas e sem alterar `desenvolvimento` ou mergear a PR #3 sem autorização explícita de Thiago.
+Congelar uma candidata operacional recuperável imediatamente antes da promoção ao modo publicado, sem depender de ZIP no fluxo de desenvolvimento, sem reescrever funcionalidades já validadas e sem alterar `desenvolvimento` ou mergear a PR #3 sem autorização explícita de Thiago.
 
 ## Estado da branch
 
 - Repositório: `thiagonevesrj/sei-protocolistas`
-- Branch: `agent/catalogo-fast-mail-amanha`
+- Branch de desenvolvimento/teste local: `agent/catalogo-fast-mail-amanha`
 - PR #3: `Consolidar FAST MAIL e FAST PROC para teste operacional`
 - PR permanece em draft e sem merge.
-- Commit funcional imediatamente anterior a este checkpoint: `1670836ef5cd3f9840696f7f0ce1df31f745d134`.
-- GitHub Actions `Validar extensão`: **SUCCESS** no commit `1670836`.
+- Commit funcional P0 de referência: `1670836ef5cd3f9840696f7f0ce1df31f745d134`.
+- Checkpoint pré-publicação registrado em `ef8c40312a086a00a5355d939083f281a952e98d`.
 - Manifest: versão `0.5.0`.
+
+## Dois trilhos obrigatórios a partir deste checkpoint
+
+### TRILHO 1 — LOCAL / LABORATÓRIO
+
+A branch `agent/catalogo-fast-mail-amanha` continua sendo o laboratório vivo.
+
+Fluxo do operador:
+
+1. GitHub Desktop → `Fetch origin`;
+2. `Pull origin` quando houver atualização;
+3. Chrome de desenvolvimento → `chrome://extensions`;
+4. recarregar a extensão descompactada que aponta para a pasta local do repositório;
+5. testar FAST MAIL / FAST PROC localmente;
+6. alterações validadas seguem sendo commitadas nesta branch.
+
+Este fluxo **não altera a extensão publicada** e não interfere nos trusted testers da Chrome Web Store.
+
+Recomendação operacional: usar um perfil de Chrome exclusivo para desenvolvimento local. Não deixar simultaneamente a extensão da Chrome Web Store e a extensão descompactada ativas no mesmo perfil durante os testes, porque ambas possuem content scripts para SEI/OWA e poderiam executar sobre as mesmas páginas.
+
+### TRILHO 2 — PUBLICADO / CHROME WEB STORE
+
+A versão publicada permanece independente do laboratório local.
+
+- nenhuma publicação é automática;
+- nenhum push na branch local envia versão para os protocolistas;
+- a promoção para a Chrome Web Store só ocorre após validação local e autorização explícita de Thiago;
+- a versão `0.5.0` possui empacotamento automático no GitHub Actions;
+- o workflow `Empacotar Chrome Web Store` valida a candidata e gera um artefato ZIP pronto para upload no painel da Chrome Web Store;
+- gerar o pacote **não significa publicar**.
 
 ## P0 fechado neste ciclo
 
@@ -157,23 +187,31 @@ A GREDINFO já foi acionada. A Central foi ajustada para reutilizar/restaurar ab
 - PR #3 não foi mergeada;
 - `desenvolvimento` não foi alterada;
 - nenhuma branch de publicação foi promovida;
-- nenhum ZIP foi criado;
-- não foi exigido PowerShell do usuário;
-- não foi feita publicação automática porque o workflow atual do repositório é de validação, não deploy.
+- a Chrome Web Store não foi atualizada automaticamente;
+- não foi exigido PowerShell do usuário.
 
-## Próximo passo obrigatório
+## Próximo passo operacional
 
-1. Confirmar o GitHub Actions do commit deste próprio checkpoint.
-2. Identificar exatamente qual branch, release ou mecanismo alimenta a extensão **publicada/online** usada pelos protocolistas.
-3. Comparar esse alvo com este checkpoint.
-4. Só depois solicitar autorização explícita de Thiago para a promoção que realmente alterar o ambiente publicado.
-5. Após publicação, fazer validação operacional curta no próprio modo publicado, priorizando:
+### Agora — teste local
+
+1. Fazer `Fetch origin` → `Pull origin` no GitHub Desktop, mantendo `agent/catalogo-fast-mail-amanha` selecionada.
+2. Recarregar a extensão descompactada no perfil de Chrome de desenvolvimento.
+3. Executar validação operacional curta:
    - Solicitar Identificação;
    - Identificar Serviço;
    - assunto dinâmico;
    - Baixa de Restrição → Inventário → Herdeiros;
    - Leilão → COMISLE com tipologia manual.
+4. Corrigir qualquer regressão encontrada localmente na mesma branch.
+
+### Depois — publicação
+
+1. Só após os testes locais verdes, usar o artefato da versão `0.5.0` gerado pelo workflow `Empacotar Chrome Web Store`.
+2. Fazer o upload no item privado da Chrome Web Store.
+3. Publicar somente após autorização explícita de Thiago.
+4. Fazer smoke test curto na versão da loja depois que a atualização chegar.
+5. Continuar mantendo a branch e a extensão local para o próximo ciclo de desenvolvimento.
 
 ## Regra de recuperação
 
-Se a promoção publicada apresentar regressão, esta candidata pode ser recuperada a partir do commit funcional `1670836ef5cd3f9840696f7f0ce1df31f745d134` mais este documento de checkpoint. Não reconstruir a solução a partir de versões antigas.
+Se uma futura promoção publicada apresentar regressão, o estado P0 pode ser rastreado a partir do commit funcional `1670836ef5cd3f9840696f7f0ce1df31f745d134`, do checkpoint `ef8c40312a086a00a5355d939083f281a952e98d` e dos commits posteriores exclusivamente de CI/documentação. Não reconstruir a solução a partir de versões antigas.
