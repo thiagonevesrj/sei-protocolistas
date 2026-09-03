@@ -16,10 +16,7 @@ jobs:
       - name: Preparar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Instalar dependências
-        run: npm ci
+          node-version: 22
 
       - name: Validar candidata
         run: npm run validate
@@ -51,8 +48,6 @@ jobs:
                'package.json' \
                'package-lock.json' \
                'bun.lock'
-
-          unzip -l "$ZIP" | grep -E '[[:space:]]manifest\.json$'
           test "$(unzip -Z1 "$ZIP" | grep -c '^manifest.json$')" -eq 1
 
       - name: Disponibilizar pacote
