@@ -1,0 +1,64 @@
+name: Empacotar Chrome Web Store
+
+on:
+  push:
+    branches:
+      - agent/catalogo-fast-mail-amanha
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar candidata
+        run: npm run validate
+
+      - name: Ler versão do manifesto
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Montar pacote da extensão
+        shell: bash
+        run: |
+          mkdir -p dist
+          ZIP="dist/sei-protocolistas-chrome-web-store-${{ steps.version.outputs.version }}.zip"
+          zip -r "$ZIP" . \
+            -x '.git/*' \
+               '.github/*' \
+               '.githooks/*' \
+               '.vscode/*' \
+               'docs/*' \
+               'scripts/*' \
+               'node_modules/*' \
+               'dist/*' \
+               '.gitignore' \
+               'AGENTS.md' \
+               'README.md' \
+               'package.json' \
+               'package-lock.json' \
+               'bun.lock'
+
+          unzip -l "$ZIP" | grep -E '[[:space:]]manifest\.json$'
+          test "$(unzip -Z1 "$ZIP" | grep -c '^manifest.json$')" -eq 1
+
+      - name: Disponibilizar pacote
+        uses: actions/upload-artifact@v4
+        with:
+          name: sei-protocolistas-chrome-web-store-${{ steps.version.outputs.version }}
+          path: dist/sei-protocolistas-chrome-web-store-${{ steps.version.outputs.version }}.zip
+          if-no-files-found: error
+          retention-days: 7
