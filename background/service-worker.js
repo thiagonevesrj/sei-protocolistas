@@ -83,6 +83,67 @@ async function focusBrowserTab (tab) {
   }
 }
 
+async function moveTabToWindow (tab, windowId) {
+  if (!tab?.id || windowId == null || tab.windowId === windowId || !api.tabs?.move) return tab
+
+  try {
+    const moved = await callApi(api.tabs, 'move', tab.id, {
+      windowId,
+      index: -1
+    })
+    return Array.isArray(moved) ? moved[0] || tab : moved || tab
+  } catch (error) {
+    console.warn('[SEI Protocolistas] A aba restaurada do Webmail não pôde ser movida para a janela atual:', error)
+    return tab
+  }
+}
+
+async function restoreRecentWebmailTab (active = true, windowId = null) {
+  if (!api.sessions?.getRecentlyClosed || !api.sessions?.restore) return null
+
+  let sessions
+  try {
+    sessions = await callApi(api.sessions, 'getRecentlyClosed', { maxResults: 12 })
+  } catch (error) {
+    console.warn('[SEI Protocolistas] Não foi possível consultar sessões recentes do Webmail:', error)
+    return null
+  }
+
+  const candidate = (sessions || []).find((session) => {
+    const tab = session?.tab
+    return Boolean(
+      session?.sessionId &&
+      tab &&
+      String(tab.url || '').startsWith(WEBMAIL_URL) &&
+      !isWebmailComposeTab(tab) &&
+      !/\/owa\/auth\/(?:logoff|logon)\.aspx/i.test(String(tab.url || '')) &&
+      !/server error in ['"]?\/owa|mapiexceptionsessionlimit/i.test(String(tab.title || ''))
+    )
+  })
+
+  if (!candidate) return null
+
+  try {
+    const restored = await callApi(api.sessions, 'restore', candidate.sessionId)
+    let tab = restored?.tab || null
+
+    if (!tab && restored?.window?.tabs?.length) {
+      tab = restored.window.tabs.find((item) =>
+        String(item?.url || '').startsWith(WEBMAIL_URL) && !isWebmailComposeTab(item)
+      ) || restored.window.tabs[0]
+    }
+
+    if (!tab?.id) return null
+
+    tab = await moveTabToWindow(tab, windowId)
+    if (active) await focusBrowserTab(tab)
+    return tab
+  } catch (error) {
+    console.warn('[SEI Protocolistas] Não foi possível restaurar a sessão recente do Webmail:', error)
+    return null
+  }
+}
+
 async function openOrReuseWebmail (active = true, windowId = null) {
   const existing = await findReusableWebmailTab()
 
@@ -90,6 +151,9 @@ async function openOrReuseWebmail (active = true, windowId = null) {
     if (active) await focusBrowserTab(existing)
     return { tab: existing, reused: true, restored: false }
   }
+
+  const restored = await restoreRecentWebmailTab(active, windowId)
+  if (restored) return { tab: restored, reused: false, restored: true }
 
   const createProperties = { url: WEBMAIL_URL, active }
   if (windowId != null) createProperties.windowId = windowId
@@ -103,7 +167,7 @@ async function openWebmail (sender) {
     ok: true,
     tabId: result.tab.id,
     reused: result.reused,
-    restored: false
+    restored: result.restored
   }
 }
 
@@ -263,7 +327,7 @@ async function openWorkdaySystems (sender) {
       ok: true,
       webmailTabId: webmailTab.id,
       webmailReused: webmailResult.reused,
-      webmailRestored: false,
+      webmailRestored: webmailResult.restored,
       seiTabId: seiTab.id
     }
   } catch (error) {
