@@ -2,6 +2,7 @@
   'use strict'
 
   if (window.top !== window) return
+  if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
   const api = typeof browser === 'undefined' ? chrome : browser
   const nativeFetch = window.fetch.bind(window)
