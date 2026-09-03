@@ -146,7 +146,7 @@
             "run_at": "document_idle",
             "all_frames": false,
             "css": ["cs_modules/fast_mail/styles.css", "cs_modules/fast_mail/navigation-v2.css", "cs_modules/fast_mail/action-state-v2.css", "cs_modules/fast_mail/action-cue-v2.css"],
-            "js": ["cs_modules/fast_mail/trellinho-overlay-v2.js", "cs_modules/fast_mail/index.js", "cs_modules/fast_mail/navigation-v2.js", "cs_modules/fast_mail/action-state-v2.js", "cs_modules/fast_mail/action-cue-v2.js"]
+            "js": ["cs_modules/fast_mail/trellinho-overlay-v2.js", "cs_modules/fast_mail/index.js", "cs_modules/fast_mail/navigation-v2.js", "cs_modules/fast_mail/action-state-v2.js", "cs_modules/fast_mail/action-cue-v2.js", "cs_modules/fast_mail/operational-p0-v3.js"]
         }
     ],
     "web_accessible_resources": [
