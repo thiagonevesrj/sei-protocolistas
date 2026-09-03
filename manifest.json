@@ -1,162 +1,162 @@
 {
-    "manifest_version": 3,
-    "name": "SEI Protocolistas",
-    "short_name": "SEI Protocolistas",
-    "description": "Ferramentas de produtividade para protocolistas no Sistema Eletrônico de Informações (SEI), com base no projeto SEI++.",
-    "version": "0.5.0",
-    "author": "Thiago Neves e colaboradores do SEI++",
-    "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
-    "icons": {
-        "16": "icons/protocolistas-16.png",
-        "32": "icons/protocolistas-32.png",
-        "48": "icons/protocolistas-48.png",
-        "128": "icons/protocolistas-128.png"
+  "manifest_version": 3,
+  "name": "SEI Protocolistas",
+  "short_name": "SEI Protocolistas",
+  "description": "Ferramentas de produtividade para protocolistas no Sistema Eletrônico de Informações (SEI), com base no projeto SEI++.",
+  "version": "0.5.0",
+  "author": "Thiago Neves e colaboradores do SEI++",
+  "homepage_url": "https://github.com/thiagonevesrj/sei-protocolistas",
+  "icons": {
+    "16": "icons/protocolistas-16.png",
+    "32": "icons/protocolistas-32.png",
+    "48": "icons/protocolistas-48.png",
+    "128": "icons/protocolistas-128.png"
+  },
+  "permissions": ["storage", "sessions"],
+  "host_permissions": ["*://sei.rj.gov.br/*", "https://venus2.detran.rj.gov.br/owa/*"],
+  "action": {
+    "default_icon": {
+      "16": "icons/protocolistas-16.png",
+      "32": "icons/protocolistas-32.png",
+      "48": "icons/protocolistas-48.png",
+      "128": "icons/protocolistas-128.png"
     },
-    "permissions": ["storage", "sessions"],
-    "host_permissions": ["*://sei.rj.gov.br/*", "https://venus2.detran.rj.gov.br/owa/*"],
-    "action": {
-        "default_icon": {
-            "16": "icons/protocolistas-16.png",
-            "32": "icons/protocolistas-32.png",
-            "48": "icons/protocolistas-48.png",
-            "128": "icons/protocolistas-128.png"
-        },
-        "default_title": "SEI Protocolistas",
-        "default_popup": "browser_action/index.html"
+    "default_title": "SEI Protocolistas",
+    "default_popup": "browser_action/index.html"
+  },
+  "background": {"service_worker": "background/service-worker.js"},
+  "browser_specific_settings": {"gecko": {"id": "jonatas@gov", "strict_min_version": "128.0"}},
+  "content_scripts": [
+    {
+      "matches": ["*://sei.rj.gov.br/*"],
+      "run_at": "document_start",
+      "css": ["cs_modules/core.css"],
+      "all_frames": true,
+      "js": ["cs_modules/core/start/lib.js", "cs_modules/core/start/limparContextoTemporario.js", "vendor/jquery/jquery.min.js", "vendor/jquery-ui/jquery-ui.min.js"]
     },
-    "background": {"service_worker": "background/service-worker.js"},
-    "browser_specific_settings": {"gecko": {"id": "jonatas@gov", "strict_min_version": "128.0"}},
-    "content_scripts": [
-        {
-            "matches": ["*://sei.rj.gov.br/*"],
-            "run_at": "document_start",
-            "css": ["cs_modules/core.css"],
-            "all_frames": true,
-            "js": ["cs_modules/core/start/lib.js", "cs_modules/core/start/limparContextoTemporario.js", "vendor/jquery/jquery.min.js", "vendor/jquery-ui/jquery-ui.min.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*"],
-            "run_at": "document_end",
-            "css": ["cs_modules/core.css", "vendor/jquery-ui/themes/base/jquery-ui.min.css"],
-            "all_frames": true,
-            "js": ["cs_modules/core/end/theme.js", "cs_modules/core/end/getSeiVersion.js", "cs_modules/core/end/redirecionarPagina.js", "cs_modules/core/end/moduleInit.js", "cs_modules/core/end/permitirSalvarSenhaBrowser.js", "cs_modules/core/end/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/sip/login.php*"],
-            "run_at": "document_end",
-            "js": ["cs_modules/core/login/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*", "*://sei.rj.gov.br/*controlador_externo.php?acao=*"],
-            "run_at": "document_idle",
-            "all_frames": false,
-            "js": ["cs_modules/core/idle/adicionarIdentificadorSeipp.js", "cs_modules/core/idle/verificarBlocoAssinatura.js", "cs_modules/core/idle/indicarConfiguracao.js", "cs_modules/core/idle/atalhoPublicacoesEletronicas.js", "cs_modules/core/idle/linkNeutroControleProcessos.js", "cs_modules/core/idle/moveLinkMenu.js", "cs_modules/core/idle/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_receber*"],
-            "all_frames": true,
-            "js": ["cs_modules/documento_receber/forcarReaberturaProcesso.js", "cs_modules/documento_receber/autopreencherDocumentoExterno.js", "cs_modules/documento_receber/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*"],
-            "run_at": "document_idle",
-            "all_frames": false,
-            "js": ["cs_modules/fast_proc_handoff/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_escolher_tipo*", "*://sei.rj.gov.br/*controlador.php?acao=procedimento_gerar*"],
-            "run_at": "document_idle",
-            "all_frames": false,
-            "css": ["cs_modules/clique_protocolista/styles.css"],
-            "js": ["cs_modules/clique_protocolista/index.js", "cs_modules/clique_protocolista/next-click-guide.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
-            "run_at": "document_start",
-            "all_frames": true,
-            "world": "MAIN",
-            "js": ["cs_modules/clique_protocolista/confirmarInclusaoInteressado.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_controlar*"],
-            "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_controlar/mostrarEspecificacao.js", "cs_modules/procedimento_controlar/corrigirTabelas.js", "cs_modules/procedimento_controlar/confirmarAntesConcluir.js", "cs_modules/procedimento_controlar/incluirCalculoPrazos.js", "cs_modules/procedimento_controlar/marcarCorProcesso.js", "cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/procedimento_controlar/filtra_processos/filtraPorAtribuicao.js", "cs_modules/procedimento_controlar/filtra_processos/carregaInformacaoBlocos.js", "cs_modules/lib/selecionarMultiplosProcessos.js", "cs_modules/procedimento_controlar/listaPorEspecificacao.js", "cs_modules/procedimento_controlar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
-            "js": ["cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/lib/selecionarMultiplosProcessos.js", "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js", "cs_modules/rel_bloco_protocolo_listar/selecionarDocumentosAssinar.js", "cs_modules/rel_bloco_protocolo_listar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=controle_unidade_gerar*"],
-            "js": ["cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js", "cs_modules/controle_unidade_gerar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
-            "run_at": "document_idle",
-            "all_frames": true,
-            "js": ["cs_modules/autenticacao_nativa/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_visualizar*"],
-            "all_frames": true,
-            "css": ["cs_modules/procedimento_visualizar/styles.css", "cs_modules/procedimento_visualizar/arvore-inteligente.css"],
-            "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_visualizar/consultarInteressado.js", "cs_modules/procedimento_visualizar/copiarNumeroProcessoDocumento.js", "cs_modules/procedimento_visualizar/mostrarAnotacao.js", "cs_modules/procedimento_visualizar/abrirDocumentoNovaAba.js", "cs_modules/procedimento_visualizar/copiarLinkInterno.js", "cs_modules/procedimento_visualizar/dropzone.js", "cs_modules/procedimento_visualizar/alterarTitulo.js", "cs_modules/procedimento_visualizar/documentoModelo.js", "cs_modules/procedimento_visualizar/ajustarElementosNativos.js", "cs_modules/procedimento_visualizar/index.js", "cs_modules/procedimento_visualizar/arvore-inteligente.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_escolher_tipo*"],
-            "all_frames": true,
-            "css": ["cs_modules/documento_escolher_tipo/styles.css"],
-            "js": ["cs_modules/documento_escolher_tipo/escolherDocumentoComModelo.js", "cs_modules/documento_escolher_tipo/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=anotacao_registrar*"],
-            "all_frames": true,
-            "js": ["cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js", "cs_modules/anotacao_registrar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=infra_configurar*"],
-            "css": ["cs_modules/infra_configurar/options_ui/styles.css"],
-            "js": ["cs_modules/lib/colorToFilter.js", "cs_modules/infra_configurar/options_ui.js", "cs_modules/infra_configurar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_gerar*"],
-            "all_frames": true,
-            "js": ["cs_modules/documento_gerar/gerarDocumentoComModelo.js", "cs_modules/documento_gerar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_atribuicao_cadastrar*"],
-            "all_frames": true,
-            "js": ["cs_modules/procedimento_atribuicao_cadastrar/ordenarSelect.js", "cs_modules/procedimento_atribuicao_cadastrar/index.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
-            "run_at": "document_idle",
-            "all_frames": true,
-            "css": ["cs_modules/requerimento_rapido/styles.css"],
-            "js": ["cs_modules/requerimento_rapido/index.js", "cs_modules/requerimento_rapido/resgate-rq.js"]
-        },
-        {
-            "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
-            "run_at": "document_idle",
-            "all_frames": true,
-            "css": ["cs_modules/protocolo_cliente/styles.css"],
-            "js": ["cs_modules/protocolo_cliente/index.js"]
-        },
-        {
-            "matches": ["https://venus2.detran.rj.gov.br/owa/*"],
-            "run_at": "document_idle",
-            "all_frames": false,
-            "css": ["cs_modules/fast_mail/styles.css", "cs_modules/fast_mail/navigation-v2.css", "cs_modules/fast_mail/action-state-v2.css", "cs_modules/fast_mail/action-cue-v2.css"],
-            "js": ["cs_modules/fast_mail/trellinho-overlay-v2.js", "cs_modules/fast_mail/index.js", "cs_modules/fast_mail/navigation-v2.js", "cs_modules/fast_mail/action-state-v2.js", "cs_modules/fast_mail/action-cue-v2.js", "cs_modules/fast_mail/operational-p0-v3.js"]
-        }
-    ],
-    "web_accessible_resources": [
-        {
-            "resources": ["cs_modules/infra_configurar/options_ui/index.html", "cs_modules/themes/black.css", "cs_modules/themes/super-black.css", "icons/iconYellow.png", "icons/iconBlue.png", "icons/iconGreen.png", "icons/iconRed.png", "icons/link.png", "icons/modelo.png", "icons/fileUpload.png", "icons/aguarde.gif", "icons/editNote.png", "icons/removeNote.png", "icons/note.png", "icons/interessado.png", "icons/menu.svg", "icons/copy.svg", "icons/sei-protocolistas-wordmark.png"],
-            "matches": ["*://sei.rj.gov.br/*"]
-        },
-        {
-            "resources": ["data/catalogo-processos.json", "data/catalogo-scripts.json", "data/respostas-curadas.json", "data/trellinho-operacional-2808.json", "data/trello-fase02-estado-atual.json"],
-            "matches": ["https://venus2.detran.rj.gov.br/*"]
-        }
-    ]
+    {
+      "matches": ["*://sei.rj.gov.br/*"],
+      "run_at": "document_end",
+      "css": ["cs_modules/core.css", "vendor/jquery-ui/themes/base/jquery-ui.min.css"],
+      "all_frames": true,
+      "js": ["cs_modules/core/end/theme.js", "cs_modules/core/end/getSeiVersion.js", "cs_modules/core/end/redirecionarPagina.js", "cs_modules/core/end/moduleInit.js", "cs_modules/core/end/permitirSalvarSenhaBrowser.js", "cs_modules/core/end/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/sip/login.php*"],
+      "run_at": "document_end",
+      "js": ["cs_modules/core/login/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*", "*://sei.rj.gov.br/*controlador_externo.php?acao=*"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "js": ["cs_modules/core/idle/adicionarIdentificadorSeipp.js", "cs_modules/core/idle/verificarBlocoAssinatura.js", "cs_modules/core/idle/indicarConfiguracao.js", "cs_modules/core/idle/atalhoPublicacoesEletronicas.js", "cs_modules/core/idle/linkNeutroControleProcessos.js", "cs_modules/core/idle/moveLinkMenu.js", "cs_modules/core/idle/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_receber*"],
+      "all_frames": true,
+      "js": ["cs_modules/documento_receber/forcarReaberturaProcesso.js", "cs_modules/documento_receber/autopreencherDocumentoExterno.js", "cs_modules/documento_receber/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "js": ["cs_modules/fast_proc_handoff/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_escolher_tipo*", "*://sei.rj.gov.br/*controlador.php?acao=procedimento_gerar*"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "css": ["cs_modules/clique_protocolista/styles.css"],
+      "js": ["cs_modules/clique_protocolista/index.js", "cs_modules/clique_protocolista/next-click-guide.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN",
+      "js": ["cs_modules/clique_protocolista/confirmarInclusaoInteressado.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_controlar*"],
+      "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_controlar/mostrarEspecificacao.js", "cs_modules/procedimento_controlar/corrigirTabelas.js", "cs_modules/procedimento_controlar/confirmarAntesConcluir.js", "cs_modules/procedimento_controlar/incluirCalculoPrazos.js", "cs_modules/procedimento_controlar/marcarCorProcesso.js", "cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/procedimento_controlar/filtra_processos/filtraPorAtribuicao.js", "cs_modules/procedimento_controlar/filtra_processos/carregaInformacaoBlocos.js", "cs_modules/lib/selecionarMultiplosProcessos.js", "cs_modules/procedimento_controlar/listaPorEspecificacao.js", "cs_modules/procedimento_controlar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
+      "js": ["cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/lib/selecionarMultiplosProcessos.js", "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js", "cs_modules/rel_bloco_protocolo_listar/selecionarDocumentosAssinar.js", "cs_modules/rel_bloco_protocolo_listar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=controle_unidade_gerar*"],
+      "js": ["cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/retirarSobrestamentoReabrirEmBloco.js", "cs_modules/controle_unidade_gerar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "js": ["cs_modules/autenticacao_nativa/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_visualizar*"],
+      "all_frames": true,
+      "css": ["cs_modules/procedimento_visualizar/styles.css", "cs_modules/procedimento_visualizar/arvore-inteligente.css"],
+      "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_visualizar/consultarInteressado.js", "cs_modules/procedimento_visualizar/copiarNumeroProcessoDocumento.js", "cs_modules/procedimento_visualizar/mostrarAnotacao.js", "cs_modules/procedimento_visualizar/abrirDocumentoNovaAba.js", "cs_modules/procedimento_visualizar/copiarLinkInterno.js", "cs_modules/procedimento_visualizar/dropzone.js", "cs_modules/procedimento_visualizar/alterarTitulo.js", "cs_modules/procedimento_visualizar/documentoModelo.js", "cs_modules/procedimento_visualizar/ajustarElementosNativos.js", "cs_modules/procedimento_visualizar/index.js", "cs_modules/procedimento_visualizar/arvore-inteligente.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_escolher_tipo*"],
+      "all_frames": true,
+      "css": ["cs_modules/documento_escolher_tipo/styles.css"],
+      "js": ["cs_modules/documento_escolher_tipo/escolherDocumentoComModelo.js", "cs_modules/documento_escolher_tipo/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=anotacao_registrar*"],
+      "all_frames": true,
+      "js": ["cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js", "cs_modules/anotacao_registrar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=infra_configurar*"],
+      "css": ["cs_modules/infra_configurar/options_ui/styles.css"],
+      "js": ["cs_modules/lib/colorToFilter.js", "cs_modules/infra_configurar/options_ui.js", "cs_modules/infra_configurar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=documento_gerar*"],
+      "all_frames": true,
+      "js": ["cs_modules/documento_gerar/gerarDocumentoComModelo.js", "cs_modules/documento_gerar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_atribuicao_cadastrar*"],
+      "all_frames": true,
+      "js": ["cs_modules/procedimento_atribuicao_cadastrar/ordenarSelect.js", "cs_modules/procedimento_atribuicao_cadastrar/index.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "css": ["cs_modules/requerimento_rapido/styles.css"],
+      "js": ["cs_modules/requerimento_rapido/index.js", "cs_modules/requerimento_rapido/resgate-rq.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "css": ["cs_modules/protocolo_cliente/styles.css"],
+      "js": ["cs_modules/protocolo_cliente/index.js"]
+    },
+    {
+      "matches": ["https://venus2.detran.rj.gov.br/owa/*"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "css": ["cs_modules/fast_mail/styles.css", "cs_modules/fast_mail/navigation-v2.css", "cs_modules/fast_mail/action-state-v2.css", "cs_modules/fast_mail/action-cue-v2.css"],
+      "js": ["cs_modules/fast_mail/trellinho-overlay-v2.js", "cs_modules/fast_mail/index.js", "cs_modules/fast_mail/navigation-v2.js", "cs_modules/fast_mail/action-state-v2.js", "cs_modules/fast_mail/action-cue-v2.js", "cs_modules/fast_mail/operational-p0-v3.js", "cs_modules/fast_mail/identity-shortcut-cleanup-v1.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["cs_modules/infra_configurar/options_ui/index.html", "cs_modules/themes/black.css", "cs_modules/themes/super-black.css", "icons/iconYellow.png", "icons/iconBlue.png", "icons/iconGreen.png", "icons/iconRed.png", "icons/link.png", "icons/modelo.png", "icons/fileUpload.png", "icons/aguarde.gif", "icons/editNote.png", "icons/removeNote.png", "icons/note.png", "icons/interessado.png", "icons/menu.svg", "icons/copy.svg", "icons/sei-protocolistas-wordmark.png"],
+      "matches": ["*://sei.rj.gov.br/*"]
+    },
+    {
+      "resources": ["data/catalogo-processos.json", "data/catalogo-scripts.json", "data/respostas-curadas.json", "data/trellinho-operacional-2808.json", "data/trello-fase02-estado-atual.json"],
+      "matches": ["https://venus2.detran.rj.gov.br/*"]
+    }
+  ]
 }
