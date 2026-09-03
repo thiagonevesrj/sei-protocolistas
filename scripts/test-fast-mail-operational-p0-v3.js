@@ -7,7 +7,9 @@ const path = require('path')
 const root = path.resolve(__dirname, '..')
 const errors = []
 const sourcePath = 'cs_modules/fast_mail/operational-p0-v3.js'
+const cleanupPath = 'cs_modules/fast_mail/identity-shortcut-cleanup-v1.js'
 const source = fs.readFileSync(path.join(root, sourcePath), 'utf8')
+const cleanupSource = fs.readFileSync(path.join(root, cleanupPath), 'utf8')
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'))
 
 function expect (condition, message) {
@@ -15,9 +17,11 @@ function expect (condition, message) {
 }
 
 try {
-  // Valida apenas a sintaxe. O script não é executado no Node.
+  // Valida apenas a sintaxe. Os scripts não são executados no Node.
   // eslint-disable-next-line no-new-func
   new Function(source)
+  // eslint-disable-next-line no-new-func
+  new Function(cleanupSource)
 } catch (error) {
   errors.push(`FAST MAIL P0: erro de sintaxe: ${error.message}`)
 }
@@ -26,16 +30,26 @@ const owaEntry = (manifest.content_scripts || []).find((entry) =>
   (entry.matches || []).includes('https://venus2.detran.rj.gov.br/owa/*')
 )
 const owaScripts = owaEntry?.js || []
+const p0Index = owaScripts.indexOf(sourcePath)
+const cleanupIndex = owaScripts.indexOf(cleanupPath)
 
-expect(owaScripts.includes(sourcePath), 'FAST MAIL P0: camada operacional não carregada no OWA')
-expect(owaScripts[owaScripts.length - 1] === sourcePath, 'FAST MAIL P0: camada operacional deve carregar por último')
+expect(p0Index >= 0, 'FAST MAIL P0: camada operacional não carregada no OWA')
+expect(cleanupIndex >= 0, 'FAST MAIL P0: limpeza visual de atalhos não carregada no OWA')
+expect(cleanupIndex === p0Index + 1, 'FAST MAIL P0: limpeza de atalhos deve carregar imediatamente após a camada operacional')
+expect(cleanupIndex === owaScripts.length - 1, 'FAST MAIL P0: limpeza de atalhos deve ser a última camada visual do OWA')
 
 // Identificação e serviço.
-expect(source.includes('SOLICITAR IDENTIFICAÇÃO'), 'FAST MAIL P0: atalho de solicitar identificação ausente')
-expect(source.includes('IDENTIFICAR SERVIÇO'), 'FAST MAIL P0: atalho de identificar serviço ausente')
+expect(source.includes('SOLICITAR IDENTIFICAÇÃO'), 'FAST MAIL P0: fluxo interno de solicitar identificação ausente')
+expect(source.includes('IDENTIFICAR SERVIÇO'), 'FAST MAIL P0: script interno de identificar serviço ausente')
 expect(source.includes('IDENTIDADE NÃO CONFIRMADA'), 'FAST MAIL P0: estado de identidade pendente ausente')
 expect(source.includes("cpf.length === 11"), 'FAST MAIL P0: nome e CPF não estão sendo exigidos para confirmar identidade')
 expect(source.includes("document.querySelector('#spfm-insert-script')"), 'FAST MAIL P0: scripts rápidos não inserem a resposta em um clique')
+expect(cleanupSource.includes('IDENTIFICAÇÃO COMPLETA'), 'FAST MAIL P0: atalho único de identificação completa ausente')
+expect(cleanupSource.includes("'devolucao de taxas'"), 'FAST MAIL P0: devolução de taxas ainda pode poluir os atalhos de identificação')
+expect(cleanupSource.includes("'pericia medica'"), 'FAST MAIL P0: perícia médica ainda pode poluir os atalhos de identificação')
+expect(cleanupSource.includes("'simples identificacao'"), 'FAST MAIL P0: simples identificação ainda pode poluir os atalhos principais')
+expect(cleanupSource.includes("'inventario'"), 'FAST MAIL P0: inventário ainda pode reaparecer como atalho principal')
+expect(cleanupSource.includes("button.id === BAIXA_BUTTON_ID"), 'FAST MAIL P0: Baixa de Restrição não está protegida na limpeza dos atalhos')
 
 // Assunto e operador.
 expect(source.includes("String(now.getFullYear()).slice(-2)"), 'FAST MAIL P0: assunto não usa ano com dois dígitos')
