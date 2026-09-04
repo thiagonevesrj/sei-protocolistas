@@ -48,6 +48,14 @@ assert(bridge.includes("button.setAttribute('aria-pressed', 'true')"), 'FAST MAI
 assert(workflowCss.includes('.spfm-workflow-v3-service-button.is-selected'), 'FAST MAIL V3: CSS deve destacar fortemente o atendimento ativo')
 assert(workflowCss.includes("content: '✓ '"), 'FAST MAIL V3: atendimento ativo deve exibir confirmação visual')
 
+assert(bridge.includes('function bindIdentificationManualFlow ()'), 'FAST MAIL V3: identificação deve ter etapa manual antes de inserir a resposta')
+assert(bridge.includes('function selectNativeScriptWithoutInsert (script)'), 'FAST MAIL V3: selecionar a identificação não pode inserir resposta automaticamente')
+assert(bridge.includes('event.stopImmediatePropagation()'), 'FAST MAIL V3: fluxo manual deve bloquear o disparo automático legado')
+assert(bridge.includes('REQUERENTE SEM DADOS'), 'FAST MAIL V3: deve permitir confirmar que o requerente ainda não informou dados')
+assert(bridge.includes('spfm-workflow-v3-identification-insert'), 'FAST MAIL V3: identificação deve ter botão explícito INSERIR RESPOSTA')
+assert(bridge.includes('nativeInsert.click()'), 'FAST MAIL V3: inserção deve ocorrer somente após o clique explícito do operador')
+assert(bridge.includes('Informe nome completo + CPF ou marque REQUERENTE SEM DADOS.'), 'FAST MAIL V3: dados ou ausência de dados devem ser confirmados antes da inserção')
+
 if (failures.length) {
   console.error('Falhas na validação do fluxo V3 do FAST MAIL:')
   failures.forEach((failure) => console.error(`- ${failure}`))
