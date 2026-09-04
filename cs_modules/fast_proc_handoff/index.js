@@ -81,6 +81,44 @@
     ) || null
   }
 
+  function findSendProcessHeading () {
+    return Array.from(document.querySelectorAll('h1,h2,h3,legend,strong,div,span'))
+      .filter(visible)
+      .filter((element) => normalize(element.textContent).includes('enviar processo'))
+      .sort((a, b) => clean(a.textContent).length - clean(b.textContent).length)[0] || null
+  }
+
+  function showDestinationProgress (message, state = 'loading', anchor = null) {
+    let box = document.getElementById('sp-fast-proc-destination-status')
+    if (!box) {
+      box = document.createElement('div')
+      box.id = 'sp-fast-proc-destination-status'
+      box.setAttribute('role', 'status')
+      box.setAttribute('aria-live', 'polite')
+      box.style.margin = '10px 0 14px'
+      box.style.padding = '11px 13px'
+      box.style.borderRadius = '7px'
+      box.style.fontSize = '12px'
+      box.style.fontWeight = '800'
+      box.style.letterSpacing = '.02em'
+
+      const reference = anchor || findSendProcessHeading()
+      if (reference?.parentElement) reference.insertAdjacentElement('afterend', box)
+      else document.body?.prepend(box)
+    }
+
+    box.dataset.state = state
+    box.style.border = state === 'ready'
+      ? '2px solid #d2a92f'
+      : state === 'error'
+        ? '2px solid #d27a2f'
+        : '1px solid #d2a92f'
+    box.style.background = state === 'ready' ? '#0b2940' : '#07182c'
+    box.style.color = state === 'error' ? '#ffd9bd' : '#fff'
+    box.textContent = message
+    return box
+  }
+
   function findUnitsLabel () {
     return Array.from(document.querySelectorAll('label,td,th,div,span'))
       .filter(visible)
@@ -174,24 +212,6 @@
       .find((element) => /enviar/i.test(clean(element.value || element.textContent || element.title))) || null
   }
 
-  function showDestinationStatus (destination, input) {
-    let box = document.getElementById('sp-fast-proc-destination-status')
-    if (!box) {
-      box = document.createElement('div')
-      box.id = 'sp-fast-proc-destination-status'
-      box.style.margin = '8px 0'
-      box.style.padding = '9px 11px'
-      box.style.border = '1px solid #d2a92f'
-      box.style.borderRadius = '6px'
-      box.style.background = '#07182c'
-      box.style.color = '#fff'
-      box.style.fontSize = '12px'
-      box.style.fontWeight = '700'
-      input.parentElement?.insertAdjacentElement('afterend', box)
-    }
-    box.textContent = `Destino selecionado automaticamente: ${destination} — confirme o destino antes de enviar.`
-  }
-
   async function autoSelectDestination () {
     if (action() !== 'procedimento_trabalhar') return false
 
@@ -210,16 +230,25 @@
     const destination = clean(context.destino || context.destination).toUpperCase()
     if (!destination) return false
 
+    showDestinationProgress(`FAST PROC — CARREGANDO SETOR DE DESTINO: ${destination}…`, 'loading')
+
     const startedAt = Date.now()
+    let announcedInput = false
     return new Promise((resolve) => {
       const timer = window.setInterval(() => {
         const input = findUnitsInput()
         if (!input) {
           if (Date.now() - startedAt > 12000) {
             window.clearInterval(timer)
+            showDestinationProgress(`FAST PROC — NÃO FOI POSSÍVEL LOCALIZAR O CAMPO DE DESTINO (${destination}). Selecione manualmente.`, 'error')
             resolve(false)
           }
           return
+        }
+
+        if (!announcedInput) {
+          announcedInput = true
+          showDestinationProgress(`FAST PROC — LOCALIZANDO ${destination} NA LISTA DE UNIDADES…`, 'loading', input)
         }
 
         if (normalize(input.value) !== normalize(destination)) setFieldValue(input, destination)
@@ -228,6 +257,7 @@
         if (!selected) {
           if (Date.now() - startedAt > 12000) {
             window.clearInterval(timer)
+            showDestinationProgress(`FAST PROC — SETOR ${destination} NÃO FOI SELECIONADO AUTOMATICAMENTE. CONFIRA O CAMPO DE UNIDADES.`, 'error', input)
             pulse(input)
             resolve(false)
           }
@@ -235,10 +265,11 @@
         }
 
         window.clearInterval(timer)
-        showDestinationStatus(destination, input)
+        const status = showDestinationProgress(`✓ SETOR CARREGADO: ${destination} — CONFIRA E CLIQUE EM ENVIAR.`, 'ready', input)
+        pulse(status)
         pulse(selected)
 
-        ;[500, 900, 1500].forEach((delay) => {
+        ;[350, 800, 1400].forEach((delay) => {
           window.setTimeout(() => {
             const send = findSendButton()
             if (send) pulse(send)
