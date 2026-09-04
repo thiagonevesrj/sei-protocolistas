@@ -6,15 +6,27 @@
 
   const api = typeof browser === 'undefined' ? chrome : browser
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
+  const SCRIPT_CATALOG_PATH = 'data/catalogo-scripts.json'
   const TRANSFER_PROCESS_ID = 'transferencia-prontuario-habilitacao'
   const HOST_ID = 'spfm-workflow-v3-action-host'
   const TRANSFER_BUTTON_ID = 'spfm-workflow-v3-transferencia-prontuario'
+  const IDENTIFICATION_FLOW_ID = 'spfm-workflow-v3-identification-flow'
   const CUE_DURATION = 3200
 
+  const IDENTIFICATION_RESPONSES = {
+    'identificacao completa': 'SCRIPT DE IDENTIFICAÇÃO COMPLETO',
+    'identificar servico': 'SCRIPT DE IDENTIFICAÇÃO DO SERVIÇO',
+    'nao e conosco': 'SCRIPT - ESTE SERVIÇO NÃO É CONOSCO',
+    ouvidoria: 'E COM A OUVIDORIA',
+    'simples identificacao': 'SCRIPT DE SIMPLES IDENTIFICAÇÃO'
+  }
+
   let processCatalog = null
+  let scriptCatalog = []
   let observer = null
   let reconcileTimer = null
   let cueTimer = null
+  let selectedIdentificationTitle = ''
 
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim()
 
@@ -155,21 +167,6 @@
     syncHostVisibility()
   }
 
-  function clearSelectedService () {
-    document.querySelectorAll('#spfm-workflow-v3-orientation-actions .spfm-workflow-v3-service-button.is-selected')
-      .forEach((button) => {
-        button.classList.remove('is-selected')
-        button.setAttribute('aria-pressed', 'false')
-      })
-  }
-
-  function selectServiceButton (button) {
-    if (!button?.classList?.contains('spfm-workflow-v3-service-button')) return
-    clearSelectedService()
-    button.classList.add('is-selected')
-    button.setAttribute('aria-pressed', 'true')
-  }
-
   function selectDefaultPersonFisica () {
     const select = document.querySelector('#spfm-v2-variant')
     if (!select || !visible(select)) return false
@@ -250,10 +247,227 @@
     button.id = TRANSFER_BUTTON_ID
     button.type = 'button'
     button.className = 'spfm-workflow-v3-service-button is-emphasis'
-    button.setAttribute('aria-pressed', 'false')
     button.textContent = 'Transferência de Prontuário'
     button.addEventListener('click', () => selectOrientationTopic(topic))
     container.appendChild(button)
+  }
+
+  function scriptByTitle (title) {
+    const wanted = normalize(title)
+    return scriptCatalog.find((script) => normalize(script.title) === wanted && clean(script.body)) || null
+  }
+
+  function selectNativeScriptWithoutInsert (script) {
+    if (!script) return false
+
+    const phase = document.querySelector('#spfm-script-phase')
+    const search = document.querySelector('#spfm-script-search')
+    const result = document.querySelector('#spfm-script-result')
+    if (!phase || !search || !result) return false
+
+    if (Array.from(phase.options || []).some((option) => option.value === script.phase)) {
+      phase.value = script.phase
+      dispatch(phase, 'change')
+    }
+
+    search.value = script.title
+    dispatch(search, 'input')
+
+    const option = Array.from(result.options || []).find((candidate) => candidate.value === script.id)
+    if (!option) return false
+
+    result.value = script.id
+    dispatch(result, 'change')
+    return true
+  }
+
+  function nativeRequesterFields () {
+    return {
+      name: document.querySelector('#spfm-requester-name'),
+      cpf: document.querySelector('#spfm-requester-cpf')
+    }
+  }
+
+  function syncRequesterToNative (nameValue, cpfValue) {
+    const native = nativeRequesterFields()
+    if (native.name) {
+      native.name.value = clean(nameValue)
+      dispatch(native.name, 'input')
+      dispatch(native.name, 'change')
+    }
+    if (native.cpf) {
+      native.cpf.value = clean(cpfValue)
+      dispatch(native.cpf, 'input')
+      dispatch(native.cpf, 'change')
+    }
+  }
+
+  function identificationFlow () {
+    return document.getElementById(IDENTIFICATION_FLOW_ID)
+  }
+
+  function updateIdentificationInsertState () {
+    const flow = identificationFlow()
+    if (!flow) return
+
+    const name = flow.querySelector('#spfm-workflow-v3-requester-name')
+    const cpf = flow.querySelector('#spfm-workflow-v3-requester-cpf')
+    const noData = flow.querySelector('#spfm-workflow-v3-requester-no-data')
+    const insert = flow.querySelector('#spfm-workflow-v3-identification-insert')
+    const status = flow.querySelector('#spfm-workflow-v3-identification-status')
+    if (!name || !cpf || !noData || !insert || !status) return
+
+    name.disabled = noData.checked
+    cpf.disabled = noData.checked
+
+    const identified = clean(name.value) && String(cpf.value || '').replace(/\D/g, '').length === 11
+    const ready = Boolean(selectedIdentificationTitle) && (noData.checked || identified)
+    insert.disabled = !ready
+
+    if (!selectedIdentificationTitle) {
+      status.textContent = 'Escolha primeiro a resposta de identificação.'
+    } else if (noData.checked) {
+      status.textContent = 'REQUERENTE SEM DADOS marcado. A resposta está pronta para inserção.'
+    } else if (!identified) {
+      status.textContent = 'Informe nome completo + CPF ou marque REQUERENTE SEM DADOS.'
+    } else {
+      status.textContent = 'Dados confirmados. A resposta está pronta para inserção.'
+    }
+  }
+
+  function ensureIdentificationFlow () {
+    let flow = identificationFlow()
+    if (flow) return flow
+
+    const section = document.querySelector('[data-spfm-workflow-section="identificacao"]')
+    const simple = document.querySelector('#spfm-workflow-v3-simple')
+    if (!section) return null
+
+    flow = document.createElement('div')
+    flow.id = IDENTIFICATION_FLOW_ID
+    flow.hidden = true
+    flow.style.display = 'grid'
+    flow.style.gap = '9px'
+    flow.style.padding = '10px'
+    flow.style.border = '1px solid rgba(244, 200, 77, .5)'
+    flow.style.borderRadius = '10px'
+    flow.style.background = 'rgba(7, 24, 44, .92)'
+    flow.innerHTML = `
+      <div class="spfm-workflow-v3-kicker">DADOS DO REQUERENTE</div>
+      <label style="display:grid;gap:4px;font-size:10px;color:#dce6f1">
+        <span>Nome completo</span>
+        <input id="spfm-workflow-v3-requester-name" type="text" autocomplete="off" placeholder="Nome completo" style="box-sizing:border-box;width:100%;padding:9px;border:1px solid #314861;border-radius:8px;background:#07182c;color:#fff">
+      </label>
+      <label style="display:grid;gap:4px;font-size:10px;color:#dce6f1">
+        <span>CPF</span>
+        <input id="spfm-workflow-v3-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="CPF do requerente" style="box-sizing:border-box;width:100%;padding:9px;border:1px solid #314861;border-radius:8px;background:#07182c;color:#fff">
+      </label>
+      <label style="display:flex;align-items:center;gap:7px;padding:8px;border:1px dashed #51647a;border-radius:8px;font-size:10px;font-weight:800;color:#fff;cursor:pointer">
+        <input id="spfm-workflow-v3-requester-no-data" type="checkbox">
+        <span>REQUERENTE SEM DADOS</span>
+      </label>
+      <div style="display:grid;gap:4px;border-left:3px solid #f4c84d;padding:7px 9px;background:#0d2239;border-radius:0 8px 8px 0">
+        <span style="font-size:9px;font-weight:800;color:#f4c84d">RESPOSTA SELECIONADA</span>
+        <strong id="spfm-workflow-v3-identification-response" style="font-size:11px;color:#fff">Nenhuma</strong>
+      </div>
+      <button id="spfm-workflow-v3-identification-insert" type="button" disabled style="min-height:42px;border:1px solid #f4c84d;border-radius:9px;background:#f4c84d;color:#07182c;font-weight:900;cursor:pointer">INSERIR RESPOSTA</button>
+      <div id="spfm-workflow-v3-identification-status" style="font-size:9px;color:#aab8c9;line-height:1.35">Escolha primeiro a resposta de identificação.</div>
+    `
+
+    if (simple) simple.insertAdjacentElement('afterend', flow)
+    else section.appendChild(flow)
+
+    const native = nativeRequesterFields()
+    const name = flow.querySelector('#spfm-workflow-v3-requester-name')
+    const cpf = flow.querySelector('#spfm-workflow-v3-requester-cpf')
+    const noData = flow.querySelector('#spfm-workflow-v3-requester-no-data')
+    const insert = flow.querySelector('#spfm-workflow-v3-identification-insert')
+
+    name.value = clean(native.name?.value)
+    cpf.value = clean(native.cpf?.value)
+
+    name.addEventListener('input', () => {
+      syncRequesterToNative(name.value, cpf.value)
+      updateIdentificationInsertState()
+    })
+    cpf.addEventListener('input', () => {
+      cpf.value = cpf.value.replace(/[^\d.-]/g, '').slice(0, 14)
+      syncRequesterToNative(name.value, cpf.value)
+      updateIdentificationInsertState()
+    })
+    noData.addEventListener('change', () => {
+      if (noData.checked) syncRequesterToNative('', '')
+      updateIdentificationInsertState()
+      window.setTimeout(() => cue(insert), 60)
+    })
+    insert.addEventListener('click', () => {
+      updateIdentificationInsertState()
+      if (insert.disabled) return
+      if (!noData.checked) syncRequesterToNative(name.value, cpf.value)
+
+      const nativeInsert = document.querySelector('#spfm-insert-script:not([disabled])')
+      if (!nativeInsert) {
+        const status = flow.querySelector('#spfm-workflow-v3-identification-status')
+        if (status) status.textContent = 'A resposta ainda não ficou pronta. Selecione novamente a identificação.'
+        return
+      }
+
+      nativeInsert.click()
+      const status = flow.querySelector('#spfm-workflow-v3-identification-status')
+      if (status) status.textContent = '✓ RESPOSTA INSERIDA. Confira o e-mail antes de enviar.'
+    })
+
+    return flow
+  }
+
+  function chooseIdentificationResponse (label) {
+    const title = IDENTIFICATION_RESPONSES[normalize(label)]
+    if (!title) return false
+
+    const script = scriptByTitle(title)
+    const flow = ensureIdentificationFlow()
+    if (!script || !flow || !selectNativeScriptWithoutInsert(script)) return false
+
+    selectedIdentificationTitle = title
+    flow.hidden = false
+
+    const response = flow.querySelector('#spfm-workflow-v3-identification-response')
+    const name = flow.querySelector('#spfm-workflow-v3-requester-name')
+    const cpf = flow.querySelector('#spfm-workflow-v3-requester-cpf')
+    const noData = flow.querySelector('#spfm-workflow-v3-requester-no-data')
+    const native = nativeRequesterFields()
+
+    if (response) response.textContent = title
+    if (name && !clean(name.value)) name.value = clean(native.name?.value)
+    if (cpf && !clean(cpf.value)) cpf.value = clean(native.cpf?.value)
+    if (noData) noData.checked = false
+
+    updateIdentificationInsertState()
+    flow.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    window.setTimeout(() => cue(name || flow), 70)
+
+    const status = document.querySelector('#spfm-workflow-v3-status')
+    if (status) status.textContent = 'Resposta selecionada. Confirme os dados do requerente e só então clique em INSERIR RESPOSTA.'
+    return true
+  }
+
+  function bindIdentificationManualFlow () {
+    const root = document.getElementById('spfm-workflow-v3')
+    if (!root || root.dataset.spfmWorkflowIdentificationBound === 'true') return
+    root.dataset.spfmWorkflowIdentificationBound = 'true'
+    ensureIdentificationFlow()
+
+    root.addEventListener('click', (event) => {
+      const quick = event.target.closest('#spfm-workflow-v3-identification-actions .spfm-workflow-v3-action, #spfm-workflow-v3-simple')
+      if (!quick) return
+
+      const title = IDENTIFICATION_RESPONSES[normalize(quick.textContent)]
+      if (!title) return
+
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      chooseIdentificationResponse(quick.textContent)
+    }, true)
   }
 
   function bindStageButtons () {
@@ -262,7 +476,6 @@
       button.dataset.spfmWorkflowBridgeBound = 'true'
       button.addEventListener('click', () => {
         clearPreviousServiceState()
-        clearSelectedService()
         window.setTimeout(() => {
           moveOperationalControls()
           syncHostVisibility()
@@ -284,7 +497,6 @@
 
       const label = normalize(service.textContent)
       clearPreviousServiceState()
-      if (service.classList.contains('spfm-workflow-v3-service-button')) selectServiceButton(service)
       if (label.includes('devolucao de taxas')) schedulePersonFisicaDefault()
       scheduleNextGuide()
     }, true)
@@ -296,6 +508,7 @@
     injectTransferShortcut()
     bindStageButtons()
     bindServiceState()
+    bindIdentificationManualFlow()
     moveOperationalControls()
   }
 
@@ -309,9 +522,14 @@
 
   async function init () {
     try {
-      processCatalog = await fetchJson(PROCESS_CATALOG_PATH)
+      const [processData, scriptData] = await Promise.all([
+        fetchJson(PROCESS_CATALOG_PATH),
+        fetchJson(SCRIPT_CATALOG_PATH)
+      ])
+      processCatalog = processData || null
+      scriptCatalog = Array.isArray(scriptData?.scripts) ? scriptData.scripts : []
     } catch (error) {
-      console.warn('[SEI Protocolistas] Ponte do fluxo V3 iniciou sem catálogo completo:', error)
+      console.warn('[SEI Protocolistas] Ponte do fluxo V3 iniciou com catálogo incompleto:', error)
     }
 
     observer = new MutationObserver(scheduleReconcile)
