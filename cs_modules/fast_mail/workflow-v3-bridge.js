@@ -9,11 +9,12 @@
   const TRANSFER_PROCESS_ID = 'transferencia-prontuario-habilitacao'
   const HOST_ID = 'spfm-workflow-v3-action-host'
   const TRANSFER_BUTTON_ID = 'spfm-workflow-v3-transferencia-prontuario'
-  const CUE_DURATION = 2800
+  const CUE_DURATION = 3200
 
   let processCatalog = null
   let observer = null
   let reconcileTimer = null
+  let cueTimer = null
 
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim()
 
@@ -38,7 +39,7 @@
   }
 
   function visible (element) {
-    if (!element) return false
+    if (!element || element.hidden || element.closest('[hidden]')) return false
     const style = element.ownerDocument.defaultView?.getComputedStyle(element)
     if (!style || style.display === 'none' || style.visibility === 'hidden') return false
     const rect = element.getBoundingClientRect()
@@ -46,12 +47,43 @@
   }
 
   function cue (element) {
-    if (!element) return
+    if (!visible(element)) return false
     element.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
-    element.classList.remove('spfm-workflow-v3-cue')
+    element.classList.remove('spfm-workflow-v3-cue', 'spfm-v2-action-cue')
     void element.offsetWidth
     element.classList.add('spfm-workflow-v3-cue')
-    window.setTimeout(() => element.classList.remove('spfm-workflow-v3-cue'), CUE_DURATION)
+    if (cueTimer) window.clearTimeout(cueTimer)
+    cueTimer = window.setTimeout(() => element.classList.remove('spfm-workflow-v3-cue'), CUE_DURATION)
+    return true
+  }
+
+  function nextUsefulTarget () {
+    const selectors = [
+      '#spfm-p0-baixa-chooser button:not([disabled])',
+      '#spfm-v2-variant-field',
+      '#spfm-v2-special-actions button:not([disabled])',
+      '#spfm-p0-presential-panel input:not([disabled]), #spfm-p0-presential-panel button:not([disabled])',
+      '#spfm-action-step button:not([disabled])',
+      '#spfm-priority-actions button:not([disabled])',
+      '#spfm-insert-script:not([disabled])',
+      '#spfm-open-process:not([disabled])'
+    ]
+
+    for (const selector of selectors) {
+      const target = Array.from(document.querySelectorAll(selector)).find(visible)
+      if (target) return target
+    }
+    return null
+  }
+
+  function scheduleNextGuide () {
+    ;[100, 260, 520, 900, 1400].forEach((delay) => {
+      window.setTimeout(() => {
+        moveOperationalControls()
+        const target = nextUsefulTarget()
+        if (target) cue(target)
+      }, delay)
+    })
   }
 
   function actionHost () {
@@ -79,7 +111,7 @@
   function syncHostVisibility () {
     const host = actionHost()
     if (!host) return
-    const hasVisibleChild = Array.from(host.children).some((child) => !child.hidden)
+    const hasVisibleChild = Array.from(host.children).some((child) => visible(child) || Array.from(child.querySelectorAll?.('button,select,input') || []).some(visible))
     host.hidden = activeStage() !== 'orientacao' || !hasVisibleChild
   }
 
@@ -111,6 +143,46 @@
     }
 
     return moved
+  }
+
+  function clearPreviousServiceState () {
+    ;[
+      '#spfm-p0-baixa-chooser',
+      '#spfm-p0-presential-panel',
+      '#spfm-v2-inventory-chooser',
+      '#spfm-v2-oficio-chooser'
+    ].forEach((selector) => document.querySelector(selector)?.remove())
+    syncHostVisibility()
+  }
+
+  function selectDefaultPersonFisica () {
+    const select = document.querySelector('#spfm-v2-variant')
+    if (!select || !visible(select)) return false
+
+    const options = Array.from(select.options || []).filter((option) => option.value)
+    const best = options.map((option) => {
+      const label = normalize(option.textContent)
+      let score = 0
+      if (label.includes('pessoa fisica')) score += 100
+      if (label.includes('duda')) score += 25
+      if (label.includes('grt')) score -= 5
+      if (label.includes('pessoa juridica')) score -= 100
+      return { option, score }
+    }).sort((a, b) => b.score - a.score)[0]
+
+    if (!best || best.score < 100) return false
+    if (select.value !== best.option.value) {
+      select.value = best.option.value
+      dispatch(select, 'change')
+    }
+    cue(select.closest('#spfm-v2-variant-field') || select)
+    return true
+  }
+
+  function schedulePersonFisicaDefault () {
+    ;[100, 250, 500, 850].forEach((delay) => {
+      window.setTimeout(() => selectDefaultPersonFisica(), delay)
+    })
   }
 
   function orientationTopics () {
@@ -147,11 +219,7 @@
       select.value = topic.id
       dispatch(select, 'change')
       open.click()
-      window.setTimeout(() => {
-        moveOperationalControls()
-        const next = document.querySelector('#spfm-action-step button:not([disabled]), #spfm-priority-actions button:not([disabled])')
-        if (visible(next)) cue(next)
-      }, 80)
+      scheduleNextGuide()
     }, 40)
 
     return true
@@ -177,6 +245,7 @@
       if (button.dataset.spfmWorkflowBridgeBound === 'true') return
       button.dataset.spfmWorkflowBridgeBound = 'true'
       button.addEventListener('click', () => {
+        clearPreviousServiceState()
         window.setTimeout(() => {
           moveOperationalControls()
           syncHostVisibility()
@@ -185,11 +254,30 @@
     })
   }
 
+  function bindServiceState () {
+    const root = document.getElementById('spfm-workflow-v3')
+    if (!root || root.dataset.spfmWorkflowServiceStateBound === 'true') return
+    root.dataset.spfmWorkflowServiceStateBound = 'true'
+
+    root.addEventListener('click', (event) => {
+      const service = event.target.closest(
+        '#spfm-workflow-v3-orientation-actions .spfm-workflow-v3-service-button, #spfm-workflow-v3-orientation-results .spfm-workflow-v3-result'
+      )
+      if (!service) return
+
+      const label = normalize(service.textContent)
+      clearPreviousServiceState()
+      if (label.includes('devolucao de taxas')) schedulePersonFisicaDefault()
+      scheduleNextGuide()
+    }, true)
+  }
+
   function reconcile () {
     if (!document.getElementById('spfm-workflow-v3')) return
     actionHost()
     injectTransferShortcut()
     bindStageButtons()
+    bindServiceState()
     moveOperationalControls()
   }
 
