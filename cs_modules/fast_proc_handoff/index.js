@@ -204,7 +204,7 @@
     }
 
     const context = stored[CONTEXT_KEY]
-    if (!context || context.source !== 'fast-mail') return false
+    if (!context) return false
     if (!context.createdAt || Date.now() - context.createdAt > CONTEXT_MAX_AGE) return false
 
     const destination = clean(context.destino || context.destination).toUpperCase()
