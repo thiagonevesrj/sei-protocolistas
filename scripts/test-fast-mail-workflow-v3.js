@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, '..')
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'))
 const workflow = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/workflow-v3.js'), 'utf8')
 const bridge = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/workflow-v3-bridge.js'), 'utf8')
+const workflowCss = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/workflow-v3.css'), 'utf8')
 
 const failures = []
 const assert = (condition, message) => {
@@ -41,6 +42,11 @@ assert(bridge.includes('function scheduleNextGuide ()'), 'FAST MAIL V3: próximo
 assert(bridge.includes('[100, 260, 520, 900, 1400]'), 'FAST MAIL V3: guia deve aguardar fluxos que montam a próxima ação mais lentamente')
 assert(bridge.includes('function schedulePersonFisicaDefault ()'), 'FAST MAIL V3: Devolução de Taxas deve manter Pessoa Física como padrão')
 assert(bridge.includes("label.includes('pessoa fisica')"), 'FAST MAIL V3: padrão de Devolução de Taxas deve priorizar Pessoa Física')
+assert(bridge.includes('function selectServiceButton (button)'), 'FAST MAIL V3: atendimento selecionado deve ter estado visual explícito')
+assert(bridge.includes("button.classList.add('is-selected')"), 'FAST MAIL V3: botão ativo deve receber classe de seleção')
+assert(bridge.includes("button.setAttribute('aria-pressed', 'true')"), 'FAST MAIL V3: seleção do atendimento deve ser exposta semanticamente')
+assert(workflowCss.includes('.spfm-workflow-v3-service-button.is-selected'), 'FAST MAIL V3: CSS deve destacar fortemente o atendimento ativo')
+assert(workflowCss.includes("content: '✓ '"), 'FAST MAIL V3: atendimento ativo deve exibir confirmação visual')
 
 if (failures.length) {
   console.error('Falhas na validação do fluxo V3 do FAST MAIL:')
