@@ -155,6 +155,21 @@
     syncHostVisibility()
   }
 
+  function clearSelectedService () {
+    document.querySelectorAll('#spfm-workflow-v3-orientation-actions .spfm-workflow-v3-service-button.is-selected')
+      .forEach((button) => {
+        button.classList.remove('is-selected')
+        button.setAttribute('aria-pressed', 'false')
+      })
+  }
+
+  function selectServiceButton (button) {
+    if (!button?.classList?.contains('spfm-workflow-v3-service-button')) return
+    clearSelectedService()
+    button.classList.add('is-selected')
+    button.setAttribute('aria-pressed', 'true')
+  }
+
   function selectDefaultPersonFisica () {
     const select = document.querySelector('#spfm-v2-variant')
     if (!select || !visible(select)) return false
@@ -235,6 +250,7 @@
     button.id = TRANSFER_BUTTON_ID
     button.type = 'button'
     button.className = 'spfm-workflow-v3-service-button is-emphasis'
+    button.setAttribute('aria-pressed', 'false')
     button.textContent = 'Transferência de Prontuário'
     button.addEventListener('click', () => selectOrientationTopic(topic))
     container.appendChild(button)
@@ -246,6 +262,7 @@
       button.dataset.spfmWorkflowBridgeBound = 'true'
       button.addEventListener('click', () => {
         clearPreviousServiceState()
+        clearSelectedService()
         window.setTimeout(() => {
           moveOperationalControls()
           syncHostVisibility()
@@ -267,6 +284,7 @@
 
       const label = normalize(service.textContent)
       clearPreviousServiceState()
+      if (service.classList.contains('spfm-workflow-v3-service-button')) selectServiceButton(service)
       if (label.includes('devolucao de taxas')) schedulePersonFisicaDefault()
       scheduleNextGuide()
     }, true)
