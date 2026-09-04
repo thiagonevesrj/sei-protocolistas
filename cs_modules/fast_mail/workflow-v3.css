@@ -1,0 +1,170 @@
+.spfm-workflow-v3-ready > .spfm-v2-mode-grid,
+.spfm-workflow-v3-ready > #spfm-v2-identification,
+.spfm-workflow-v3-ready > #spfm-v2-orientation,
+.spfm-workflow-v3-ready > #spfm-v2-more,
+.spfm-workflow-v3-ready > #spfm-p0-identity-state {
+  display: none !important;
+}
+
+.spfm-workflow-v3 {
+  display: grid;
+  gap: 10px;
+  padding: 2px 0 0;
+}
+
+.spfm-workflow-v3-kicker,
+.spfm-workflow-v3-search-block > label {
+  color: #f3c84f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.spfm-workflow-v3-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.spfm-workflow-v3-action,
+.spfm-workflow-v3-simple,
+.spfm-workflow-v3-result {
+  font: inherit;
+}
+
+.spfm-workflow-v3-action {
+  min-height: 43px;
+  border: 1px solid rgba(243, 200, 79, .38);
+  border-radius: 10px;
+  background: #0d2239;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.spfm-workflow-v3-action.is-primary {
+  background: #f4c84d;
+  color: #07182c;
+  border-color: #f4c84d;
+}
+
+.spfm-workflow-v3-action:hover,
+.spfm-workflow-v3-action:focus-visible,
+.spfm-workflow-v3-result:hover,
+.spfm-workflow-v3-result:focus-visible {
+  outline: 2px solid rgba(244, 200, 77, .65);
+  outline-offset: 1px;
+}
+
+.spfm-workflow-v3-simple {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: #aab8c9;
+  padding: 0;
+  font-size: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.spfm-workflow-v3-search-block {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+#spfm-workflow-v3-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #314861;
+  border-radius: 10px;
+  background: #07182c;
+  color: #fff;
+  padding: 10px 11px;
+  font-size: 12px;
+}
+
+#spfm-workflow-v3-search::placeholder {
+  color: #8190a2;
+}
+
+#spfm-workflow-v3-search:focus {
+  outline: 2px solid rgba(244, 200, 77, .55);
+  outline-offset: 1px;
+}
+
+.spfm-workflow-v3-results {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #314861;
+  border-radius: 10px;
+  background: #07182c;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .42);
+  padding: 5px;
+}
+
+.spfm-workflow-v3-result {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  padding: 9px 8px;
+  cursor: pointer;
+}
+
+.spfm-workflow-v3-result strong {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.spfm-workflow-v3-result span {
+  color: #f3c84f;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.spfm-workflow-v3-empty {
+  padding: 10px;
+  color: #aab8c9;
+  font-size: 10px;
+}
+
+.spfm-workflow-v3-selected {
+  display: grid;
+  gap: 2px;
+  border-left: 3px solid #f3c84f;
+  padding: 6px 8px;
+  background: rgba(13, 34, 57, .72);
+  border-radius: 0 8px 8px 0;
+}
+
+.spfm-workflow-v3-selected span {
+  color: #f3c84f;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.spfm-workflow-v3-selected strong {
+  color: #fff;
+  font-size: 11px;
+}
+
+.spfm-workflow-v3-status {
+  color: #8f9dad;
+  font-size: 9px;
+  line-height: 1.3;
+}
