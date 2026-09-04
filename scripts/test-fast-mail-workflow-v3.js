@@ -6,6 +6,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'u
 const workflow = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/workflow-v3.js'), 'utf8')
 const bridge = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/workflow-v3-bridge.js'), 'utf8')
 const workflowCss = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/workflow-v3.css'), 'utf8')
+const subjectSanitizer = fs.readFileSync(path.join(root, 'cs_modules/fast_mail/subject-sanitizer-v1.js'), 'utf8')
 
 const failures = []
 const assert = (condition, message) => {
@@ -16,11 +17,13 @@ const owaEntry = manifest.content_scripts.find((entry) =>
   Array.isArray(entry.matches) && entry.matches.includes('https://venus2.detran.rj.gov.br/owa/*')
 )
 const scripts = owaEntry?.js || []
+const subjectSanitizerIndex = scripts.indexOf('cs_modules/fast_mail/subject-sanitizer-v1.js')
 const workflowIndex = scripts.indexOf('cs_modules/fast_mail/workflow-v3.js')
 const bridgeIndex = scripts.indexOf('cs_modules/fast_mail/workflow-v3-bridge.js')
 const p0Index = scripts.indexOf('cs_modules/fast_mail/operational-p0-v3.js')
 const cleanupIndex = scripts.indexOf('cs_modules/fast_mail/identity-shortcut-cleanup-v1.js')
 
+assert(subjectSanitizerIndex >= 0 && subjectSanitizerIndex < workflowIndex, 'FAST MAIL V3: limpeza de assunto deve carregar antes do fluxo operacional')
 assert(workflowIndex >= 0, 'FAST MAIL V3: workflow-v3.js deve estar carregado no OWA')
 assert(bridgeIndex === workflowIndex + 1, 'FAST MAIL V3: a ponte deve carregar imediatamente após workflow-v3.js')
 assert(p0Index === bridgeIndex + 1, 'FAST MAIL V3: operational-p0-v3.js deve carregar após a ponte')
@@ -55,6 +58,12 @@ assert(bridge.includes('REQUERENTE SEM DADOS'), 'FAST MAIL V3: deve permitir con
 assert(bridge.includes('spfm-workflow-v3-identification-insert'), 'FAST MAIL V3: identificação deve ter botão explícito INSERIR RESPOSTA')
 assert(bridge.includes('nativeInsert.click()'), 'FAST MAIL V3: inserção deve ocorrer somente após o clique explícito do operador')
 assert(bridge.includes('Informe nome completo + CPF ou marque REQUERENTE SEM DADOS.'), 'FAST MAIL V3: dados ou ausência de dados devem ser confirmados antes da inserção')
+
+assert(subjectSanitizer.includes('INTERNAL_RQ_LABEL'), 'FAST MAIL assunto: deve reconhecer o rótulo interno do Requerimento Rápido')
+assert(subjectSanitizer.includes('REQUERIMENTO\\s+R[ÁA]PIDO'), 'FAST MAIL assunto: deve remover Requerimento Rápido com ou sem acento')
+assert(subjectSanitizer.includes('isOperationalSubject'), 'FAST MAIL assunto: limpeza deve ficar restrita a assuntos operacionais')
+assert(subjectSanitizer.includes('TRIAGEM|FECHADO'), 'FAST MAIL assunto: limpeza deve atuar apenas em TRIAGEM/FECHADO')
+assert(subjectSanitizer.includes('sanitizeOperationalSubject'), 'FAST MAIL assunto: deve limpar o rótulo interno antes do envio')
 
 if (failures.length) {
   console.error('Falhas na validação do fluxo V3 do FAST MAIL:')
