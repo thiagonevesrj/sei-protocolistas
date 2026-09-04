@@ -32,7 +32,7 @@
       "run_at": "document_start",
       "css": ["cs_modules/core.css"],
       "all_frames": true,
-      "js": ["cs_modules/core/start/lib.js", "cs_modules/core/start/limparContextoTemporario.js", "vendor/jquery/jquery.min.js", "vendor/jquery-ui/jquery.min.js"]
+      "js": ["cs_modules/core/start/lib.js", "cs_modules/core/start/limparContextoTemporario.js", "vendor/jquery/jquery.min.js", "vendor/jquery-ui/jquery-ui.min.js"]
     },
     {
       "matches": ["*://sei.rj.gov.br/*"],
