@@ -35,6 +35,12 @@ assert(bridge.includes("document.querySelector('#spfm-p0-baixa-chooser')"), 'FAS
 assert(bridge.includes("document.querySelector('#spfm-v2-variant-field')"), 'FAST MAIL V3: variantes de atendimento devem ser trazidas para a área visível')
 assert(bridge.includes("document.querySelector('#spfm-v2-special-actions')"), 'FAST MAIL V3: ações especiais devem ser trazidas para a área visível')
 assert(bridge.includes("document.querySelector('#spfm-p0-presential-panel')"), 'FAST MAIL V3: painel presencial deve ser trazido para a área visível')
+assert(bridge.includes('function clearPreviousServiceState ()'), 'FAST MAIL V3: cada novo atendimento deve limpar o estado transitório anterior')
+assert(bridge.includes("'#spfm-p0-baixa-chooser'"), 'FAST MAIL V3: seletor de Baixa não pode vazar para outro atendimento')
+assert(bridge.includes('function scheduleNextGuide ()'), 'FAST MAIL V3: próximo clique deve ter tentativas progressivas')
+assert(bridge.includes('[100, 260, 520, 900, 1400]'), 'FAST MAIL V3: guia deve aguardar fluxos que montam a próxima ação mais lentamente')
+assert(bridge.includes('function schedulePersonFisicaDefault ()'), 'FAST MAIL V3: Devolução de Taxas deve manter Pessoa Física como padrão')
+assert(bridge.includes("label.includes('pessoa fisica')"), 'FAST MAIL V3: padrão de Devolução de Taxas deve priorizar Pessoa Física')
 
 if (failures.length) {
   console.error('Falhas na validação do fluxo V3 do FAST MAIL:')
