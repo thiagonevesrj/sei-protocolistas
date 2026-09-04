@@ -91,6 +91,19 @@
   border-color: #f4c84d;
 }
 
+.spfm-workflow-v3-service-button.is-selected {
+  background: #07182c !important;
+  color: #f4c84d !important;
+  border: 2px solid #f4c84d !important;
+  box-shadow: 0 0 0 2px rgba(244, 200, 77, .24), 0 0 16px rgba(244, 200, 77, .42);
+  transform: translateY(-1px);
+}
+
+.spfm-workflow-v3-service-button.is-selected::before {
+  content: '✓ ';
+  font-weight: 900;
+}
+
 .spfm-workflow-v3-stage-grid button:hover,
 .spfm-workflow-v3-stage-grid button:focus-visible,
 .spfm-workflow-v3-action:hover,
