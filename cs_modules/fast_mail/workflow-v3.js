@@ -8,12 +8,25 @@
   const SCRIPT_CATALOG_PATH = 'data/catalogo-scripts.json'
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
   const ROOT_ID = 'spfm-workflow-v3'
+  const CUE_DURATION = 2800
 
   const QUICK_TRIAGE = [
     { label: 'IDENTIFICAÇÃO COMPLETA', title: 'SCRIPT DE IDENTIFICAÇÃO COMPLETO', primary: true },
     { label: 'IDENTIFICAR SERVIÇO', title: 'SCRIPT DE IDENTIFICAÇÃO DO SERVIÇO', primary: true },
     { label: 'NÃO É CONOSCO', title: 'SCRIPT - ESTE SERVIÇO NÃO É CONOSCO' },
     { label: 'OUVIDORIA', title: 'E COM A OUVIDORIA' }
+  ]
+
+  const ORIENTATION_SHORTCUTS = [
+    { type: 'baixa', label: 'Baixa de Restrição' },
+    { id: 'devolucao-taxas', label: 'Devolução de Taxas' },
+    { id: 'pericia-medica-pcd', label: 'Perícia Médica' },
+    { id: 'desistencia-categoria', label: 'Desistência de Categoria' },
+    { id: 'generico-habilitacao', label: 'Genérico Habilitação' },
+    { id: 'generico-veiculos', label: 'Genérico Veículos' },
+    { id: 'leilao-veiculos', label: 'Leilão' },
+    { id: 'troca-clinica', label: 'Troca de Clínica' },
+    { id: 'oficios', label: 'Ofícios' }
   ]
 
   const SIMPLE_IDENTIFICATION_TITLE = 'SCRIPT DE SIMPLES IDENTIFICAÇÃO'
@@ -24,7 +37,9 @@
 
   let scripts = []
   let processCatalog = null
-  let searchTimer = null
+  let activeStage = ''
+  let orientationSearchTimer = null
+  let requirementSearchTimer = null
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -58,6 +73,50 @@
   function setStatus (message) {
     const status = document.querySelector('#spfm-workflow-v3-status')
     if (status) status.textContent = message || ''
+  }
+
+  function cue (element) {
+    if (!element) return
+    element.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    element.classList.remove('spfm-workflow-v3-cue')
+    void element.offsetWidth
+    element.classList.add('spfm-workflow-v3-cue')
+    window.setTimeout(() => element.classList.remove('spfm-workflow-v3-cue'), CUE_DURATION)
+  }
+
+  function cueLater (getter) {
+    ;[80, 220, 520].forEach((delay) => {
+      window.setTimeout(() => {
+        const element = getter()
+        if (element) cue(element)
+      }, delay)
+    })
+  }
+
+  function nextActionTarget () {
+    const selectors = [
+      '#spfm-p0-baixa-chooser button:not([disabled])',
+      '#spfm-v2-special-actions button:not([disabled])',
+      '#spfm-action-step button:not([disabled])',
+      '#spfm-priority-actions button:not([disabled])',
+      '#spfm-insert-script:not([disabled])',
+      '#spfm-open-process:not([disabled])'
+    ]
+    for (const selector of selectors) {
+      const target = Array.from(document.querySelectorAll(selector)).find((item) => {
+        const style = item.ownerDocument.defaultView?.getComputedStyle(item)
+        if (!style || style.display === 'none' || style.visibility === 'hidden') return false
+        const rect = item.getBoundingClientRect()
+        return rect.width > 0 && rect.height > 0
+      })
+      if (target) return target
+    }
+    return null
+  }
+
+  function showNativeStatus (show) {
+    const status = document.querySelector('#spfm-priority-status')
+    if (status) status.hidden = !show
   }
 
   function selectNativeScript (script, { insert = false } = {}) {
@@ -101,9 +160,12 @@
         const insertButton = document.querySelector('#spfm-insert-script')
         if (insertButton && !insertButton.disabled) insertButton.click()
       }, 80)
+      setStatus('Resposta preparada.')
+    } else {
+      setStatus(`Selecionado: ${script.title}`)
+      showNativeStatus(true)
+      cueLater(() => document.querySelector('#spfm-insert-script:not([disabled])'))
     }
-
-    setStatus(insert ? 'Resposta preparada.' : `Selecionado: ${script.title}`)
     return true
   }
 
@@ -124,6 +186,10 @@
     return Array.isArray(processCatalog?.fastMailPriorityTopics)
       ? processCatalog.fastMailPriorityTopics
       : []
+  }
+
+  function topicById (id) {
+    return orientationTopics().find((topic) => topic.id === id) || null
   }
 
   function areaLabel (areaId) {
@@ -150,20 +216,14 @@
     return score
   }
 
-  function serviceResults (query) {
+  function orientationResults (query) {
     const terms = normalize(query).split(' ').filter(Boolean)
     if (!terms.length) return []
 
     const results = []
-
-    if (terms.every((term) => normalize('baixa de restricao inventario herdeiros terceiros veiculos').includes(term))) {
-      results.push({
-        type: 'baixa',
-        key: 'baixa-restricao',
-        label: 'Baixa de Restrição',
-        meta: 'VEÍCULOS',
-        score: 1000
-      })
+    const baixaText = normalize('baixa de restricao inventario herdeiros terceiros veiculos')
+    if (terms.every((term) => baixaText.includes(term))) {
+      results.push({ type: 'baixa', key: 'baixa-restricao', label: 'Baixa de Restrição', meta: 'VEÍCULOS', score: 1000 })
     }
 
     orientationTopics().forEach((topic) => {
@@ -180,7 +240,7 @@
     })
 
     scripts.forEach((script) => {
-      if (!clean(script.body) || GENERIC_TRIAGE_TITLES.has(script.title)) return
+      if (script.phase !== 'orientacao' || !clean(script.body) || GENERIC_TRIAGE_TITLES.has(script.title)) return
       const score = scoreText(scriptSearchText(script), terms)
       if (score < 0) return
       results.push({
@@ -193,6 +253,29 @@
       })
     })
 
+    return dedupeAndLimit(results)
+  }
+
+  function requirementResults (query) {
+    const terms = normalize(query).split(' ').filter(Boolean)
+    if (!terms.length) return []
+
+    const results = scripts
+      .filter((script) => script.phase === 'atendimento' && clean(script.body))
+      .map((script) => ({
+        type: 'script',
+        key: `script:${script.id}`,
+        label: clean(script.title),
+        meta: clean(script.group || 'EXIGÊNCIA').toUpperCase(),
+        script,
+        score: scoreText(scriptSearchText(script), terms)
+      }))
+      .filter((item) => item.score >= 0)
+
+    return dedupeAndLimit(results)
+  }
+
+  function dedupeAndLimit (results) {
     const seen = new Set()
     return results
       .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label, 'pt-BR'))
@@ -202,7 +285,7 @@
         seen.add(fingerprint)
         return true
       })
-      .slice(0, 8)
+      .slice(0, 10)
   }
 
   function selectOrientationTopic (topic) {
@@ -230,13 +313,27 @@
       dispatch(select, 'change')
       open.click()
       setSelected(topic.label, areaLabel(topic.area))
-      setStatus('Atendimento aberto. Escolha a ação necessária.')
+      showNativeStatus(true)
+      setStatus('Atendimento aberto. Escolha RESPONDER, COBRAR DOCUMENTOS ou ABRIR PROCESSO.')
+      cueLater(nextActionTarget)
     }, 30)
 
     return true
   }
 
-  function setSelected(label, meta = '') {
+  function openBaixaRestricao () {
+    const button = document.querySelector('#spfm-p0-baixa-restricao')
+    if (!button) {
+      setStatus('Fluxo de Baixa de Restrição ainda não ficou pronto.')
+      return
+    }
+    button.click()
+    setSelected('Baixa de Restrição', 'VEÍCULOS')
+    setStatus('Escolha o tipo de baixa de restrição.')
+    cueLater(() => document.querySelector('#spfm-p0-baixa-chooser button:not([disabled])'))
+  }
+
+  function setSelected (label, meta = '') {
     const selected = document.querySelector('#spfm-workflow-v3-selected')
     if (!selected) return
     selected.hidden = false
@@ -252,45 +349,36 @@
       .replace(/'/g, '&#039;')
   }
 
-  function chooseServiceResult (item) {
-    if (item.type === 'baixa') {
-      const button = document.querySelector('#spfm-p0-baixa-restricao')
-      if (button) {
-        button.click()
-        setSelected('Baixa de Restrição', 'VEÍCULOS')
-        setStatus('Escolha o tipo de baixa de restrição.')
-      } else {
-        setStatus('Fluxo de Baixa de Restrição ainda não ficou pronto.')
-      }
-      return
-    }
-
-    if (item.type === 'topic') {
-      selectOrientationTopic(item.topic)
-      return
-    }
-
-    if (item.type === 'script') {
-      if (selectNativeScript(item.script)) {
-        setSelected(item.script.title, item.script.group || item.script.phaseLabel)
-        setStatus('Resposta localizada. Confira e insira.')
-      }
+  function chooseOrientationResult (item) {
+    if (item.type === 'baixa') return openBaixaRestricao()
+    if (item.type === 'topic') return selectOrientationTopic(item.topic)
+    if (item.type === 'script' && selectNativeScript(item.script)) {
+      setSelected(item.script.title, item.script.group || item.script.phaseLabel)
+      setStatus('Resposta localizada. Confira e insira.')
     }
   }
 
-  function renderSearchResults () {
-    const input = document.querySelector('#spfm-workflow-v3-search')
-    const container = document.querySelector('#spfm-workflow-v3-results')
+  function chooseRequirementResult (item) {
+    if (item.type !== 'script') return
+    if (selectNativeScript(item.script)) {
+      setSelected(item.script.title, item.script.group || 'EXIGÊNCIA')
+      setStatus('Exigência localizada. Confira o texto e insira a resposta.')
+    }
+  }
+
+  function renderResultList (inputId, containerId, resolver, chooser) {
+    const input = document.querySelector(`#${inputId}`)
+    const container = document.querySelector(`#${containerId}`)
     if (!input || !container) return
 
-    const items = serviceResults(input.value)
+    const items = resolver(input.value)
     container.innerHTML = ''
     container.hidden = !clean(input.value)
 
     if (!clean(input.value)) return
 
     if (!items.length) {
-      container.innerHTML = '<div class="spfm-workflow-v3-empty">Nenhum atendimento encontrado. Tente outra palavra.</div>'
+      container.innerHTML = '<div class="spfm-workflow-v3-empty">Nenhum resultado encontrado. Tente outra palavra.</div>'
       return
     }
 
@@ -300,11 +388,107 @@
       button.className = 'spfm-workflow-v3-result'
       button.innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.meta)}</span>`
       button.addEventListener('click', () => {
-        chooseServiceResult(item)
+        chooser(item)
         input.value = item.label
         container.hidden = true
       })
       container.appendChild(button)
+    })
+  }
+
+  function renderOrientationSearch () {
+    renderResultList('spfm-workflow-v3-orientation-search', 'spfm-workflow-v3-orientation-results', orientationResults, chooseOrientationResult)
+  }
+
+  function renderRequirementSearch () {
+    renderResultList('spfm-workflow-v3-requirement-search', 'spfm-workflow-v3-requirement-results', requirementResults, chooseRequirementResult)
+  }
+
+  function setStage (stage) {
+    activeStage = stage
+    const root = document.getElementById(ROOT_ID)
+    if (!root) return
+
+    root.querySelectorAll('[data-spfm-workflow-stage]').forEach((button) => {
+      const active = button.dataset.spfmWorkflowStage === stage
+      button.classList.toggle('is-active', active)
+      button.setAttribute('aria-pressed', String(active))
+    })
+
+    root.querySelectorAll('[data-spfm-workflow-section]').forEach((section) => {
+      section.hidden = section.dataset.spfmWorkflowSection !== stage
+    })
+
+    const selected = root.querySelector('#spfm-workflow-v3-selected')
+    if (selected) selected.hidden = true
+    showNativeStatus(false)
+
+    if (stage === 'identificacao') {
+      setStatus('Escolha a resposta de identificação adequada.')
+      cueLater(() => root.querySelector('[data-spfm-workflow-section="identificacao"] .spfm-workflow-v3-action.is-primary'))
+    } else if (stage === 'orientacao') {
+      setStatus('Escolha um atendimento principal ou pesquise diretamente o serviço.')
+      cueLater(() => root.querySelector('[data-spfm-workflow-section="orientacao"] .spfm-workflow-v3-service-button'))
+    } else if (stage === 'exigencias') {
+      setStatus('Pesquise o assunto da exigência.')
+      const input = root.querySelector('#spfm-workflow-v3-requirement-search')
+      input?.focus()
+      cueLater(() => input)
+    }
+  }
+
+  function renderQuickTriage (root) {
+    const actions = root.querySelector('#spfm-workflow-v3-identification-actions')
+    QUICK_TRIAGE.forEach((item) => {
+      if (!scriptByTitle(item.title)) return
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = item.label
+      button.className = `spfm-workflow-v3-action${item.primary ? ' is-primary' : ''}`
+      button.addEventListener('click', () => runQuickTriage(item.title))
+      actions.appendChild(button)
+    })
+
+    root.querySelector('#spfm-workflow-v3-simple').addEventListener('click', () => runQuickTriage(SIMPLE_IDENTIFICATION_TITLE))
+  }
+
+  function renderOrientationShortcuts (root) {
+    const container = root.querySelector('#spfm-workflow-v3-orientation-actions')
+
+    ORIENTATION_SHORTCUTS.forEach((shortcut) => {
+      if (shortcut.type === 'baixa') {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'spfm-workflow-v3-service-button is-emphasis'
+        button.textContent = shortcut.label
+        button.addEventListener('click', openBaixaRestricao)
+        container.appendChild(button)
+        return
+      }
+
+      const topic = topicById(shortcut.id)
+      if (!topic) return
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'spfm-workflow-v3-service-button'
+      button.textContent = shortcut.label
+      button.addEventListener('click', () => selectOrientationTopic(topic))
+      container.appendChild(button)
+    })
+  }
+
+  function bindSearch (root, inputId, resultSelector, render, timerSetter) {
+    const input = root.querySelector(`#${inputId}`)
+    input.addEventListener('input', () => {
+      timerSetter()
+    })
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return
+      const first = root.querySelector(resultSelector)
+      if (first) {
+        event.preventDefault()
+        first.click()
+      }
     })
   }
 
@@ -318,53 +502,63 @@
     root.id = ROOT_ID
     root.className = 'spfm-workflow-v3'
     root.innerHTML = `
-      <div class="spfm-workflow-v3-kicker">TRIAGEM RÁPIDA</div>
-      <div class="spfm-workflow-v3-actions"></div>
-      <button id="spfm-workflow-v3-simple" class="spfm-workflow-v3-simple" type="button">Simples identificação</button>
-
-      <div class="spfm-workflow-v3-search-block">
-        <label for="spfm-workflow-v3-search">JÁ SEI QUAL É O SERVIÇO</label>
-        <input id="spfm-workflow-v3-search" type="search" autocomplete="off" placeholder="Buscar serviço... Ex.: inventário, ofício, clonagem">
-        <div id="spfm-workflow-v3-results" class="spfm-workflow-v3-results" hidden></div>
+      <div class="spfm-workflow-v3-stage-grid" aria-label="Etapa do atendimento">
+        <button type="button" data-spfm-workflow-stage="identificacao" aria-pressed="false">IDENTIFICAÇÃO</button>
+        <button type="button" data-spfm-workflow-stage="orientacao" aria-pressed="false">ORIENTAÇÃO</button>
+        <button type="button" data-spfm-workflow-stage="exigencias" aria-pressed="false">EXIGÊNCIAS</button>
       </div>
 
+      <section class="spfm-workflow-v3-stage-section" data-spfm-workflow-section="identificacao" hidden>
+        <div class="spfm-workflow-v3-kicker">TRIAGEM RÁPIDA</div>
+        <div id="spfm-workflow-v3-identification-actions" class="spfm-workflow-v3-actions"></div>
+        <button id="spfm-workflow-v3-simple" class="spfm-workflow-v3-simple" type="button">Simples identificação</button>
+      </section>
+
+      <section class="spfm-workflow-v3-stage-section" data-spfm-workflow-section="orientacao" hidden>
+        <div class="spfm-workflow-v3-kicker">ATENDIMENTOS PRINCIPAIS</div>
+        <div id="spfm-workflow-v3-orientation-actions" class="spfm-workflow-v3-service-grid"></div>
+        <div class="spfm-workflow-v3-search-block">
+          <label for="spfm-workflow-v3-orientation-search">OUTRO SERVIÇO</label>
+          <input id="spfm-workflow-v3-orientation-search" type="search" autocomplete="off" placeholder="Buscar serviço... Ex.: clonagem, certidão, transferência">
+          <div id="spfm-workflow-v3-orientation-results" class="spfm-workflow-v3-results" hidden></div>
+        </div>
+      </section>
+
+      <section class="spfm-workflow-v3-stage-section" data-spfm-workflow-section="exigencias" hidden>
+        <div class="spfm-workflow-v3-kicker">EXIGÊNCIAS</div>
+        <div class="spfm-workflow-v3-search-block">
+          <label for="spfm-workflow-v3-requirement-search">PESQUISAR ASSUNTO</label>
+          <input id="spfm-workflow-v3-requirement-search" type="search" autocomplete="off" placeholder="Ex.: documento, ofício, multa, habilitação">
+          <div id="spfm-workflow-v3-requirement-results" class="spfm-workflow-v3-results" hidden></div>
+        </div>
+      </section>
+
       <div id="spfm-workflow-v3-selected" class="spfm-workflow-v3-selected" hidden></div>
-      <div id="spfm-workflow-v3-status" class="spfm-workflow-v3-status">Abra o e-mail, escolha uma resposta rápida ou busque diretamente o serviço.</div>
+      <div id="spfm-workflow-v3-status" class="spfm-workflow-v3-status">Escolha IDENTIFICAÇÃO, ORIENTAÇÃO ou EXIGÊNCIAS.</div>
     `
 
     const firstSection = navigation.querySelector('.spfm-v2-section')
     if (firstSection) navigation.insertBefore(root, firstSection)
     else navigation.appendChild(root)
 
-    const actions = root.querySelector('.spfm-workflow-v3-actions')
-    QUICK_TRIAGE.forEach((item) => {
-      if (!scriptByTitle(item.title)) return
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.textContent = item.label
-      button.className = `spfm-workflow-v3-action${item.primary ? ' is-primary' : ''}`
-      button.addEventListener('click', () => runQuickTriage(item.title))
-      actions.appendChild(button)
+    root.querySelectorAll('[data-spfm-workflow-stage]').forEach((button) => {
+      button.addEventListener('click', () => setStage(button.dataset.spfmWorkflowStage))
     })
 
-    root.querySelector('#spfm-workflow-v3-simple').addEventListener('click', () => {
-      runQuickTriage(SIMPLE_IDENTIFICATION_TITLE)
+    renderQuickTriage(root)
+    renderOrientationShortcuts(root)
+
+    bindSearch(root, 'spfm-workflow-v3-orientation-search', '#spfm-workflow-v3-orientation-results .spfm-workflow-v3-result', renderOrientationSearch, () => {
+      window.clearTimeout(orientationSearchTimer)
+      orientationSearchTimer = window.setTimeout(renderOrientationSearch, 40)
     })
 
-    const search = root.querySelector('#spfm-workflow-v3-search')
-    search.addEventListener('input', () => {
-      window.clearTimeout(searchTimer)
-      searchTimer = window.setTimeout(renderSearchResults, 40)
-    })
-    search.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return
-      const first = root.querySelector('.spfm-workflow-v3-result')
-      if (first) {
-        event.preventDefault()
-        first.click()
-      }
+    bindSearch(root, 'spfm-workflow-v3-requirement-search', '#spfm-workflow-v3-requirement-results .spfm-workflow-v3-result', renderRequirementSearch, () => {
+      window.clearTimeout(requirementSearchTimer)
+      requirementSearchTimer = window.setTimeout(renderRequirementSearch, 40)
     })
 
+    showNativeStatus(false)
     return true
   }
 
@@ -382,7 +576,7 @@
         if (build() || Date.now() - started > 12000) window.clearInterval(timer)
       }, 120)
     } catch (error) {
-      console.error('[SEI Protocolistas] Falha ao iniciar fluxo direto do FAST MAIL:', error)
+      console.error('[SEI Protocolistas] Falha ao iniciar fluxo por etapas do FAST MAIL:', error)
     }
   }
 
