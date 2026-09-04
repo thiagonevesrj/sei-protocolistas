@@ -2,7 +2,8 @@
 .spfm-workflow-v3-ready > #spfm-v2-identification,
 .spfm-workflow-v3-ready > #spfm-v2-orientation,
 .spfm-workflow-v3-ready > #spfm-v2-more,
-.spfm-workflow-v3-ready > #spfm-p0-identity-state {
+.spfm-workflow-v3-ready > #spfm-p0-identity-state,
+.spfm-workflow-v3-ready > #spfm-v2-status {
   display: none !important;
 }
 
@@ -12,45 +13,90 @@
   padding: 2px 0 0;
 }
 
+.spfm-workflow-v3-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.spfm-workflow-v3-stage-grid button {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #314861;
+  border-radius: 9px;
+  background: #0d2239;
+  color: #dce6f1;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  padding: 7px 4px;
+  cursor: pointer;
+}
+
+.spfm-workflow-v3-stage-grid button.is-active {
+  border-color: #f4c84d;
+  background: #f4c84d;
+  color: #07182c;
+}
+
+.spfm-workflow-v3-stage-section {
+  display: grid;
+  gap: 9px;
+  padding: 2px 0;
+}
+
+.spfm-workflow-v3-stage-section[hidden] {
+  display: none !important;
+}
+
 .spfm-workflow-v3-kicker,
 .spfm-workflow-v3-search-block > label {
   color: #f3c84f;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: .04em;
 }
 
-.spfm-workflow-v3-actions {
+.spfm-workflow-v3-actions,
+.spfm-workflow-v3-service-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
 }
 
 .spfm-workflow-v3-action,
+.spfm-workflow-v3-service-button,
 .spfm-workflow-v3-simple,
 .spfm-workflow-v3-result {
   font: inherit;
 }
 
-.spfm-workflow-v3-action {
-  min-height: 43px;
+.spfm-workflow-v3-action,
+.spfm-workflow-v3-service-button {
+  min-height: 42px;
   border: 1px solid rgba(243, 200, 79, .38);
-  border-radius: 10px;
+  border-radius: 9px;
   background: #0d2239;
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   cursor: pointer;
+  padding: 7px 6px;
 }
 
-.spfm-workflow-v3-action.is-primary {
+.spfm-workflow-v3-action.is-primary,
+.spfm-workflow-v3-service-button.is-emphasis {
   background: #f4c84d;
   color: #07182c;
   border-color: #f4c84d;
 }
 
+.spfm-workflow-v3-stage-grid button:hover,
+.spfm-workflow-v3-stage-grid button:focus-visible,
 .spfm-workflow-v3-action:hover,
 .spfm-workflow-v3-action:focus-visible,
+.spfm-workflow-v3-service-button:hover,
+.spfm-workflow-v3-service-button:focus-visible,
 .spfm-workflow-v3-result:hover,
 .spfm-workflow-v3-result:focus-visible {
   outline: 2px solid rgba(244, 200, 77, .65);
@@ -75,22 +121,25 @@
   padding-top: 2px;
 }
 
-#spfm-workflow-v3-search {
+#spfm-workflow-v3-orientation-search,
+#spfm-workflow-v3-requirement-search {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #314861;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #07182c;
   color: #fff;
   padding: 10px 11px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-#spfm-workflow-v3-search::placeholder {
+#spfm-workflow-v3-orientation-search::placeholder,
+#spfm-workflow-v3-requirement-search::placeholder {
   color: #8190a2;
 }
 
-#spfm-workflow-v3-search:focus {
+#spfm-workflow-v3-orientation-search:focus,
+#spfm-workflow-v3-requirement-search:focus {
   outline: 2px solid rgba(244, 200, 77, .55);
   outline-offset: 1px;
 }
@@ -104,7 +153,7 @@
   max-height: 260px;
   overflow-y: auto;
   border: 1px solid #314861;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #07182c;
   box-shadow: 0 10px 24px rgba(0, 0, 0, .42);
   padding: 5px;
@@ -126,13 +175,13 @@
 }
 
 .spfm-workflow-v3-result strong {
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.25;
 }
 
 .spfm-workflow-v3-result span {
   color: #f3c84f;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -167,4 +216,21 @@
   color: #8f9dad;
   font-size: 9px;
   line-height: 1.3;
+}
+
+.spfm-workflow-v3-cue {
+  animation: spfm-workflow-v3-cue 0.9s ease-in-out 3;
+  position: relative;
+  z-index: 3;
+}
+
+@keyframes spfm-workflow-v3-cue {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(244, 200, 77, 0);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(244, 200, 77, .34), 0 0 18px rgba(244, 200, 77, .42);
+    transform: translateY(-1px);
+  }
 }
