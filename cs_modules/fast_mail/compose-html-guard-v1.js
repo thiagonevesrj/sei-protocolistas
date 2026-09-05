@@ -7,19 +7,13 @@
   const bypass = new WeakSet()
   let preparing = null
   let scheduled = false
-  let lastPrepareAttempt = 0
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
   }
 
-  function sleep (ms) {
-    return new Promise((resolve) => window.setTimeout(resolve, ms))
-  }
-
   function allDocuments () {
     const documents = [document]
-
     const visit = (win) => {
       for (let index = 0; index < win.frames.length; index += 1) {
         try {
@@ -31,7 +25,6 @@
         } catch (_) {}
       }
     }
-
     visit(window)
     return documents
   }
@@ -58,15 +51,28 @@
   }
 
   function formatSelect () {
+    const matches = []
     for (const doc of allDocuments()) {
-      const selects = Array.from(doc.querySelectorAll('select')).filter(visible)
-
-      for (const select of selects) {
+      Array.from(doc.querySelectorAll('select')).forEach((select) => {
         const labels = Array.from(select.options || []).map((option) => clean(option.text))
-        if (labels.some(isHtmlText) && labels.some(isPlainText)) return select
-      }
+        const hasHtml = labels.some(isHtmlText)
+        const hasPlain = labels.some(isPlainText)
+        const selectedKnown = isHtmlText(selectedText(select)) || isPlainText(selectedText(select))
+        if (hasHtml && (hasPlain || selectedKnown)) matches.push(select)
+      })
     }
+    return matches.find(visible) || matches[0] || null
+  }
 
+  function deterministicPlainTextEditor () {
+    for (const doc of allDocuments()) {
+      const bodyContainer = doc.querySelector('#divBdy')
+      if (!bodyContainer || bodyContainer.closest?.('#divHdrMessage')) continue
+      const textarea = bodyContainer.querySelector('textarea#txtBdy')
+      if (!textarea || textarea.closest?.('#divHdrMessage')) continue
+      if (textarea.disabled || textarea.readOnly) continue
+      if (visible(textarea)) return textarea
+    }
     return null
   }
 
@@ -74,43 +80,40 @@
     for (const doc of allDocuments()) {
       const bodyContainer = doc.querySelector('#divBdy')
       if (!bodyContainer || bodyContainer.closest?.('#divHdrMessage')) continue
-
       const frame = bodyContainer.querySelector('iframe#ifBdy')
       if (!frame || !visible(frame) || frame.closest?.('#divHdrMessage')) continue
-
       try {
         const htmlDocument = frame.contentDocument
         const htmlBody = htmlDocument?.body
         const editable = htmlDocument?.designMode?.toLowerCase() === 'on' ||
           htmlBody?.isContentEditable ||
           htmlBody?.getAttribute?.('contenteditable') === 'true'
-
         if (htmlBody && editable) return htmlBody
       } catch (_) {}
     }
-
     return null
   }
 
   function setStatus (message) {
-    const targets = [
-      document.querySelector('#spfm-script-status'),
-      document.querySelector('#spfm-priority-status'),
-      document.querySelector('#spfm-v2-status'),
-      document.querySelector('#spfm-workflow-v3-status'),
-      document.querySelector('#spfm-body-status'),
-      document.querySelector('#spfm-process-response-status')
-    ].filter(Boolean)
-
-    targets.forEach((target) => { target.textContent = message })
+    ;[
+      '#spfm-script-status',
+      '#spfm-priority-status',
+      '#spfm-v2-status',
+      '#spfm-workflow-v3-status',
+      '#spfm-body-status',
+      '#spfm-process-response-status'
+    ].forEach((selector) => {
+      const target = document.querySelector(selector)
+      if (target) target.textContent = message
+    })
   }
 
   function dispatch (element, type) {
     const view = element?.ownerDocument?.defaultView || window
-    element?.dispatchEvent(new view.Event(type, { bubbles: true, cancelable: false }))
+    element?.dispatchEvent(new view.Event(type, { bubbles: true, cancelable: true }))
   }
 
-  function waitFor (getter, timeout = 5000, interval = 100) {
+  function waitFor (getter, timeout = 3500, interval = 80) {
     return new Promise((resolve) => {
       const started = Date.now()
       const timer = window.setInterval(() => {
@@ -127,36 +130,31 @@
     const view = select.ownerDocument?.defaultView || window
     const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
 
-    select.focus?.()
-    htmlOption.selected = true
-    select.value = htmlOption.value
-    if (optionIndex >= 0) select.selectedIndex = optionIndex
-    dispatch(select, 'input')
-
-    let nativeHandlerCalled = false
-    if (typeof select.onchange === 'function') {
-      try {
-        const event = new view.Event('change', { bubbles: true, cancelable: true })
-        select.onchange.call(select, event)
-        nativeHandlerCalled = true
-      } catch (_) {}
+    const apply = () => {
+      htmlOption.selected = true
+      select.value = htmlOption.value
+      if (optionIndex >= 0) select.selectedIndex = optionIndex
     }
 
-    if (!nativeHandlerCalled) dispatch(select, 'change')
-    select.blur?.()
+    apply()
+    dispatch(select, 'input')
 
-    let editor = await waitFor(() => deterministicHtmlEditor(), 650, 50)
+    if (typeof select.onchange === 'function') {
+      try {
+        select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
+      } catch (_) {
+        dispatch(select, 'change')
+      }
+    } else {
+      dispatch(select, 'change')
+    }
+
+    let editor = await waitFor(deterministicHtmlEditor, 800, 50)
     if (editor) return editor
 
-    // O OWA legado pode manter a troca de formato em um handler inline que
-    // não reage da mesma forma a eventos sintéticos. Depois da chamada direta
-    // acima, fazemos uma única tentativa pelo fluxo DOM normal.
-    htmlOption.selected = true
-    select.value = htmlOption.value
-    if (optionIndex >= 0) select.selectedIndex = optionIndex
+    apply()
     dispatch(select, 'change')
-
-    editor = await waitFor(() => deterministicHtmlEditor(), 5200, 100)
+    editor = await waitFor(deterministicHtmlEditor, 2600, 80)
     return editor || null
   }
 
@@ -164,16 +162,13 @@
     if (preparing) return preparing
 
     preparing = (async () => {
-      lastPrepareAttempt = Date.now()
+      if (deterministicHtmlEditor()) return true
 
-      const existingEditor = deterministicHtmlEditor()
-      if (existingEditor) return true
-
-      const select = await waitFor(() => formatSelect(), 2500, 80)
+      const select = formatSelect()
       if (!select) return false
 
       if (isHtmlText(selectedText(select))) {
-        return Boolean(await waitFor(() => deterministicHtmlEditor(), 3000, 80))
+        return Boolean(await waitFor(deterministicHtmlEditor, 1800, 80))
       }
 
       const htmlOption = Array.from(select.options || []).find((option) => isHtmlText(option.text))
@@ -181,13 +176,10 @@
 
       setStatus('FAST MAIL — preparando e-mail formatado…')
       const editor = await triggerNativeFormatChange(select, htmlOption)
-
       if (editor) {
         setStatus('FAST MAIL — e-mail formatado pronto.')
         return true
       }
-
-      setStatus('Não foi possível ativar o editor HTML do OWA. Nada foi inserido.')
       return false
     })()
 
@@ -199,16 +191,12 @@
   }
 
   function fastMailPanelExists () {
-    return Boolean(document.querySelector(
-      '#sei-protocolistas-fast-mail-status, #spfm-navigation-v2, #spfm-workflow-v3'
-    ))
+    return Boolean(document.querySelector('#sei-protocolistas-fast-mail-status, #spfm-navigation-v2, #spfm-workflow-v3'))
   }
 
   function isInsertionControl (target) {
     if (!(target instanceof Element)) return null
-    return target.closest(
-      '#spfm-insert-script, #spfm-insert-requirement, #spfm-insert-process-response, #spfm-baixa-direct-insert'
-    )
+    return target.closest('#spfm-insert-script, #spfm-insert-requirement, #spfm-insert-process-response, #spfm-baixa-direct-insert')
   }
 
   function cloneLineContainer (doc, nodes) {
@@ -218,21 +206,18 @@
   }
 
   function firstTextNode (node) {
-    const walker = node.ownerDocument.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+    const showText = node.ownerDocument?.defaultView?.NodeFilter?.SHOW_TEXT || 4
+    const walker = node.ownerDocument.createTreeWalker(node, showText)
     return walker.nextNode()
   }
 
   function stripBulletMarker (holder) {
     const textNode = firstTextNode(holder)
-    if (!textNode) return
-    textNode.nodeValue = String(textNode.nodeValue || '').replace(/^\s*[-•·]\s+/, '')
+    if (textNode) textNode.nodeValue = String(textNode.nodeValue || '').replace(/^\s*[-•·]\s+/, '')
   }
 
   function normalizedHeadingText (value) {
-    return clean(value)
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
+    return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   }
 
   function lineKind (text) {
@@ -241,7 +226,6 @@
     if (/^[-•·]\s+/.test(text.trim())) return 'bullet'
     if (/^(atencao|importante)\b/.test(normalized)) return 'alert'
     if (/^atenciosamente[,.]?$/.test(normalized)) return 'signature'
-
     const headingPrefix = /^(observacoes?|documentacao|documentos?|formulario|taxa|contato|canais?|dados do processo|documentacao especifica|documentacao pessoa|documentacao representacao)\b/
     if (text.length <= 110 && (headingPrefix.test(normalized) || /:$/.test(text.trim()))) return 'heading'
     return 'paragraph'
@@ -260,24 +244,18 @@
     if (!root || root.dataset.spfmPresented === 'true') return
 
     const doc = root.ownerDocument
-    const sourceNodes = Array.from(root.childNodes)
     const lines = []
     let current = []
-
-    sourceNodes.forEach((node) => {
+    Array.from(root.childNodes).forEach((node) => {
       if (node.nodeName === 'BR') {
         lines.push(current)
         current = []
-      } else {
-        current.push(node)
-      }
+      } else current.push(node)
     })
     lines.push(current)
 
     const fragment = doc.createDocumentFragment()
     let activeList = null
-
-    const closeList = () => { activeList = null }
 
     lines.forEach((nodes) => {
       const holder = cloneLineContainer(doc, nodes)
@@ -285,7 +263,7 @@
       const kind = lineKind(text)
 
       if (kind === 'blank') {
-        closeList()
+        activeList = null
         return
       }
 
@@ -299,14 +277,12 @@
         stripBulletMarker(holder)
         const item = doc.createElement('li')
         item.style.margin = '0 0 7px 0'
-        item.style.paddingLeft = '2px'
         while (holder.firstChild) item.appendChild(holder.firstChild)
         activeList.appendChild(item)
         return
       }
 
-      closeList()
-
+      activeList = null
       const block = doc.createElement(kind === 'paragraph' || kind === 'signature' ? 'p' : 'div')
       while (holder.firstChild) block.appendChild(holder.firstChild)
 
@@ -347,7 +323,6 @@
     root.style.maxWidth = '900px'
     root.style.padding = '14px 4px 2px 0'
     root.style.borderTop = '3px solid #174a7e'
-
     styleLinks(root)
   }
 
@@ -366,18 +341,14 @@
   function formatPendingResponses () {
     for (const doc of allDocuments()) {
       doc.querySelectorAll('[data-sei-protocolistas="catalog-script"]').forEach(presentCatalogScript)
-      doc.querySelectorAll(
-        '[data-sei-protocolistas="missing-documents-requirement"], [data-sei-protocolistas="process-completed-response"], [data-sei-protocolistas="presential-missing-documents"]'
-      ).forEach(presentStructuredResponse)
+      doc.querySelectorAll('[data-sei-protocolistas="missing-documents-requirement"], [data-sei-protocolistas="process-completed-response"], [data-sei-protocolistas="presential-missing-documents"]').forEach(presentStructuredResponse)
     }
   }
 
   async function normalizeWhenPanelAppears () {
-    if (!fastMailPanelExists()) return false
-
+    if (!fastMailPanelExists() || deterministicHtmlEditor()) return true
     const select = formatSelect()
-    if (!select || !isPlainText(selectedText(select))) return Boolean(deterministicHtmlEditor() || select)
-
+    if (!select || !isPlainText(selectedText(select))) return Boolean(deterministicPlainTextEditor() || select)
     return ensureHtmlComposer()
   }
 
@@ -390,15 +361,14 @@
       return
     }
 
-    const editor = deterministicHtmlEditor()
-    if (editor) return
+    if (deterministicHtmlEditor()) return
 
-    const select = formatSelect()
-    if (!select || (!isPlainText(selectedText(select)) && !isHtmlText(selectedText(select)))) {
+    const plainEditor = deterministicPlainTextEditor()
+    if (!plainEditor) {
       event.preventDefault()
       event.stopPropagation()
       event.stopImmediatePropagation()
-      setStatus('Não consegui confirmar o formato do editor do OWA. Nada foi inserido.')
+      setStatus('Não consegui identificar com segurança o corpo do e-mail. Nada foi inserido.')
       return
     }
 
@@ -407,9 +377,13 @@
     event.stopImmediatePropagation()
 
     const ready = await ensureHtmlComposer()
-    if (!ready) {
-      setStatus('Não foi possível preparar o e-mail com formatação. Nada foi inserido.')
+    if (!ready && !deterministicPlainTextEditor()) {
+      setStatus('O formato do OWA mudou durante a preparação. Nada foi inserido.')
       return
+    }
+
+    if (!ready) {
+      setStatus('OWA permaneceu em Texto simples — inserindo a resposta com segurança, sem formatação HTML.')
     }
 
     bypass.add(control)
@@ -421,25 +395,13 @@
     scheduled = true
     window.setTimeout(() => {
       scheduled = false
-      normalizeWhenPanelAppears().catch(() => {})
       formatPendingResponses()
     }, 120)
   })
 
   observer.observe(document.documentElement, { childList: true, subtree: true })
 
-  window.setInterval(() => {
-    formatPendingResponses()
-
-    if (!fastMailPanelExists()) return
-    if (deterministicHtmlEditor()) return
-    const select = formatSelect()
-    if (!select || !isPlainText(selectedText(select))) return
-    if (preparing || Date.now() - lastPrepareAttempt < 1600) return
-    ensureHtmlComposer().catch(() => {})
-  }, 700)
-
-  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 250)
-  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 900)
-  window.setTimeout(formatPendingResponses, 400)
+  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 300)
+  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 1100)
+  window.setInterval(formatPendingResponses, 900)
 })()
