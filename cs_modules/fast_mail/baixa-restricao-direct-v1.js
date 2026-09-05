@@ -37,6 +37,10 @@
     return response.json()
   }
 
+  function sleep (ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms))
+  }
+
   function scriptByTitle (title) {
     const wanted = normalize(title)
     return scripts.find((script) => normalize(script.title) === wanted && clean(script.body)) || null
@@ -97,6 +101,54 @@
     return true
   }
 
+  function findFormatSelect () {
+    return Array.from(document.querySelectorAll('select')).find((select) => {
+      const options = Array.from(select.options || []).map((option) => normalize(option.textContent))
+      return options.includes('html') && options.some((label) => label.includes('texto simp') || label.includes('plain text'))
+    }) || null
+  }
+
+  function hasHtmlEditor () {
+    const editable = Array.from(document.querySelectorAll('[contenteditable="true"]')).find((element) => {
+      const rect = element.getBoundingClientRect()
+      return rect.width > 250 && rect.height > 80
+    })
+    if (editable) return true
+
+    return Array.from(document.querySelectorAll('iframe')).some((frame) => {
+      try {
+        const doc = frame.contentDocument
+        return Boolean(doc?.body && (doc.designMode?.toLowerCase() === 'on' || doc.body.isContentEditable))
+      } catch (_) {
+        return false
+      }
+    })
+  }
+
+  async function ensureHtmlComposer () {
+    const format = findFormatSelect()
+    if (!format) return true
+
+    const selectedLabel = normalize(format.options[format.selectedIndex]?.textContent)
+    if (selectedLabel === 'html') return true
+
+    const htmlOption = Array.from(format.options).find((option) => normalize(option.textContent) === 'html')
+    if (!htmlOption) return false
+
+    setStatus('Preparando o editor da resposta…')
+    format.value = htmlOption.value
+    dispatch(format, 'input')
+    dispatch(format, 'change')
+
+    const started = Date.now()
+    while (Date.now() - started < 3000) {
+      if (hasHtmlEditor()) return true
+      await sleep(120)
+    }
+
+    return false
+  }
+
   function removeLegacyBaixaState () {
     document.querySelector('#spfm-p0-baixa-chooser')?.remove()
     const selected = document.querySelector('#spfm-workflow-v3-selected')
@@ -123,16 +175,29 @@
     `
 
     const insert = panel.querySelector('#spfm-baixa-direct-insert')
-    insert?.addEventListener('click', () => {
+    insert?.addEventListener('click', async () => {
       const nativeInsert = document.querySelector('#spfm-insert-script')
       if (!nativeInsert || nativeInsert.disabled) {
         setStatus('A resposta foi selecionada, mas o botão de inserção ainda não está disponível.')
         return
       }
-      nativeInsert.click()
-      setStatus(presencial
-        ? 'Resposta presencial inserida. Confira o texto e envie ao requerente.'
-        : 'Resposta inserida. Confira o texto antes do envio.')
+
+      insert.disabled = true
+      try {
+        const editorReady = await ensureHtmlComposer()
+        if (!editorReady) {
+          setStatus('Não consegui preparar com segurança o corpo do e-mail. A resposta NÃO foi inserida.')
+          return
+        }
+
+        await sleep(100)
+        nativeInsert.click()
+        setStatus(presencial
+          ? 'Resposta presencial inserida. Confira o texto e envie ao requerente.'
+          : 'Resposta inserida. Confira o texto antes do envio.')
+      } finally {
+        insert.disabled = false
+      }
     })
     cue(insert)
     setStatus(presencial
