@@ -13,13 +13,6 @@
     return String(value || '').replace(/\s+/g, ' ').trim()
   }
 
-  function normalize (value) {
-    return clean(value)
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-  }
-
   function allDocuments () {
     const documents = [document]
     const visit = (candidate) => {
@@ -131,6 +124,11 @@
     return `${subjectPrefix(subject)}${data.name.toUpperCase()} - ${destination} - ${date}${operator} - TRIAGEM`
   }
 
+  function isOperationalSubject (value) {
+    const subject = clean(value)
+    return /\b(?:TRIAGEM|FECHADO)\b/i.test(subject) && /\b\d{7,12}\b/.test(subject)
+  }
+
   function isCompleteOperationalSubject (value) {
     const subject = clean(value)
     return /\bTRIAGEM\b/i.test(subject) &&
@@ -140,7 +138,7 @@
 
   function sanitizeOperationalSubject (value) {
     const current = clean(value)
-    if (!current || !isCompleteOperationalSubject(current) || !INTERNAL_RQ_LABEL.test(current)) {
+    if (!current || !isOperationalSubject(current) || !INTERNAL_RQ_LABEL.test(current)) {
       INTERNAL_RQ_LABEL.lastIndex = 0
       return current
     }
