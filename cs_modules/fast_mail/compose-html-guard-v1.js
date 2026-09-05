@@ -7,6 +7,7 @@
   const bypass = new WeakSet()
   let preparing = null
   let scheduled = false
+  let lastPrepareAttempt = 0
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -122,6 +123,7 @@
     if (preparing) return preparing
 
     preparing = (async () => {
+      lastPrepareAttempt = Date.now()
       const select = await waitFor(() => formatSelect(), 2500, 80)
 
       if (!select) {
@@ -147,7 +149,7 @@
       const editor = await waitFor(() => {
         if (!isHtmlText(selectedText(select))) return null
         return deterministicHtmlEditor()
-      }, 5500, 100)
+      }, 6000, 100)
 
       if (editor) setStatus('FAST MAIL — e-mail formatado pronto.')
       return Boolean(editor)
@@ -160,6 +162,12 @@
     }
   }
 
+  function fastMailPanelExists () {
+    return Boolean(document.querySelector(
+      '#sei-protocolistas-fast-mail-status, #spfm-navigation-v2, #spfm-workflow-v3'
+    ))
+  }
+
   function isInsertionControl (target) {
     if (!(target instanceof Element)) return null
     return target.closest(
@@ -167,9 +175,169 @@
     )
   }
 
+  function cloneLineContainer (doc, nodes) {
+    const holder = doc.createElement('span')
+    nodes.forEach((node) => holder.appendChild(node.cloneNode(true)))
+    return holder
+  }
+
+  function firstTextNode (node) {
+    const walker = node.ownerDocument.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+    return walker.nextNode()
+  }
+
+  function stripBulletMarker (holder) {
+    const textNode = firstTextNode(holder)
+    if (!textNode) return
+    textNode.nodeValue = String(textNode.nodeValue || '').replace(/^\s*[-•·]\s+/, '')
+  }
+
+  function normalizedHeadingText (value) {
+    return clean(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+  }
+
+  function lineKind (text) {
+    const normalized = normalizedHeadingText(text)
+    if (!normalized) return 'blank'
+    if (/^[-•·]\s+/.test(text.trim())) return 'bullet'
+    if (/^(atencao|importante)\b/.test(normalized)) return 'alert'
+    if (/^atenciosamente[,.]?$/.test(normalized)) return 'signature'
+
+    const headingPrefix = /^(observacoes?|documentacao|documentos?|formulario|taxa|contato|canais?|dados do processo|documentacao especifica|documentacao pessoa|documentacao representacao)\b/
+    if (text.length <= 110 && (headingPrefix.test(normalized) || /:$/.test(text.trim()))) return 'heading'
+    return 'paragraph'
+  }
+
+  function styleLinks (root) {
+    root.querySelectorAll('a[href]').forEach((link) => {
+      link.style.color = '#0b57d0'
+      link.style.textDecoration = 'underline'
+      link.style.fontWeight = '600'
+      link.style.wordBreak = 'break-word'
+    })
+  }
+
+  function presentCatalogScript (root) {
+    if (!root || root.dataset.spfmPresented === 'true') return
+
+    const doc = root.ownerDocument
+    const sourceNodes = Array.from(root.childNodes)
+    const lines = []
+    let current = []
+
+    sourceNodes.forEach((node) => {
+      if (node.nodeName === 'BR') {
+        lines.push(current)
+        current = []
+      } else {
+        current.push(node)
+      }
+    })
+    lines.push(current)
+
+    const fragment = doc.createDocumentFragment()
+    let activeList = null
+
+    const closeList = () => { activeList = null }
+
+    lines.forEach((nodes) => {
+      const holder = cloneLineContainer(doc, nodes)
+      const text = clean(holder.textContent)
+      const kind = lineKind(text)
+
+      if (kind === 'blank') {
+        closeList()
+        return
+      }
+
+      if (kind === 'bullet') {
+        if (!activeList) {
+          activeList = doc.createElement('ul')
+          activeList.style.margin = '4px 0 16px 22px'
+          activeList.style.padding = '0'
+          fragment.appendChild(activeList)
+        }
+        stripBulletMarker(holder)
+        const item = doc.createElement('li')
+        item.style.margin = '0 0 7px 0'
+        item.style.paddingLeft = '2px'
+        while (holder.firstChild) item.appendChild(holder.firstChild)
+        activeList.appendChild(item)
+        return
+      }
+
+      closeList()
+
+      const block = doc.createElement(kind === 'paragraph' || kind === 'signature' ? 'p' : 'div')
+      while (holder.firstChild) block.appendChild(holder.firstChild)
+
+      if (kind === 'alert') {
+        block.style.margin = '16px 0'
+        block.style.padding = '11px 13px'
+        block.style.background = '#fff8e6'
+        block.style.border = '1px solid #ead39a'
+        block.style.borderLeft = '4px solid #c69214'
+        block.style.borderRadius = '4px'
+        block.style.fontWeight = '700'
+        block.style.color = '#332600'
+      } else if (kind === 'heading') {
+        block.style.margin = '18px 0 9px 0'
+        block.style.padding = '8px 10px'
+        block.style.background = '#f2f6f9'
+        block.style.borderLeft = '4px solid #174a7e'
+        block.style.fontWeight = '700'
+        block.style.color = '#17324d'
+      } else if (kind === 'signature') {
+        block.style.margin = '22px 0 6px 0'
+        block.style.paddingTop = '12px'
+        block.style.borderTop = '1px solid #d8dde3'
+        block.style.color = '#34495e'
+      } else {
+        block.style.margin = '0 0 12px 0'
+      }
+
+      fragment.appendChild(block)
+    })
+
+    root.replaceChildren(fragment)
+    root.dataset.spfmPresented = 'true'
+    root.style.fontFamily = 'Arial, Segoe UI, sans-serif'
+    root.style.fontSize = '14px'
+    root.style.lineHeight = '1.58'
+    root.style.color = '#1f2933'
+    root.style.maxWidth = '900px'
+    root.style.padding = '14px 4px 2px 0'
+    root.style.borderTop = '3px solid #174a7e'
+
+    styleLinks(root)
+  }
+
+  function presentStructuredResponse (root) {
+    if (!root || root.dataset.spfmPresented === 'true') return
+    root.dataset.spfmPresented = 'true'
+    root.style.fontFamily = 'Arial, Segoe UI, sans-serif'
+    root.style.fontSize = '14px'
+    root.style.lineHeight = '1.58'
+    root.style.color = '#1f2933'
+    root.style.maxWidth = '900px'
+    root.style.paddingTop = '12px'
+    styleLinks(root)
+  }
+
+  function formatPendingResponses () {
+    for (const doc of allDocuments()) {
+      doc.querySelectorAll('[data-sei-protocolistas="catalog-script"]').forEach(presentCatalogScript)
+      doc.querySelectorAll(
+        '[data-sei-protocolistas="missing-documents-requirement"], [data-sei-protocolistas="process-completed-response"], [data-sei-protocolistas="presential-missing-documents"]'
+      ).forEach(presentStructuredResponse)
+    }
+  }
+
   async function normalizeWhenPanelAppears () {
-    const panel = document.querySelector('#sei-protocolistas-fast-mail-status, #spfm-navigation-v2')
-    if (!panel) return false
+    if (!fastMailPanelExists()) return false
 
     const select = formatSelect()
     if (!select || !isPlainText(selectedText(select))) return true
@@ -209,10 +377,23 @@
     window.setTimeout(() => {
       scheduled = false
       normalizeWhenPanelAppears().catch(() => {})
+      formatPendingResponses()
     }, 120)
   })
 
   observer.observe(document.documentElement, { childList: true, subtree: true })
+
+  window.setInterval(() => {
+    formatPendingResponses()
+
+    if (!fastMailPanelExists()) return
+    const select = formatSelect()
+    if (!select || !isPlainText(selectedText(select))) return
+    if (preparing || Date.now() - lastPrepareAttempt < 1600) return
+    ensureHtmlComposer().catch(() => {})
+  }, 700)
+
   window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 250)
   window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 900)
+  window.setTimeout(formatPendingResponses, 400)
 })()
