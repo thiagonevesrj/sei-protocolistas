@@ -4,14 +4,8 @@
   if (window.top !== window) return
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
-  const INSERT_SELECTOR = [
-    '#spfm-insert-script',
-    '#spfm-insert-requirement',
-    '#spfm-insert-process-response'
-  ].join(', ')
-
   const bypass = new WeakSet()
-  const running = new WeakSet()
+  let preparing = null
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -49,16 +43,26 @@
     return clean(select?.options?.[select.selectedIndex]?.text || select?.value)
   }
 
+  function isHtmlText (value) {
+    return /(^|\b)html(\b|$)/i.test(clean(value))
+  }
+
+  function isPlainText (value) {
+    return /texto\s*simp|plain\s*text|texto\s*sem\s*formata/i.test(clean(value))
+  }
+
   function formatSelect () {
     for (const doc of allDocuments()) {
       const selects = Array.from(doc.querySelectorAll('select')).filter(visible)
+
       for (const select of selects) {
         const labels = Array.from(select.options || []).map((option) => clean(option.text))
-        const hasHtml = labels.some((label) => /^html$/i.test(label))
-        const hasPlain = labels.some((label) => /texto\s*simples|plain\s*text/i.test(label))
+        const hasHtml = labels.some(isHtmlText)
+        const hasPlain = labels.some(isPlainText)
         if (hasHtml && hasPlain) return select
       }
     }
+
     return null
   }
 
@@ -78,17 +82,24 @@
 
     for (const doc of allDocuments()) {
       const elements = Array.from(doc.querySelectorAll('[contenteditable="true"], body[contenteditable="true"]'))
+      if (doc.designMode?.toLowerCase() === 'on' && doc.body) elements.push(doc.body)
+
       for (const element of elements) {
         if (!visible(element)) continue
         if (element.closest?.('#spfm-navigation-v2, #sei-protocolistas-fast-mail-status')) continue
+        if (element.matches?.('input,textarea')) continue
 
         const rect = element.getBoundingClientRect()
-        if (rect.width < 300 || rect.height < 80) continue
+        const area = rect.width * rect.height
+        if (rect.width < 300 || rect.height < 80 || area < 24000) continue
 
         const text = descriptor(element)
         if (/(^|\b)(assunto|subject|recipient|destinat|bcc|cc|para|to)(\b|$)/i.test(text)) continue
 
-        candidates.push({ element, score: (rect.width * rect.height) + (element.innerText?.length || 0) })
+        candidates.push({
+          element,
+          score: area + (element.innerText?.length || 0)
+        })
       }
     }
 
@@ -96,12 +107,18 @@
     return candidates[0]?.element || null
   }
 
+  function fastMailTarget (target) {
+    if (!(target instanceof Element)) return null
+    return target.closest('#sei-protocolistas-fast-mail-status, #spfm-navigation-v2, [id^="spfm-"]')
+  }
+
   function setStatus (message) {
     const targets = [
       document.querySelector('#spfm-script-status'),
       document.querySelector('#spfm-priority-status'),
       document.querySelector('#spfm-v2-status'),
-      document.querySelector('#spfm-workflow-v3-status')
+      document.querySelector('#spfm-workflow-v3-status'),
+      document.querySelector('#spfm-body-status')
     ].filter(Boolean)
 
     targets.forEach((target) => { target.textContent = message })
@@ -109,10 +126,10 @@
 
   function dispatch (element, type) {
     const view = element?.ownerDocument?.defaultView || window
-    element?.dispatchEvent(new view.Event(type, { bubbles: true }))
+    element?.dispatchEvent(new view.Event(type, { bubbles: true, cancelable: false }))
   }
 
-  function waitFor (getter, timeout = 3500, interval = 100) {
+  function waitFor (getter, timeout = 5000, interval = 100) {
     return new Promise((resolve) => {
       const started = Date.now()
       const timer = window.setInterval(() => {
@@ -126,62 +143,94 @@
   }
 
   async function ensureHtmlComposer () {
-    const select = formatSelect()
-    if (!select) return Boolean(safeHtmlEditor())
+    if (preparing) return preparing
 
-    if (/^html$/i.test(selectedText(select))) {
-      return Boolean(await waitFor(() => safeHtmlEditor(), 1800, 80))
+    preparing = (async () => {
+      const select = await waitFor(() => formatSelect(), 2500, 80)
+
+      if (!select) {
+        return Boolean(await waitFor(() => safeHtmlEditor(), 1800, 80))
+      }
+
+      if (isHtmlText(selectedText(select))) {
+        return Boolean(await waitFor(() => safeHtmlEditor(), 2200, 80))
+      }
+
+      const htmlOption = Array.from(select.options || []).find((option) => isHtmlText(option.text))
+      if (!htmlOption) return false
+
+      setStatus('FAST MAIL — PREPARANDO O EDITOR DO E-MAIL…')
+
+      select.focus?.()
+      select.value = htmlOption.value
+      select.selectedIndex = Array.from(select.options || []).indexOf(htmlOption)
+      dispatch(select, 'input')
+      dispatch(select, 'change')
+      select.blur?.()
+
+      const editor = await waitFor(() => {
+        if (!isHtmlText(selectedText(select))) return null
+        return safeHtmlEditor()
+      }, 5000, 100)
+
+      if (editor) setStatus('FAST MAIL — EDITOR PRONTO.')
+      return Boolean(editor)
+    })()
+
+    try {
+      return await preparing
+    } finally {
+      preparing = null
     }
+  }
 
-    const htmlOption = Array.from(select.options || []).find((option) => /^html$/i.test(clean(option.text)))
-    if (!htmlOption) return false
+  async function normalizeWhenPanelAppears () {
+    const panel = document.querySelector('#sei-protocolistas-fast-mail-status, #spfm-navigation-v2')
+    if (!panel) return false
 
-    setStatus('FAST MAIL — PREPARANDO O CORPO DO E-MAIL…')
+    const select = formatSelect()
+    if (!select || !isPlainText(selectedText(select))) return true
 
-    select.value = htmlOption.value
-    dispatch(select, 'input')
-    dispatch(select, 'change')
-
-    const editor = await waitFor(() => {
-      if (!/^html$/i.test(selectedText(select))) return null
-      return safeHtmlEditor()
-    })
-
-    return Boolean(editor)
+    return ensureHtmlComposer()
   }
 
   document.addEventListener('click', async (event) => {
-    const button = event.target?.closest?.(INSERT_SELECTOR)
-    if (!button) return
+    const control = event.target?.closest?.('button,a,input,label,[role="button"]')
+    if (!control || !fastMailTarget(control)) return
 
-    if (bypass.has(button)) {
-      bypass.delete(button)
+    if (bypass.has(control)) {
+      bypass.delete(control)
       return
     }
 
     const select = formatSelect()
-    const plainText = select && /texto\s*simples|plain\s*text/i.test(selectedText(select))
-    if (!plainText) return
+    if (!select || !isPlainText(selectedText(select))) return
 
     event.preventDefault()
     event.stopPropagation()
     event.stopImmediatePropagation()
 
-    if (running.has(button)) return
-    running.add(button)
-
-    try {
-      const ready = await ensureHtmlComposer()
-      if (!ready) {
-        setStatus('SEGURANÇA: não foi possível localizar o corpo correto do e-mail. Nada foi inserido.')
-        return
-      }
-
-      setStatus('FAST MAIL — CORPO DO E-MAIL PRONTO. INSERINDO RESPOSTA…')
-      bypass.add(button)
-      button.click()
-    } finally {
-      running.delete(button)
+    const ready = await ensureHtmlComposer()
+    if (!ready) {
+      setStatus('SEGURANÇA: não foi possível preparar o corpo correto do e-mail. A ação foi bloqueada.')
+      return
     }
+
+    bypass.add(control)
+    control.click()
   }, true)
+
+  let scheduled = false
+  const observer = new MutationObserver(() => {
+    if (scheduled) return
+    scheduled = true
+    window.setTimeout(() => {
+      scheduled = false
+      normalizeWhenPanelAppears().catch(() => {})
+    }, 120)
+  })
+
+  observer.observe(document.documentElement, { childList: true, subtree: true })
+  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 250)
+  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 900)
 })()
