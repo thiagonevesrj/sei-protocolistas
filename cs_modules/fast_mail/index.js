@@ -597,32 +597,142 @@
       .replace(/'/g, '&#039;')
   }
 
+  function messageBodyFrame (element) {
+    try {
+      return element?.ownerDocument?.defaultView?.frameElement || null
+    } catch (_) {
+      return null
+    }
+  }
+
+  function isInsideMessageHeader (element) {
+    if (!element) return false
+    if (element.closest?.('#divHdrMessage')) return true
+    const frame = messageBodyFrame(element)
+    return Boolean(frame?.closest?.('#divHdrMessage'))
+  }
+
+  function isPlainTextMessageBody (element) {
+    return Boolean(
+      element &&
+      element.matches?.('textarea#txtBdy') &&
+      element.closest?.('#divBdy') &&
+      !element.disabled &&
+      !element.readOnly &&
+      !isInsideMessageHeader(element)
+    )
+  }
+
+  function isHtmlMessageBody (element) {
+    if (!element || element !== element.ownerDocument?.body) return false
+
+    const frame = messageBodyFrame(element)
+    if (!frame?.matches?.('iframe#ifBdy')) return false
+    if (!frame.closest?.('#divBdy') || frame.closest?.('#divHdrMessage')) return false
+
+    const doc = element.ownerDocument
+    return doc.designMode?.toLowerCase() === 'on' || element.isContentEditable
+  }
+
+  function isSafeMessageBodyEditor (element) {
+    if (!element || isInsideMessageHeader(element)) return false
+    return isPlainTextMessageBody(element) || isHtmlMessageBody(element)
+  }
+
   function findMessageBodyEditor () {
-    const candidates = []
-
     for (const doc of allDocuments()) {
-      const elements = Array.from(doc.querySelectorAll('[contenteditable="true"], body[contenteditable="true"]'))
-
-      if (doc.designMode?.toLowerCase() === 'on' && doc.body) elements.push(doc.body)
-
-      for (const element of elements) {
-        if (!isVisible(element)) continue
-        if (element.closest?.('#sei-protocolistas-fast-mail-status')) continue
-        if (element.matches?.('input,textarea')) continue
-
-        const rect = element.getBoundingClientRect()
-        const area = rect.width * rect.height
-        if (area < 12000) continue
-
-        const label = `${element.getAttribute?.('aria-label') || ''} ${element.getAttribute?.('title') || ''}`
-        if (/assunto|subject|bcc|cc|destinat|recipient/i.test(label)) continue
-
-        candidates.push({ element, score: area + (element.innerText?.length || 0) })
+      const plainTextBody = doc.querySelector('#divBdy textarea#txtBdy')
+      if (plainTextBody && isVisible(plainTextBody) && isPlainTextMessageBody(plainTextBody)) {
+        return plainTextBody
       }
+
+      const htmlFrame = doc.querySelector('#divBdy iframe#ifBdy')
+      if (!htmlFrame || !isVisible(htmlFrame) || htmlFrame.closest?.('#divHdrMessage')) continue
+
+      try {
+        const htmlBody = htmlFrame.contentDocument?.body
+        if (htmlBody && isHtmlMessageBody(htmlBody)) return htmlBody
+      } catch (_) {}
     }
 
-    candidates.sort((a, b) => b.score - a.score)
-    return candidates[0]?.element || null
+    return null
+  }
+
+  function assertSafeMessageBodyEditor (editor) {
+    if (!isSafeMessageBodyEditor(editor)) {
+      throw new Error('SEGURANÇA: o corpo do e-mail não foi identificado com segurança. Nada foi inserido.')
+    }
+  }
+
+  function dispatchBodyEvent (editor, type) {
+    const view = editor?.ownerDocument?.defaultView || window
+    editor?.dispatchEvent(new view.Event(type, { bubbles: true }))
+  }
+
+  function setPlainTextBodyValue (editor, value) {
+    assertSafeMessageBodyEditor(editor)
+    if (!isPlainTextMessageBody(editor)) {
+      throw new Error('SEGURANÇA: o editor em Texto simples não foi identificado com segurança.')
+    }
+
+    const view = editor.ownerDocument?.defaultView || window
+    const prototype = view.HTMLTextAreaElement?.prototype
+    const descriptor = prototype && Object.getOwnPropertyDescriptor(prototype, 'value')
+
+    editor.focus()
+    if (descriptor?.set) descriptor.set.call(editor, value)
+    else editor.value = value
+    dispatchBodyEvent(editor, 'input')
+    dispatchBodyEvent(editor, 'change')
+  }
+
+  function htmlToPlainText (html, doc = document) {
+    const container = doc.createElement('div')
+    container.innerHTML = String(html || '')
+
+    container.querySelectorAll('a[href]').forEach((link) => {
+      const href = String(link.getAttribute('href') || '').replace(/^mailto:/i, '')
+      const label = cleanValue(link.textContent)
+      if (!href) return
+      if (label.toLowerCase() === href.toLowerCase() || label.includes(href)) return
+      link.appendChild(doc.createTextNode(`${label ? ' — ' : ''}${href}`))
+    })
+
+    container.querySelectorAll('br').forEach((br) => {
+      br.replaceWith(doc.createTextNode('\n'))
+    })
+
+    container.querySelectorAll('li').forEach((item) => {
+      item.insertBefore(doc.createTextNode('• '), item.firstChild)
+      item.appendChild(doc.createTextNode('\n'))
+    })
+
+    container.querySelectorAll('p,div,ul,ol,h1,h2,h3,h4,h5,h6').forEach((block) => {
+      block.appendChild(doc.createTextNode('\n'))
+    })
+
+    return String(container.textContent || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n[ \t]+/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
+  function messageBodyContainsResponse (editor, selector, responseHtml) {
+    assertSafeMessageBodyEditor(editor)
+
+    if (!isPlainTextMessageBody(editor)) {
+      return Boolean(editor.querySelector?.(selector))
+    }
+
+    const responseText = htmlToPlainText(responseHtml, editor.ownerDocument)
+    const probe = responseText
+      .split(/\n+/)
+      .map(cleanValue)
+      .find((line) => line.length >= 24) || cleanValue(responseText).slice(0, 80)
+
+    return Boolean(probe && String(editor.value || '').includes(probe))
   }
 
   function selectedMissingDocuments () {
@@ -669,7 +779,11 @@
   }
 
   function insertRequirementIntoBody (editor, responseHtml) {
-    if (editor.querySelector?.('[data-sei-protocolistas="missing-documents-requirement"]')) {
+    if (messageBodyContainsResponse(
+      editor,
+      '[data-sei-protocolistas="missing-documents-requirement"]',
+      responseHtml
+    )) {
       throw new Error('A exigência já foi inserida nesta resposta.')
     }
 
@@ -677,13 +791,25 @@
   }
 
   function insertResponseBeforeHistory (editor, responseHtml) {
+    assertSafeMessageBodyEditor(editor)
+
+    if (isPlainTextMessageBody(editor)) {
+      const responseText = htmlToPlainText(responseHtml, editor.ownerDocument)
+      if (!responseText) throw new Error('A resposta não possui conteúdo para inserir.')
+
+      const oldText = String(editor.value || '').replace(/\r\n/g, '\n')
+      const separator = `\n\n${HISTORY_SEPARATOR}\n\n`
+      setPlainTextBodyValue(editor, `${responseText}${separator}${oldText}`)
+      return
+    }
+
     const oldHtml = editor.innerHTML || ''
     const separator = `<div data-sei-protocolistas="history-separator" style="margin:22px 0 14px 0;padding-top:10px;border-top:1px solid #a7a7a7;color:#666;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;">${HISTORY_SEPARATOR}</div>`
 
     editor.focus()
     editor.innerHTML = `${responseHtml}${separator}${oldHtml}`
-    editor.dispatchEvent(new Event('input', { bubbles: true }))
-    editor.dispatchEvent(new Event('change', { bubbles: true }))
+    dispatchBodyEvent(editor, 'input')
+    dispatchBodyEvent(editor, 'change')
   }
 
   function renderMissingDocumentsOptions () {
@@ -867,17 +993,15 @@
   }
 
   function insertProcessCompletedResponse (editor, responseHtml) {
-    if (editor.querySelector?.('[data-sei-protocolistas="process-completed-response"]')) {
+    if (messageBodyContainsResponse(
+      editor,
+      '[data-sei-protocolistas="process-completed-response"]',
+      responseHtml
+    )) {
       throw new Error('A resposta do processo já foi inserida neste e-mail.')
     }
 
-    const oldHtml = editor.innerHTML || ''
-    const separator = `<div data-sei-protocolistas="history-separator" style="margin:22px 0 14px 0;padding-top:10px;border-top:1px solid #a7a7a7;color:#666;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;">${HISTORY_SEPARATOR}</div>`
-
-    editor.focus()
-    editor.innerHTML = `${responseHtml}${separator}${oldHtml}`
-    editor.dispatchEvent(new Event('input', { bubbles: true }))
-    editor.dispatchEvent(new Event('change', { bubbles: true }))
+    insertResponseBeforeHistory(editor, responseHtml)
   }
 
   function shortDestinationForSubject (value) {
@@ -1060,11 +1184,13 @@
         throw new Error('Não foi possível atualizar automaticamente o assunto do e-mail.')
       }
 
-      if (!editor.querySelector?.('[data-sei-protocolistas="process-completed-response"]')) {
-        insertProcessCompletedResponse(
-          editor,
-          buildProcessCompletedResponseHtml(payload)
-        )
+      const responseHtml = buildProcessCompletedResponseHtml(payload)
+      if (!messageBodyContainsResponse(
+        editor,
+        '[data-sei-protocolistas="process-completed-response"]',
+        responseHtml
+      )) {
+        insertProcessCompletedResponse(editor, responseHtml)
       }
 
       renderAttendanceCompletedState(payload)
@@ -1337,11 +1463,17 @@
 
       const editor = findMessageBodyEditor()
       if (!editor) throw new Error('Não localizei o corpo editável do e-mail.')
-      if (editor.querySelector?.('[data-sei-protocolistas="catalog-script"]')) {
+
+      const responseHtml = buildCatalogScriptHtml(script)
+      if (messageBodyContainsResponse(
+        editor,
+        '[data-sei-protocolistas="catalog-script"]',
+        responseHtml
+      )) {
         throw new Error('Já existe um script inserido nesta resposta.')
       }
 
-      insertResponseBeforeHistory(editor, buildCatalogScriptHtml(script))
+      insertResponseBeforeHistory(editor, responseHtml)
       await recordWorkdayMetric('emails')
       if (status) status.textContent = `Script inserido: ${script.title}`
     } catch (error) {
@@ -2083,10 +2215,18 @@
   }
 
   function setMessageBodyText (field, text) {
+    assertSafeMessageBodyEditor(field)
+
+    if (isPlainTextMessageBody(field)) {
+      setPlainTextBodyValue(field, text)
+      field.blur()
+      return
+    }
+
     field.focus()
     field.textContent = text
-    field.dispatchEvent(new Event('input', { bubbles: true }))
-    field.dispatchEvent(new Event('change', { bubbles: true }))
+    dispatchBodyEvent(field, 'input')
+    dispatchBodyEvent(field, 'change')
     field.blur()
   }
 
