@@ -13,6 +13,10 @@
     return String(value || '').replace(/\s+/g, ' ').trim()
   }
 
+  function sleep (ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms))
+  }
+
   function allDocuments () {
     const documents = [document]
 
@@ -119,40 +123,72 @@
     })
   }
 
+  async function triggerNativeFormatChange (select, htmlOption) {
+    const view = select.ownerDocument?.defaultView || window
+    const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
+
+    select.focus?.()
+    htmlOption.selected = true
+    select.value = htmlOption.value
+    if (optionIndex >= 0) select.selectedIndex = optionIndex
+    dispatch(select, 'input')
+
+    let nativeHandlerCalled = false
+    if (typeof select.onchange === 'function') {
+      try {
+        const event = new view.Event('change', { bubbles: true, cancelable: true })
+        select.onchange.call(select, event)
+        nativeHandlerCalled = true
+      } catch (_) {}
+    }
+
+    if (!nativeHandlerCalled) dispatch(select, 'change')
+    select.blur?.()
+
+    let editor = await waitFor(() => deterministicHtmlEditor(), 650, 50)
+    if (editor) return editor
+
+    // O OWA legado pode manter a troca de formato em um handler inline que
+    // não reage da mesma forma a eventos sintéticos. Depois da chamada direta
+    // acima, fazemos uma única tentativa pelo fluxo DOM normal.
+    htmlOption.selected = true
+    select.value = htmlOption.value
+    if (optionIndex >= 0) select.selectedIndex = optionIndex
+    dispatch(select, 'change')
+
+    editor = await waitFor(() => deterministicHtmlEditor(), 5200, 100)
+    return editor || null
+  }
+
   async function ensureHtmlComposer () {
     if (preparing) return preparing
 
     preparing = (async () => {
       lastPrepareAttempt = Date.now()
-      const select = await waitFor(() => formatSelect(), 2500, 80)
 
-      if (!select) {
-        return Boolean(await waitFor(() => deterministicHtmlEditor(), 1800, 80))
-      }
+      const existingEditor = deterministicHtmlEditor()
+      if (existingEditor) return true
+
+      const select = await waitFor(() => formatSelect(), 2500, 80)
+      if (!select) return false
 
       if (isHtmlText(selectedText(select))) {
-        return Boolean(await waitFor(() => deterministicHtmlEditor(), 2500, 80))
+        return Boolean(await waitFor(() => deterministicHtmlEditor(), 3000, 80))
       }
 
       const htmlOption = Array.from(select.options || []).find((option) => isHtmlText(option.text))
       if (!htmlOption) return false
 
       setStatus('FAST MAIL — preparando e-mail formatado…')
+      const editor = await triggerNativeFormatChange(select, htmlOption)
 
-      select.focus?.()
-      select.value = htmlOption.value
-      select.selectedIndex = Array.from(select.options || []).indexOf(htmlOption)
-      dispatch(select, 'input')
-      dispatch(select, 'change')
-      select.blur?.()
+      if (editor) {
+        setStatus('FAST MAIL — e-mail formatado pronto.')
+        return true
+      }
 
-      const editor = await waitFor(() => {
-        if (!isHtmlText(selectedText(select))) return null
-        return deterministicHtmlEditor()
-      }, 6000, 100)
-
-      if (editor) setStatus('FAST MAIL — e-mail formatado pronto.')
-      return Boolean(editor)
+      setStatus('Não foi possível ativar o editor HTML do OWA. Nada foi inserido.')
+      return false
     })()
 
     try {
@@ -340,7 +376,7 @@
     if (!fastMailPanelExists()) return false
 
     const select = formatSelect()
-    if (!select || !isPlainText(selectedText(select))) return true
+    if (!select || !isPlainText(selectedText(select))) return Boolean(deterministicHtmlEditor() || select)
 
     return ensureHtmlComposer()
   }
@@ -354,8 +390,17 @@
       return
     }
 
+    const editor = deterministicHtmlEditor()
+    if (editor) return
+
     const select = formatSelect()
-    if (!select || !isPlainText(selectedText(select))) return
+    if (!select || (!isPlainText(selectedText(select)) && !isHtmlText(selectedText(select)))) {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      setStatus('Não consegui confirmar o formato do editor do OWA. Nada foi inserido.')
+      return
+    }
 
     event.preventDefault()
     event.stopPropagation()
@@ -387,6 +432,7 @@
     formatPendingResponses()
 
     if (!fastMailPanelExists()) return
+    if (deterministicHtmlEditor()) return
     const select = formatSelect()
     if (!select || !isPlainText(selectedText(select))) return
     if (preparing || Date.now() - lastPrepareAttempt < 1600) return
