@@ -4,9 +4,10 @@
   if (window.top !== window) return
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
-  const bypass = new WeakSet()
   let preparing = null
   let scheduled = false
+  let lastAttemptAt = 0
+  const RETRY_COOLDOWN = 12000
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -51,27 +52,14 @@
   }
 
   function formatSelect () {
-    const matches = []
     for (const doc of allDocuments()) {
-      Array.from(doc.querySelectorAll('select')).forEach((select) => {
+      const selects = Array.from(doc.querySelectorAll('select'))
+      for (const select of selects) {
         const labels = Array.from(select.options || []).map((option) => clean(option.text))
-        const hasHtml = labels.some(isHtmlText)
-        const hasPlain = labels.some(isPlainText)
-        const selectedKnown = isHtmlText(selectedText(select)) || isPlainText(selectedText(select))
-        if (hasHtml && (hasPlain || selectedKnown)) matches.push(select)
-      })
-    }
-    return matches.find(visible) || matches[0] || null
-  }
-
-  function deterministicPlainTextEditor () {
-    for (const doc of allDocuments()) {
-      const bodyContainer = doc.querySelector('#divBdy')
-      if (!bodyContainer || bodyContainer.closest?.('#divHdrMessage')) continue
-      const textarea = bodyContainer.querySelector('textarea#txtBdy')
-      if (!textarea || textarea.closest?.('#divHdrMessage')) continue
-      if (textarea.disabled || textarea.readOnly) continue
-      if (visible(textarea)) return textarea
+        if (labels.some(isHtmlText) && (labels.some(isPlainText) || isPlainText(selectedText(select)))) {
+          return select
+        }
+      }
     }
     return null
   }
@@ -80,8 +68,10 @@
     for (const doc of allDocuments()) {
       const bodyContainer = doc.querySelector('#divBdy')
       if (!bodyContainer || bodyContainer.closest?.('#divHdrMessage')) continue
+
       const frame = bodyContainer.querySelector('iframe#ifBdy')
       if (!frame || !visible(frame) || frame.closest?.('#divHdrMessage')) continue
+
       try {
         const htmlDocument = frame.contentDocument
         const htmlBody = htmlDocument?.body
@@ -94,18 +84,10 @@
     return null
   }
 
-  function setStatus (message) {
-    ;[
-      '#spfm-script-status',
-      '#spfm-priority-status',
-      '#spfm-v2-status',
-      '#spfm-workflow-v3-status',
-      '#spfm-body-status',
-      '#spfm-process-response-status'
-    ].forEach((selector) => {
-      const target = document.querySelector(selector)
-      if (target) target.textContent = message
-    })
+  function fastMailPanelExists () {
+    return Boolean(document.querySelector(
+      '#sei-protocolistas-fast-mail-status, #spfm-navigation-v2, #spfm-workflow-v3'
+    ))
   }
 
   function dispatch (element, type) {
@@ -113,7 +95,7 @@
     element?.dispatchEvent(new view.Event(type, { bubbles: true, cancelable: true }))
   }
 
-  function waitFor (getter, timeout = 3500, interval = 80) {
+  function waitFor (getter, timeout = 1400, interval = 70) {
     return new Promise((resolve) => {
       const started = Date.now()
       const timer = window.setInterval(() => {
@@ -126,60 +108,46 @@
     })
   }
 
-  async function triggerNativeFormatChange (select, htmlOption) {
-    const view = select.ownerDocument?.defaultView || window
-    const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
-
-    const apply = () => {
-      htmlOption.selected = true
-      select.value = htmlOption.value
-      if (optionIndex >= 0) select.selectedIndex = optionIndex
-    }
-
-    apply()
-    dispatch(select, 'input')
-
-    if (typeof select.onchange === 'function') {
-      try {
-        select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
-      } catch (_) {
-        dispatch(select, 'change')
-      }
-    } else {
-      dispatch(select, 'change')
-    }
-
-    let editor = await waitFor(deterministicHtmlEditor, 800, 50)
-    if (editor) return editor
-
-    apply()
-    dispatch(select, 'change')
-    editor = await waitFor(deterministicHtmlEditor, 2600, 80)
-    return editor || null
-  }
-
-  async function ensureHtmlComposer () {
+  async function tryHtmlInBackground () {
+    if (deterministicHtmlEditor()) return true
     if (preparing) return preparing
+    if (Date.now() - lastAttemptAt < RETRY_COOLDOWN) return false
 
     preparing = (async () => {
-      if (deterministicHtmlEditor()) return true
-
+      lastAttemptAt = Date.now()
       const select = formatSelect()
-      if (!select) return false
-
-      if (isHtmlText(selectedText(select))) {
-        return Boolean(await waitFor(deterministicHtmlEditor, 1800, 80))
-      }
+      if (!select || !isPlainText(selectedText(select))) return false
 
       const htmlOption = Array.from(select.options || []).find((option) => isHtmlText(option.text))
       if (!htmlOption) return false
 
-      setStatus('FAST MAIL — preparando e-mail formatado…')
-      const editor = await triggerNativeFormatChange(select, htmlOption)
-      if (editor) {
-        setStatus('FAST MAIL — e-mail formatado pronto.')
-        return true
+      const originalValue = select.value
+      const originalIndex = select.selectedIndex
+      const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
+      const view = select.ownerDocument?.defaultView || window
+
+      htmlOption.selected = true
+      select.value = htmlOption.value
+      if (optionIndex >= 0) select.selectedIndex = optionIndex
+      dispatch(select, 'input')
+
+      if (typeof select.onchange === 'function') {
+        try {
+          select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
+        } catch (_) {
+          dispatch(select, 'change')
+        }
+      } else {
+        dispatch(select, 'change')
       }
+
+      const editor = await waitFor(deterministicHtmlEditor, 1600, 70)
+      if (editor) return true
+
+      // Se o OWA legado não efetivar a troca, restauramos apenas a aparência do
+      // seletor e deixamos o inseridor central trabalhar normalmente em Texto simples.
+      select.value = originalValue
+      select.selectedIndex = originalIndex
       return false
     })()
 
@@ -190,15 +158,6 @@
     }
   }
 
-  function fastMailPanelExists () {
-    return Boolean(document.querySelector('#sei-protocolistas-fast-mail-status, #spfm-navigation-v2, #spfm-workflow-v3'))
-  }
-
-  function isInsertionControl (target) {
-    if (!(target instanceof Element)) return null
-    return target.closest('#spfm-insert-script, #spfm-insert-requirement, #spfm-insert-process-response, #spfm-baixa-direct-insert')
-  }
-
   function cloneLineContainer (doc, nodes) {
     const holder = doc.createElement('span')
     nodes.forEach((node) => holder.appendChild(node.cloneNode(true)))
@@ -207,8 +166,7 @@
 
   function firstTextNode (node) {
     const showText = node.ownerDocument?.defaultView?.NodeFilter?.SHOW_TEXT || 4
-    const walker = node.ownerDocument.createTreeWalker(node, showText)
-    return walker.nextNode()
+    return node.ownerDocument.createTreeWalker(node, showText).nextNode()
   }
 
   function stripBulletMarker (holder) {
@@ -246,6 +204,7 @@
     const doc = root.ownerDocument
     const lines = []
     let current = []
+
     Array.from(root.childNodes).forEach((node) => {
       if (node.nodeName === 'BR') {
         lines.push(current)
@@ -341,67 +300,33 @@
   function formatPendingResponses () {
     for (const doc of allDocuments()) {
       doc.querySelectorAll('[data-sei-protocolistas="catalog-script"]').forEach(presentCatalogScript)
-      doc.querySelectorAll('[data-sei-protocolistas="missing-documents-requirement"], [data-sei-protocolistas="process-completed-response"], [data-sei-protocolistas="presential-missing-documents"]').forEach(presentStructuredResponse)
+      doc.querySelectorAll(
+        '[data-sei-protocolistas="missing-documents-requirement"], [data-sei-protocolistas="process-completed-response"], [data-sei-protocolistas="presential-missing-documents"]'
+      ).forEach(presentStructuredResponse)
     }
   }
 
-  async function normalizeWhenPanelAppears () {
-    if (!fastMailPanelExists() || deterministicHtmlEditor()) return true
-    const select = formatSelect()
-    if (!select || !isPlainText(selectedText(select))) return Boolean(deterministicPlainTextEditor() || select)
-    return ensureHtmlComposer()
-  }
-
-  document.addEventListener('click', async (event) => {
-    const control = isInsertionControl(event.target)
-    if (!control) return
-
-    if (bypass.has(control)) {
-      bypass.delete(control)
-      return
-    }
-
-    if (deterministicHtmlEditor()) return
-
-    const plainEditor = deterministicPlainTextEditor()
-    if (!plainEditor) {
-      event.preventDefault()
-      event.stopPropagation()
-      event.stopImmediatePropagation()
-      setStatus('Não consegui identificar com segurança o corpo do e-mail. Nada foi inserido.')
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-    event.stopImmediatePropagation()
-
-    const ready = await ensureHtmlComposer()
-    if (!ready && !deterministicPlainTextEditor()) {
-      setStatus('O formato do OWA mudou durante a preparação. Nada foi inserido.')
-      return
-    }
-
-    if (!ready) {
-      setStatus('OWA permaneceu em Texto simples — inserindo a resposta com segurança, sem formatação HTML.')
-    }
-
-    bypass.add(control)
-    control.click()
-  }, true)
-
-  const observer = new MutationObserver(() => {
+  function scheduleBackgroundPreparation () {
     if (scheduled) return
     scheduled = true
     window.setTimeout(() => {
       scheduled = false
       formatPendingResponses()
-    }, 120)
-  })
+      if (fastMailPanelExists()) tryHtmlInBackground().catch(() => {})
+    }, 180)
+  }
 
+  const observer = new MutationObserver(scheduleBackgroundPreparation)
   observer.observe(document.documentElement, { childList: true, subtree: true })
 
-  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 300)
-  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 1100)
-  window.setInterval(formatPendingResponses, 900)
+  window.setTimeout(() => {
+    formatPendingResponses()
+    if (fastMailPanelExists()) tryHtmlInBackground().catch(() => {})
+  }, 350)
+
+  window.setTimeout(() => {
+    if (fastMailPanelExists()) tryHtmlInBackground().catch(() => {})
+  }, 1800)
+
+  window.setInterval(formatPendingResponses, 1000)
 })()
