@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Central do Protocolista</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="branding.css">
   <script src="main.js" defer></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><b>SEI</b><strong>Protocolistas</strong><em>by Thiago Neves Design</em></div>
+    <div class="brand"><img src="../icons/sei-protocolistas-wordmark.png" alt="SEI Protocolistas — by Thiago Neves Design"></div>
     <span id="extension-version">Versão</span>
   </header>
 
@@ -32,10 +33,33 @@
     <section class="start-panel panel">
       <div>
         <p class="eyebrow">Atalho principal</p>
-        <h2>Iniciar expediente</h2>
-        <p>Abre Webmail e SEI em sequência usando os acessos configurados.</p>
+        <h2 id="workday-title">Iniciar expediente</h2>
+        <p id="workday-description">Abre Webmail e SEI em sequência usando os acessos configurados.</p>
+        <div id="workday-message" class="message"></div>
       </div>
-      <button id="start-workday" class="primary start-button" type="button">INICIAR EXPEDIENTE</button>
+      <div class="workday-actions">
+        <span id="workday-status" class="badge">Fora do expediente</span>
+        <button id="reopen-systems" class="reopen-button start-button" type="button" hidden>REABRIR SISTEMAS</button>
+        <button id="start-workday" class="primary start-button" type="button">INICIAR EXPEDIENTE</button>
+      </div>
+    </section>
+
+    <section id="workday-report" class="panel workday-report" hidden>
+      <div class="heading">
+        <div><p class="eyebrow">Resumo individual</p><h2>Relatório do expediente</h2></div>
+        <span id="workday-report-date" class="badge success"></span>
+      </div>
+      <p>Este relatório é particular, fica disponível somente neste navegador e será removido automaticamente no dia seguinte.</p>
+      <div class="metric-grid">
+        <article><span>Tempo total</span><strong id="metric-duration">—</strong></article>
+        <article><span>E-mails atendidos</span><strong id="metric-emails">0</strong></article>
+        <article><span>Processos abertos</span><strong id="metric-processes">0</strong></article>
+        <article><span>Exigências enviadas</span><strong id="metric-requirements">0</strong></article>
+      </div>
+      <div class="report-period"><span id="metric-start"></span><span id="metric-end"></span></div>
+      <div class="form-actions">
+        <button id="export-workday" type="button">EXPORTAR MEU RELATÓRIO EM CSV</button>
+      </div>
     </section>
 
     <section class="credentials-grid">
@@ -128,6 +152,44 @@
       </article>
     </section>
 
+    <section class="panel feedback-panel">
+      <div class="heading">
+        <div><p class="eyebrow">Ajude a melhorar</p><h2>Sugestões e bugs</h2></div>
+        <span class="badge">Canal direto</span>
+      </div>
+      <p>Envie um relatório ao responsável pelo projeto. Não inclua nome, CPF, e-mail, número de processo ou documentos do cidadão.</p>
+      <form id="feedback-form">
+        <div class="feedback-grid">
+          <label>Tipo do relato
+            <select id="feedback-type" required>
+              <option value="Bug">Bug</option>
+              <option value="Sugestão">Sugestão</option>
+            </select>
+          </label>
+          <label>Onde ocorreu
+            <select id="feedback-location" required>
+              <option value="Central do Protocolista">Central do Protocolista</option>
+              <option value="FAST MAIL">FAST MAIL</option>
+              <option value="FAST PROC">FAST PROC</option>
+              <option value="SEI">SEI</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </label>
+          <label class="full">Título
+            <input id="feedback-title" type="text" maxlength="120" required placeholder="Resuma o que aconteceu ou o que pode melhorar">
+          </label>
+          <label class="full">Descrição
+            <textarea id="feedback-description" rows="5" maxlength="3000" required placeholder="Explique o problema ou a sugestão com clareza"></textarea>
+          </label>
+          <label class="full">Passos realizados <small>(opcional)</small>
+            <textarea id="feedback-steps" rows="4" maxlength="2000" placeholder="Ex.: abri o e-mail, cliquei em Taxas e depois em Documentos faltantes"></textarea>
+          </label>
+        </div>
+        <div id="feedback-message" class="message"></div>
+        <div class="form-actions"><button id="send-feedback" class="primary" type="submit">ENVIAR RELATO</button></div>
+      </form>
+    </section>
+
     <section id="catalog-panel" class="panel catalog">
       <div class="heading">
         <div><p class="eyebrow">Catálogo operacional</p><h2>Procedimentos e unidades</h2></div>
@@ -145,23 +207,6 @@
       <p id="catalog-error" class="message error"></p>
     </section>
 
-    <details class="admin">
-      <summary>Administração e manutenção</summary>
-      <div class="admin-grid">
-        <article class="panel flat">
-          <p class="eyebrow">Credenciais</p><h2>Limpeza local</h2>
-          <p>Remove os acessos salvos neste perfil do navegador.</p>
-          <button id="clear-all-credentials">Apagar todas as credenciais</button>
-          <div id="clear-all-message" class="message"></div>
-        </article>
-        <article class="panel flat">
-          <p class="eyebrow">Transferência</p><h2>Configuração local</h2>
-          <p>Exportar preferências sem exportar senhas.</p>
-          <button id="export-settings">Exportar JSON</button>
-          <div id="transfer-message" class="message"></div>
-        </article>
-      </div>
-    </details>
   </main>
 
   <footer>

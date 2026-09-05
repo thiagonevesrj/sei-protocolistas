@@ -32,14 +32,20 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 - [ ] Salvar um número de protocolista fictício.
 - [ ] Fechar e reabrir a Central.
 - [ ] Confirmar que a configuração permaneceu no navegador.
-- [ ] Confirmar que o catálogo mostra os dez processos prioritários.
+- [ ] Confirmar que o FAST MAIL mostra 17 assuntos operacionais e destaca os sete principais.
 - [ ] Confirmar `Devolução de Taxas → DIVAF → DAF`.
 - [ ] Abrir cada um dos cinco modelos de resposta.
 - [ ] Editar um modelo, salvar e confirmar que ele permanece após reabrir a Central.
 - [ ] Restaurar o texto-base do modelo.
-- [ ] Exportar a configuração em JSON.
-- [ ] Confirmar que o JSON não contém nome, CPF, telefone ou e-mail de cidadão.
-- [ ] Importar o JSON e confirmar número do protocolista e modelos.
+- [ ] Confirmar que o bloco redundante `Administração e manutenção` não aparece.
+- [ ] Confirmar que apagar credenciais do Webmail ou do SEI exige confirmação.
+- [ ] Confirmar que uma senha já salva aparece apenas como `Senha já salva`, sem voltar ao campo.
+- [ ] Iniciar um expediente e confirmar que Webmail e SEI abrem.
+- [ ] Confirmar que as métricas permanecem ocultas durante o expediente.
+- [ ] Finalizar o expediente e confirmar tempo total, e-mails, processos e exigências.
+- [ ] Exportar o relatório individual em CSV.
+- [ ] Enviar um relato fictício sem dados de cidadão e confirmar o recebimento pelo responsável.
+- [ ] Tentar incluir um e-mail, CPF ou número de processo fictício no relato e confirmar o bloqueio.
 - [ ] Criar um rascunho fictício no Clique Protocolista.
 - [ ] Confirmar que a Central sinaliza a existência de atendimento temporário.
 - [ ] Limpar os dados temporários pela Central.
@@ -120,6 +126,7 @@ Use este roteiro antes de considerar uma nova versão pronta para testes com out
 ## Validação automática
 
 - [ ] Executar `npm run validate` e confirmar a mensagem de sucesso.
+- [ ] Executar `npm run lint` e confirmar a conclusão sem erros.
 - [ ] Confirmar que a verificação do GitHub Actions foi concluída sem falhas.
 - [ ] Confirmar que as versões do manifesto e do pacote são idênticas.
 - [ ] Confirmar que somente SEI-RJ e OWA institucional estão autorizados no manifesto.

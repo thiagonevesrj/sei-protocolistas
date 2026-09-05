@@ -6,6 +6,15 @@ const ROUTES_KEY = 'fastMailAttendanceRoutes'
 const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
 const RETURN_TO_EMAIL_MESSAGE = 'sei-protocolistas:return-fast-mail'
 const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
+const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
+const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
+const OPEN_WEBMAIL_MESSAGE = 'sei-protocolistas:open-webmail'
+const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
+const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
+const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
+const WEBMAIL_MATCH_PATTERN = 'https://venus2.detran.rj.gov.br/owa/*'
+const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
 
 function callApi (target, method, ...args) {
@@ -18,6 +27,148 @@ function callApi (target, method, ...args) {
       else resolve(result)
     })
   })
+}
+
+function webmailTabScore (tab) {
+  const isCompose = isWebmailComposeTab(tab)
+  return (isCompose ? 0 : 100) +
+    (tab.active ? 10 : 0) +
+    Number(tab.lastAccessed || 0) / 1e15
+}
+
+function isWebmailComposeTab (tab) {
+  return /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(tab?.url || '')
+}
+
+function isReusableWebmailTab (tab) {
+  const url = String(tab?.url || '')
+  const title = String(tab?.title || '')
+
+  if (!tab?.id || !url.startsWith(WEBMAIL_URL)) return false
+
+  if (/\/owa\/auth\/(?:logoff|logon)\.aspx/i.test(url)) return false
+
+  if (
+    /outlook web app\s*-\s*sair/i.test(title) ||
+    /server error in ['"]?\/owa/i.test(title) ||
+    /mapiexceptionsessionlimit/i.test(title)
+  ) {
+    return false
+  }
+
+  return true
+}
+
+async function findReusableWebmailTab (includeCompose = true) {
+  const tabs = await callApi(api.tabs, 'query', {
+    url: WEBMAIL_MATCH_PATTERN
+  })
+  return (tabs || [])
+    .filter((tab) =>
+      isReusableWebmailTab(tab) &&
+      (includeCompose || !isWebmailComposeTab(tab))
+    )
+    .sort((a, b) => webmailTabScore(b) - webmailTabScore(a))[0] || null
+}
+
+async function focusBrowserTab (tab) {
+  await callApi(api.tabs, 'update', tab.id, { active: true })
+
+  if (tab.windowId != null && api.windows?.update) {
+    try {
+      await callApi(api.windows, 'update', tab.windowId, { focused: true })
+    } catch (error) {
+      console.warn('[SEI Protocolistas] A aba existe, mas a janela não pôde receber foco:', error)
+    }
+  }
+}
+
+async function moveTabToWindow (tab, windowId) {
+  if (!tab?.id || windowId == null || tab.windowId === windowId || !api.tabs?.move) return tab
+
+  try {
+    const moved = await callApi(api.tabs, 'move', tab.id, {
+      windowId,
+      index: -1
+    })
+    return Array.isArray(moved) ? moved[0] || tab : moved || tab
+  } catch (error) {
+    console.warn('[SEI Protocolistas] A aba restaurada do Webmail não pôde ser movida para a janela atual:', error)
+    return tab
+  }
+}
+
+async function restoreRecentWebmailTab (active = true, windowId = null) {
+  if (!api.sessions?.getRecentlyClosed || !api.sessions?.restore) return null
+
+  let sessions
+  try {
+    sessions = await callApi(api.sessions, 'getRecentlyClosed', { maxResults: 12 })
+  } catch (error) {
+    console.warn('[SEI Protocolistas] Não foi possível consultar sessões recentes do Webmail:', error)
+    return null
+  }
+
+  const candidate = (sessions || []).find((session) => {
+    const tab = session?.tab
+    return Boolean(
+      session?.sessionId &&
+      tab &&
+      String(tab.url || '').startsWith(WEBMAIL_URL) &&
+      !isWebmailComposeTab(tab) &&
+      !/\/owa\/auth\/(?:logoff|logon)\.aspx/i.test(String(tab.url || '')) &&
+      !/server error in ['"]?\/owa|mapiexceptionsessionlimit/i.test(String(tab.title || ''))
+    )
+  })
+
+  if (!candidate) return null
+
+  try {
+    const restored = await callApi(api.sessions, 'restore', candidate.sessionId)
+    let tab = restored?.tab || null
+
+    if (!tab && restored?.window?.tabs?.length) {
+      tab = restored.window.tabs.find((item) =>
+        String(item?.url || '').startsWith(WEBMAIL_URL) && !isWebmailComposeTab(item)
+      ) || restored.window.tabs[0]
+    }
+
+    if (!tab?.id) return null
+
+    tab = await moveTabToWindow(tab, windowId)
+    if (active) await focusBrowserTab(tab)
+    return tab
+  } catch (error) {
+    console.warn('[SEI Protocolistas] Não foi possível restaurar a sessão recente do Webmail:', error)
+    return null
+  }
+}
+
+async function openOrReuseWebmail (active = true, windowId = null) {
+  const existing = await findReusableWebmailTab()
+
+  if (existing) {
+    if (active) await focusBrowserTab(existing)
+    return { tab: existing, reused: true, restored: false }
+  }
+
+  const restored = await restoreRecentWebmailTab(active, windowId)
+  if (restored) return { tab: restored, reused: false, restored: true }
+
+  const createProperties = { url: WEBMAIL_URL, active }
+  if (windowId != null) createProperties.windowId = windowId
+  const tab = await callApi(api.tabs, 'create', createProperties)
+  return { tab, reused: false, restored: false }
+}
+
+async function openWebmail (sender) {
+  const result = await openOrReuseWebmail(true, sender.tab?.windowId)
+  return {
+    ok: true,
+    tabId: result.tab.id,
+    reused: result.reused,
+    restored: result.restored
+  }
 }
 
 async function readRoutes () {
@@ -100,6 +251,96 @@ async function returnToFastMail (message) {
   return { ok: true, tabId: tab.id, reopened: tab.id !== route.tabId }
 }
 
+async function openFeedbackCompose (message) {
+  if (!message.feedbackId) throw new Error('Relato não identificado.')
+
+  const stored = await callApi(api.storage.local, 'get', FEEDBACK_KEY)
+  const feedback = stored?.[FEEDBACK_KEY]
+  if (!feedback || feedback.id !== message.feedbackId) {
+    throw new Error('O relatório pendente não foi localizado.')
+  }
+  if (!feedback.expiresAt || Date.now() > feedback.expiresAt) {
+    throw new Error('O relatório expirou. Envie novamente pela Central.')
+  }
+
+  try {
+    const reusableTab = await findReusableWebmailTab(false)
+    if (reusableTab) {
+      await callApi(api.storage.local, 'set', {
+        [FEEDBACK_KEY]: {
+          ...feedback,
+          status: 'opening-webmail',
+          webmailTabId: reusableTab.id,
+          openedAt: Date.now()
+        }
+      })
+      await callApi(api.tabs, 'update', reusableTab.id, {
+        url: FEEDBACK_COMPOSE_URL,
+        active: true
+      })
+      return { ok: true, tabId: reusableTab.id, reused: true }
+    }
+
+    if (await findReusableWebmailTab(true)) {
+      throw new Error('Conclua ou feche a resposta aberta no Webmail antes de enviar o relato.')
+    }
+
+    const tab = await callApi(api.tabs, 'create', {
+      url: 'about:blank',
+      active: false
+    })
+    await callApi(api.storage.local, 'set', {
+      [FEEDBACK_KEY]: {
+        ...feedback,
+        status: 'opening-webmail',
+        webmailTabId: tab.id,
+        openedAt: Date.now()
+      }
+    })
+    await callApi(api.tabs, 'update', tab.id, { url: FEEDBACK_COMPOSE_URL })
+    return { ok: true, tabId: tab.id, reused: false }
+  } catch (error) {
+    await callApi(api.storage.local, 'set', {
+      [FEEDBACK_KEY]: {
+        ...feedback,
+        status: 'error',
+        error: error.message || String(error)
+      }
+    })
+    throw error
+  }
+}
+
+async function openWorkdaySystems (sender) {
+  const targetWindowId = sender.tab?.windowId
+  const webmailResult = await openOrReuseWebmail(false, targetWindowId)
+  const webmailTab = webmailResult.tab
+
+  try {
+    const seiProperties = {
+      url: SEI_LOGIN_URL,
+      active: true
+    }
+    if (targetWindowId != null) seiProperties.windowId = targetWindowId
+    const seiTab = await callApi(api.tabs, 'create', seiProperties)
+    return {
+      ok: true,
+      webmailTabId: webmailTab.id,
+      webmailReused: webmailResult.reused,
+      webmailRestored: webmailResult.restored,
+      seiTabId: seiTab.id
+    }
+  } catch (error) {
+    await focusBrowserTab(webmailTab)
+    throw error
+  }
+}
+
+function currentTab (sender) {
+  if (!sender.tab?.id) throw new Error('Não foi possível identificar a aba atual.')
+  return { ok: true, tabId: sender.tab.id }
+}
+
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   let task
 
@@ -107,6 +348,14 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     task = registerFastMailOrigin(message, sender)
   } else if (message?.type === RETURN_TO_EMAIL_MESSAGE) {
     task = returnToFastMail(message)
+  } else if (message?.type === SEND_FEEDBACK_MESSAGE) {
+    task = openFeedbackCompose(message)
+  } else if (message?.type === OPEN_WORKDAY_SYSTEMS_MESSAGE) {
+    task = openWorkdaySystems(sender)
+  } else if (message?.type === OPEN_WEBMAIL_MESSAGE) {
+    task = openWebmail(sender)
+  } else if (message?.type === GET_CURRENT_TAB_MESSAGE) {
+    task = Promise.resolve(currentTab(sender))
   } else {
     return undefined
   }
