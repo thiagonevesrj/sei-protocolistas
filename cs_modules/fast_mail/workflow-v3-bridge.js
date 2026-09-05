@@ -182,6 +182,22 @@
     button.setAttribute('aria-pressed', 'true')
   }
 
+  function clearSelectedIdentificationAction () {
+    document.querySelectorAll(
+      '#spfm-workflow-v3-identification-actions .spfm-workflow-v3-action.is-selected, #spfm-workflow-v3-simple.is-selected'
+    ).forEach((button) => {
+      button.classList.remove('is-selected')
+      button.setAttribute('aria-pressed', 'false')
+    })
+  }
+
+  function selectIdentificationAction (button) {
+    if (!button) return
+    clearSelectedIdentificationAction()
+    button.classList.add('is-selected')
+    button.setAttribute('aria-pressed', 'true')
+  }
+
   function selectDefaultPersonFisica () {
     const select = document.querySelector('#spfm-v2-variant')
     if (!select || !visible(select)) return false
@@ -322,6 +338,53 @@
     return document.getElementById(IDENTIFICATION_FLOW_ID)
   }
 
+  function clearIdentificationPendingState (flow) {
+    if (!flow) return
+    flow.querySelectorAll('.is-pending, .is-alternative-pending').forEach((element) => {
+      element.classList.remove('is-pending', 'is-alternative-pending')
+    })
+  }
+
+  function identificationReadiness (flow) {
+    const name = flow?.querySelector('#spfm-workflow-v3-requester-name')
+    const cpf = flow?.querySelector('#spfm-workflow-v3-requester-cpf')
+    const noData = flow?.querySelector('#spfm-workflow-v3-requester-no-data')
+    const hasName = Boolean(clean(name?.value))
+    const hasCpf = String(cpf?.value || '').replace(/\D/g, '').length === 11
+    return {
+      name,
+      cpf,
+      noData,
+      hasName,
+      hasCpf,
+      identified: hasName && hasCpf,
+      ready: Boolean(selectedIdentificationTitle) && Boolean(noData?.checked || (hasName && hasCpf))
+    }
+  }
+
+  function guideMissingIdentificationData (flow) {
+    const status = flow?.querySelector('#spfm-workflow-v3-identification-status')
+    const state = identificationReadiness(flow)
+    if (!flow || !state.name || !state.cpf || !state.noData) return
+
+    clearIdentificationPendingState(flow)
+    const nameLabel = state.name.closest('label')
+    const cpfLabel = state.cpf.closest('label')
+    const noDataLabel = state.noData.closest('label')
+
+    if (!state.hasName) nameLabel?.classList.add('is-pending')
+    if (!state.hasCpf) cpfLabel?.classList.add('is-pending')
+    noDataLabel?.classList.add('is-alternative-pending')
+
+    if (status) {
+      status.textContent = 'FALTA CONFIRMAR O REQUERENTE — informe nome completo + CPF ou marque REQUERENTE SEM DADOS.'
+    }
+
+    const firstMissing = !state.hasName ? (nameLabel || state.name) : !state.hasCpf ? (cpfLabel || state.cpf) : noDataLabel
+    window.setTimeout(() => cue(firstMissing || flow), 20)
+    window.setTimeout(() => cue(noDataLabel || flow), 650)
+  }
+
   function updateIdentificationInsertState () {
     const flow = identificationFlow()
     if (!flow) return
@@ -336,15 +399,26 @@
     name.disabled = noData.checked
     cpf.disabled = noData.checked
 
-    const identified = clean(name.value) && String(cpf.value || '').replace(/\D/g, '').length === 11
-    const ready = Boolean(selectedIdentificationTitle) && (noData.checked || identified)
-    insert.disabled = !ready
+    const state = identificationReadiness(flow)
+    const hasResponse = Boolean(selectedIdentificationTitle)
+
+    insert.disabled = !hasResponse
+    insert.dataset.ready = String(state.ready)
+    insert.setAttribute('aria-disabled', String(!state.ready))
+    insert.classList.toggle('is-logically-blocked', hasResponse && !state.ready)
+    noData.closest('label')?.classList.toggle('is-checked', noData.checked)
+
+    if (state.ready || noData.checked) clearIdentificationPendingState(flow)
+    else {
+      if (state.hasName) name.closest('label')?.classList.remove('is-pending')
+      if (state.hasCpf) cpf.closest('label')?.classList.remove('is-pending')
+    }
 
     if (!selectedIdentificationTitle) {
       status.textContent = 'Escolha primeiro a resposta de identificação.'
     } else if (noData.checked) {
       status.textContent = 'REQUERENTE SEM DADOS marcado. A resposta está pronta para inserção.'
-    } else if (!identified) {
+    } else if (!state.identified) {
       status.textContent = 'Informe nome completo + CPF ou marque REQUERENTE SEM DADOS.'
     } else {
       status.textContent = 'Dados confirmados. A resposta está pronta para inserção.'
@@ -370,15 +444,15 @@
     flow.style.background = 'rgba(7, 24, 44, .92)'
     flow.innerHTML = `
       <div class="spfm-workflow-v3-kicker">DADOS DO REQUERENTE</div>
-      <label style="display:grid;gap:4px;font-size:10px;color:#dce6f1">
+      <label class="spfm-workflow-v3-requester-field" style="display:grid;gap:4px;font-size:10px;color:#dce6f1">
         <span>Nome completo</span>
         <input id="spfm-workflow-v3-requester-name" type="text" autocomplete="off" placeholder="Nome completo" style="box-sizing:border-box;width:100%;padding:9px;border:1px solid #314861;border-radius:8px;background:#07182c;color:#fff">
       </label>
-      <label style="display:grid;gap:4px;font-size:10px;color:#dce6f1">
+      <label class="spfm-workflow-v3-requester-field" style="display:grid;gap:4px;font-size:10px;color:#dce6f1">
         <span>CPF</span>
         <input id="spfm-workflow-v3-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="CPF do requerente" style="box-sizing:border-box;width:100%;padding:9px;border:1px solid #314861;border-radius:8px;background:#07182c;color:#fff">
       </label>
-      <label style="display:flex;align-items:center;gap:7px;padding:8px;border:1px dashed #51647a;border-radius:8px;font-size:10px;font-weight:800;color:#fff;cursor:pointer">
+      <label class="spfm-workflow-v3-no-data" style="display:flex;align-items:center;gap:7px;padding:8px;border:1px dashed #51647a;border-radius:8px;font-size:10px;font-weight:800;color:#fff;cursor:pointer">
         <input id="spfm-workflow-v3-requester-no-data" type="checkbox">
         <span>REQUERENTE SEM DADOS</span>
       </label>
@@ -419,6 +493,10 @@
     insert.addEventListener('click', () => {
       updateIdentificationInsertState()
       if (insert.disabled) return
+      if (insert.dataset.ready !== 'true') {
+        guideMissingIdentificationData(flow)
+        return
+      }
       if (!noData.checked) syncRequesterToNative(name.value, cpf.value)
 
       const nativeInsert = document.querySelector('#spfm-insert-script:not([disabled])')
@@ -458,6 +536,7 @@
     if (cpf && !clean(cpf.value)) cpf.value = clean(native.cpf?.value)
     if (noData) noData.checked = false
 
+    clearIdentificationPendingState(flow)
     updateIdentificationInsertState()
     flow.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
     window.setTimeout(() => cue(name || flow), 70)
@@ -482,6 +561,7 @@
 
       event.preventDefault()
       event.stopImmediatePropagation()
+      selectIdentificationAction(quick)
       chooseIdentificationResponse(quick.textContent)
     }, true)
   }
