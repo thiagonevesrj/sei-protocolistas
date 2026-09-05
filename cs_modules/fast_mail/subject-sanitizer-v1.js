@@ -5,6 +5,7 @@
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
   const INTERNAL_RQ_LABEL = /\s*⚡?\s*REQUERIMENTO\s+R[ÁA]PIDO\b/gi
+  const INSERTION_SELECTOR = '#spfm-insert-script, #spfm-insert-requirement, #spfm-baixa-direct-insert, #spfm-workflow-v3-identification-insert'
   let scheduled = false
   let subjectPreparationRunning = false
 
@@ -133,7 +134,7 @@
   function isCompleteOperationalSubject (value) {
     const subject = clean(value)
     return /\bTRIAGEM\b/i.test(subject) &&
-      /\b\d{8}\d{1,4}\s*-\s*TRIAGEM\b/i.test(subject) &&
+      /\b\d{9,12}\s*-\s*TRIAGEM\b/i.test(subject) &&
       /\s-\s[^-]+\s-\s\d/.test(subject)
   }
 
@@ -247,6 +248,16 @@
     event.stopPropagation()
     event.stopImmediatePropagation()
     prepareSubjectOnly()
+  }, true)
+
+  document.addEventListener('click', (event) => {
+    const control = event.target.closest?.(INSERTION_SELECTOR)
+    if (!control) return
+    if (control.id === 'spfm-workflow-v3-identification-insert' && control.dataset.ready !== 'true') return
+
+    // Qualquer resposta/exigência inserida já prepara o assunto. Nome + CPF
+    // geram o padrão completo; sem eles, preserva o assunto e apenas acrescenta TRIAGEM.
+    window.setTimeout(prepareSubjectOnly, 260)
   }, true)
 
   document.addEventListener('input', (event) => {
