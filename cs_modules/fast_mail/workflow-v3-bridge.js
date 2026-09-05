@@ -11,6 +11,7 @@
   const HOST_ID = 'spfm-workflow-v3-action-host'
   const TRANSFER_BUTTON_ID = 'spfm-workflow-v3-transferencia-prontuario'
   const IDENTIFICATION_FLOW_ID = 'spfm-workflow-v3-identification-flow'
+  const PANEL_COLLAPSE_KEY = 'seiProtocolistasFastMailCollapsed'
   const CUE_DURATION = 3200
 
   const IDENTIFICATION_RESPONSES = {
@@ -26,6 +27,9 @@
   let observer = null
   let reconcileTimer = null
   let cueTimer = null
+  let autoPreparationTimer = null
+  let emailPreparationPending = false
+  let manualPreparationNeeded = false
   let selectedIdentificationTitle = ''
 
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim()
@@ -67,6 +71,151 @@
     if (cueTimer) window.clearTimeout(cueTimer)
     cueTimer = window.setTimeout(() => element.classList.remove('spfm-workflow-v3-cue'), CUE_DURATION)
     return true
+  }
+
+  function workflowStatus () {
+    return document.querySelector('#spfm-workflow-v3-status') || document.querySelector('#spfm-priority-status')
+  }
+
+  function setWorkflowStatus (message) {
+    const workflow = document.querySelector('#spfm-workflow-v3-status')
+    const native = document.querySelector('#spfm-priority-status')
+    if (workflow) workflow.textContent = message
+    if (native) native.textContent = message
+  }
+
+  function syncManualPreparationVisibility () {
+    const section = document.querySelector('#spfm-email-preparation')
+    if (!section) return
+    section.hidden = !manualPreparationNeeded
+  }
+
+  function checkAutomaticPreparationResult (button) {
+    window.setTimeout(() => {
+      if (!button) return
+      const text = normalize(button.textContent)
+      const failed = /erro|digite|nao localizei|operador nao identificado|abra a tela/.test(text)
+      if (!failed) {
+        manualPreparationNeeded = false
+        syncManualPreparationVisibility()
+        return
+      }
+
+      manualPreparationNeeded = true
+      syncManualPreparationVisibility()
+      setWorkflowStatus('A preparação automática não terminou. Use PREPARAR E-MAIL para tentar novamente.')
+      window.setTimeout(() => cue(document.querySelector('#spfm-triagem')), 40)
+    }, 650)
+  }
+
+  function tryAutomaticEmailPreparation () {
+    if (!emailPreparationPending) return false
+
+    const prepare = document.querySelector('#spfm-triagem')
+    if (!prepare) return false
+
+    const noData = Boolean(document.querySelector('#spfm-workflow-v3-requester-no-data')?.checked)
+    if (noData) {
+      emailPreparationPending = false
+      manualPreparationNeeded = false
+      syncManualPreparationVisibility()
+      setWorkflowStatus('Resposta inserida. Assunto original mantido porque o requerente foi marcado SEM DADOS.')
+      return true
+    }
+
+    const name = clean(document.querySelector('#spfm-requester-name')?.value)
+    if (!name) {
+      manualPreparationNeeded = false
+      syncManualPreparationVisibility()
+      setWorkflowStatus('Resposta inserida. Informe o nome do requerente e o e-mail será preparado automaticamente.')
+      return false
+    }
+
+    emailPreparationPending = false
+    manualPreparationNeeded = false
+    syncManualPreparationVisibility()
+    setWorkflowStatus('Resposta inserida. Preparando assunto e Bcc automaticamente…')
+    prepare.click()
+    checkAutomaticPreparationResult(prepare)
+    return true
+  }
+
+  function scheduleAutomaticEmailPreparation (delay = 180) {
+    emailPreparationPending = true
+    manualPreparationNeeded = false
+    syncManualPreparationVisibility()
+    if (autoPreparationTimer) window.clearTimeout(autoPreparationTimer)
+    autoPreparationTimer = window.setTimeout(() => {
+      autoPreparationTimer = null
+      tryAutomaticEmailPreparation()
+    }, delay)
+  }
+
+  function bindAutomaticEmailPreparation () {
+    if (document.documentElement.dataset.spfmWorkflowAutoPreparationBound === 'true') return
+    document.documentElement.dataset.spfmWorkflowAutoPreparationBound = 'true'
+
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest?.(
+        '#spfm-insert-script, #spfm-insert-requirement, #spfm-baixa-direct-insert, #spfm-workflow-v3-identification-insert'
+      )
+      if (!control) return
+      if (control.id === 'spfm-workflow-v3-identification-insert' && control.dataset.ready !== 'true') return
+      scheduleAutomaticEmailPreparation(220)
+    })
+
+    document.addEventListener('input', (event) => {
+      if (!emailPreparationPending) return
+      if (!event.target.matches?.('#spfm-requester-name, #spfm-workflow-v3-requester-name')) return
+      if (autoPreparationTimer) window.clearTimeout(autoPreparationTimer)
+      autoPreparationTimer = window.setTimeout(() => {
+        autoPreparationTimer = null
+        tryAutomaticEmailPreparation()
+      }, 420)
+    })
+
+    document.addEventListener('change', (event) => {
+      if (!emailPreparationPending) return
+      if (!event.target.matches?.('#spfm-requester-name, #spfm-workflow-v3-requester-name, #spfm-workflow-v3-requester-no-data')) return
+      scheduleAutomaticEmailPreparation(80)
+    })
+  }
+
+  function applyCollapsedState (panel, collapsed) {
+    const body = panel?.querySelector('#spfm-panel-body')
+    const button = panel?.querySelector('#spfm-collapse')
+    if (!panel || !body || !button) return false
+
+    panel.classList.toggle('spfm-collapsed', collapsed)
+    body.hidden = collapsed
+    button.textContent = collapsed ? '+' : '−'
+    button.title = collapsed ? 'Expandir FAST MAIL' : 'Recolher FAST MAIL'
+    button.setAttribute('aria-expanded', String(!collapsed))
+    return true
+  }
+
+  function bindCollapseControl () {
+    const panel = document.querySelector('#sei-protocolistas-fast-mail-status')
+    const button = panel?.querySelector('#spfm-collapse')
+    if (!panel || !button || button.dataset.spfmWorkflowCollapseBound === 'true') return
+
+    button.dataset.spfmWorkflowCollapseBound = 'true'
+
+    const saved = localStorage.getItem(PANEL_COLLAPSE_KEY)
+    if (saved === 'true' || saved === 'false') applyCollapsedState(panel, saved === 'true')
+
+    button.addEventListener('mousedown', (event) => {
+      event.stopPropagation()
+    }, true)
+
+    button.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      const collapsed = !panel.classList.contains('spfm-collapsed')
+      applyCollapsedState(panel, collapsed)
+      localStorage.setItem(PANEL_COLLAPSE_KEY, String(collapsed))
+    }, true)
   }
 
   function nextUsefulTarget () {
@@ -604,10 +753,13 @@
     if (!document.getElementById('spfm-workflow-v3')) return
     actionHost()
     injectTransferShortcut()
+    bindCollapseControl()
+    bindAutomaticEmailPreparation()
     bindStageButtons()
     bindServiceState()
     bindIdentificationManualFlow()
     moveOperationalControls()
+    syncManualPreparationVisibility()
   }
 
   function scheduleReconcile () {
