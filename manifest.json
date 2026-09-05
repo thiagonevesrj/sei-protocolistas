@@ -79,7 +79,7 @@
     },
     {
       "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_controlar*"],
-      "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_controlar/mostrarEspecificacao.js", "cs_modules/procedimento_controlar/corrigirTabelas.js", "cs_modules/procedimento_controlar/confirmarAntesConcluir.js", "cs_modules/procedimento_controlar/incluirCalculoPrazos.js", "cs_modules/procedimento_controlar/marcarCorProcesso.js", "cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/procedimento_controlar/filtra_processos/filtraPorAtribuicao.js", "cs_modules/procedimento_controlar/filtra_processos/carregaInformacaoBlocos.js", "cs_modules/procedimento_controlar/listaPorEspecificacao.js", "cs_modules/procedimento_controlar/index.js"]
+      "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_controlar/mostrarEspecificacao.js", "cs_modules/procedimento_controlar/corrigirTabelas.js", "cs_modules/procedimento_controlar/confirmarAntesConcluir.js", "cs_modules/procedimento_controlar/incluirCalculoPrazos.js", "cs_modules/procedimento_controlar/marcarCorProcesso.js", "cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/procedimento_controlar/filtra_processos/filtraPorAtribuicao.js", "cs_modules/procedimento_controlar/filtra_processos/carregaInformacaoBlocos.js", "cs_modules/lib/selecionarMultiplosProcessos.js", "cs_modules/procedimento_controlar/listaPorEspecificacao.js", "cs_modules/procedimento_controlar/index.js"]
     },
     {
       "matches": ["*://sei.rj.gov.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
