@@ -28,7 +28,7 @@ Arquivo oficial para isso:
 
 `docs/RUNBOOK-SOLUCOES-VALIDADAS.md`
 
-## Solução recém-validada — OWA Texto simples → HTML
+## Solução validada — OWA Texto simples → HTML
 
 Problema: respostas do FAST MAIL eram inseridas em `Texto simp`, destruindo a apresentação HTML.
 
@@ -49,16 +49,54 @@ Estado: **VALIDADO / CONGELADO**.
 
 Detalhes completos estão em `docs/RUNBOOK-SOLUCOES-VALIDADAS.md`.
 
+## Validação em lote do padrão global do FAST MAIL
+
+Em 06/09/2026, Thiago testou em ambiente real:
+
+- `Perícia Médica`;
+- `Desistência de Categoria`;
+- `Transferência de Prontuário`;
+- `Devolução de Taxas` já havia sido usada durante a correção do checklist/exigência.
+
+Resultado confirmado:
+
+`TESTEI PERICIA, TESTEI DESISTENCIA DE CAT, TRANSF DE PRONTUARIO, TUDO DEU CERTO E MELHOR, JA EM HTML`
+
+Com isso, considerar **VALIDADO / CONGELADO** o padrão central compartilhado por esses fluxos:
+
+- caminho visual de fase → serviço → ação permanece marcado;
+- checkboxes de documentos faltantes persistem;
+- `COBRAR DOCUMENTOS` funciona como ação global para procedimentos com checklist;
+- `INSERIR EXIGÊNCIA` lê os documentos selecionados e insere no corpo correto;
+- respostas são preparadas em HTML automaticamente;
+- assunto de TRIAGEM é preparado automaticamente;
+- TRIAGEM parcial pode ser promovida posteriormente ao padrão completo quando nome + CPF estiverem disponíveis;
+- Bcc permanece fora de novas alterações sem regressão concreta.
+
+Não continuar testando todos os serviços botão por botão quando eles usam a mesma infraestrutura central. Reabrir apenas diante de falha concreta.
+
 ## Estado operacional relacionado
 
 - inserção segura no corpo do OWA: validada;
-- checklist de documentos faltantes: corrigido para persistir seleção;
-- caminho visual de fase → serviço → ação: deve permanecer marcado;
-- `COBRAR DOCUMENTOS` é padrão global para procedimentos com checklist;
-- assunto de TRIAGEM é preparado automaticamente;
-- `TRIAGEM` parcial não bloqueia upgrade posterior para assunto completo quando nome + CPF surgirem;
-- Bcc não deve ser reaberto sem regressão concreta;
-- HTML automático agora é comportamento validado e não deve ser reescrito sem necessidade.
+- HTML automático: validado e congelado;
+- checklist de documentos faltantes: validado em múltiplos serviços;
+- caminho visual de fase → serviço → ação: validado em múltiplos serviços;
+- assunto automático de TRIAGEM: validado no fluxo operacional;
+- `Perícia Médica`: validada no fluxo testado;
+- `Desistência de Categoria`: validada e permanece referência de padrão;
+- `Transferência de Prontuário`: validada no FAST MAIL;
+- `Devolução de Taxas`: fluxo de cobrança documental validado;
+- Bcc não deve ser reaberto sem regressão concreta.
+
+## Próxima fila de trabalho
+
+Não reabrir os itens acima. A próxima rodada deve priorizar fluxos ainda não congelados ou pendências fora desse mecanismo central, especialmente:
+
+1. `Troca de Clínica` — validar fluxo e manter a resposta curada; não inventar URL de formulário ausente;
+2. `Leilão` — validar o fluxo e eventuais pendências específicas;
+3. `Genérico Habilitação` e `Genérico Veículos` — validar roteamento/conteúdo sem alterar scripts do Trello/Trellinho;
+4. `Ofícios` — validar os cenários de triagem já mapeados;
+5. FAST PROC / `Transferência de Prontuário` — permanece separada a pendência de validação real da automação de destino `NUCRA` na tela Enviar Processo.
 
 ## Modo de trabalho
 
