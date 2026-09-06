@@ -160,6 +160,78 @@ Com isso, a solução está **VALIDADA / CONGELADA**.
 
 ---
 
+# 002 — Padrão global de ORIENTAÇÃO / COBRAR DOCUMENTOS / HTML
+
+## Estado
+
+**VALIDADO / CONGELADO em 06/09/2026**
+
+Após a correção estrutural dos checkboxes, do caminho visual e da preparação HTML, Thiago realizou validação real em múltiplos serviços diferentes e confirmou comportamento consistente.
+
+Serviços confirmados no mesmo ciclo de teste:
+
+- **Perícia Médica**;
+- **Desistência de Categoria**;
+- **Transferência de Prontuário**;
+- **Devolução de Taxas** já havia sido usada como cenário-base durante a correção.
+
+Thiago confirmou que os fluxos funcionaram corretamente e, adicionalmente, as respostas já abriram/prepararam em **HTML** automaticamente.
+
+## Padrão operacional validado
+
+Para atendimentos de Orientação que ofereçam cobrança documental, preservar o padrão:
+
+`ORIENTAÇÃO ✓ → SERVIÇO ✓ → COBRAR DOCUMENTOS ✓ → checklist → INSERIR EXIGÊNCIA`
+
+Regras congeladas:
+
+- a etapa/fase selecionada permanece visualmente marcada;
+- o serviço escolhido permanece visualmente marcado;
+- `COBRAR DOCUMENTOS` permanece visualmente marcado quando essa foi a ação escolhida;
+- `ABRIR PROCESSO` não pode parecer selecionado apenas por estar disponível;
+- checkboxes representam os documentos efetivamente faltantes;
+- seleção dos checkboxes deve persistir até a inserção;
+- marcar checkbox não pode deslocar/rolar o painel para outro campo;
+- `INSERIR EXIGÊNCIA` deve ler exatamente os documentos visualmente selecionados;
+- a resposta orienta o requerente a reenviar o conjunto completo necessário em um único e-mail, sem classificar como faltante o que já foi recebido;
+- o compositor deve ser preparado em HTML automaticamente pelo mecanismo validado no item 001;
+- o assunto de TRIAGEM é preparado automaticamente conforme disponibilidade de nome + CPF;
+- `TRIAGEM` parcial não bloqueia futuro upgrade para o padrão completo;
+- Bcc não deve ser reaberto sem regressão concreta.
+
+## Critério de validação em lote
+
+Não testar todos os serviços botão por botão quando todos utilizarem a mesma infraestrutura central.
+
+Se dois ou mais procedimentos distintos, com estruturas diferentes, passarem pelo mesmo mecanismo central sem regressão, considerar o padrão validado em lote e só reabrir diante de falha concreta.
+
+Em 06/09/2026, **Perícia Médica, Desistência de Categoria e Transferência de Prontuário** passaram no teste real, além da validação anterior de **Devolução de Taxas**.
+
+## Teste mínimo de regressão
+
+Se houver suspeita futura de regressão nesse padrão:
+
+1. testar um serviço com checklist, preferencialmente `Devolução de Taxas` ou `Desistência de Categoria`;
+2. testar um segundo serviço de estrutura diferente, preferencialmente `Perícia Médica` ou `Transferência de Prontuário`;
+3. conferir somente:
+   - caminho visual permanece marcado;
+   - checklist persiste;
+   - botão final insere;
+   - corpo abre em HTML;
+   - assunto é preparado conforme regra atual.
+
+Se os dois passarem, **não reabrir o mecanismo global**.
+
+## Resultado confirmado
+
+Thiago confirmou em 06/09/2026:
+
+> "TESTEI PERICIA, TESTEI DESISTENCIA DE CAT, TRANSF DE PRONTUARIO, TUDO DEU CERTO E MELHOR, JA EM HTML"
+
+Estado final: **VALIDADO / CONGELADO**.
+
+---
+
 # Política geral para futuras soluções
 
 Quando surgir uma regressão parecida:
