@@ -4,10 +4,10 @@
   if (window.top !== window) return
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
+  const bypass = new WeakSet()
   let preparing = null
   let scheduled = false
-  let lastAttemptAt = 0
-  const RETRY_COOLDOWN = 3500
+  let lastPrepareAttempt = 0
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -15,6 +15,7 @@
 
   function allDocuments () {
     const documents = [document]
+
     const visit = (win) => {
       for (let index = 0; index < win.frames.length; index += 1) {
         try {
@@ -26,6 +27,7 @@
         } catch (_) {}
       }
     }
+
     visit(window)
     return documents
   }
@@ -53,14 +55,14 @@
 
   function formatSelect () {
     for (const doc of allDocuments()) {
-      const selects = Array.from(doc.querySelectorAll('select'))
+      const selects = Array.from(doc.querySelectorAll('select')).filter(visible)
+
       for (const select of selects) {
         const labels = Array.from(select.options || []).map((option) => clean(option.text))
-        if (labels.some(isHtmlText) && (labels.some(isPlainText) || isPlainText(selectedText(select)))) {
-          return select
-        }
+        if (labels.some(isHtmlText) && labels.some(isPlainText)) return select
       }
     }
+
     return null
   }
 
@@ -81,6 +83,7 @@
         if (htmlBody && editable) return htmlBody
       } catch (_) {}
     }
+
     return null
   }
 
@@ -90,12 +93,25 @@
     ))
   }
 
+  function setStatus (message) {
+    const targets = [
+      document.querySelector('#spfm-script-status'),
+      document.querySelector('#spfm-priority-status'),
+      document.querySelector('#spfm-v2-status'),
+      document.querySelector('#spfm-workflow-v3-status'),
+      document.querySelector('#spfm-body-status'),
+      document.querySelector('#spfm-process-response-status')
+    ].filter(Boolean)
+
+    targets.forEach((target) => { target.textContent = message })
+  }
+
   function dispatch (element, type) {
     const view = element?.ownerDocument?.defaultView || window
     element?.dispatchEvent(new view.Event(type, { bubbles: true, cancelable: true }))
   }
 
-  function waitFor (getter, timeout = 5200, interval = 90) {
+  function waitFor (getter, timeout = 5000, interval = 90) {
     return new Promise((resolve) => {
       const started = Date.now()
       const timer = window.setInterval(() => {
@@ -108,46 +124,53 @@
     })
   }
 
-  function applyHtmlOption (select, htmlOption) {
-    if (!select || !htmlOption) return false
-
-    const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
+  async function triggerNativeFormatChange (select, htmlOption) {
     const view = select.ownerDocument?.defaultView || window
+    const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
 
-    select.focus?.()
-    htmlOption.selected = true
-    select.value = htmlOption.value
-    if (optionIndex >= 0) select.selectedIndex = optionIndex
+    const apply = () => {
+      select.focus?.()
+      htmlOption.selected = true
+      select.value = htmlOption.value
+      if (optionIndex >= 0) select.selectedIndex = optionIndex
+      dispatch(select, 'input')
 
-    dispatch(select, 'input')
+      let nativeHandlerCalled = false
+      if (typeof select.onchange === 'function') {
+        try {
+          select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
+          nativeHandlerCalled = true
+        } catch (_) {}
+      }
 
-    if (typeof select.onchange === 'function') {
-      try {
-        select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
-      } catch (_) {}
+      if (!nativeHandlerCalled) dispatch(select, 'change')
+      else dispatch(select, 'change')
+      select.blur?.()
     }
 
-    // O OWA legado possui versões em que o handler está registrado fora da
-    // propriedade onchange. Por isso o change bubbling também é obrigatório.
-    dispatch(select, 'change')
-    dispatch(select, 'blur')
-    return true
+    apply()
+    let editor = await waitFor(deterministicHtmlEditor, 900, 60)
+    if (editor) return editor
+
+    apply()
+    editor = await waitFor(deterministicHtmlEditor, 5600, 100)
+    return editor || null
   }
 
-  async function tryHtmlInBackground (force = false) {
-    if (deterministicHtmlEditor()) return true
+  async function ensureHtmlComposer () {
     if (preparing) return preparing
-    if (!force && Date.now() - lastAttemptAt < RETRY_COOLDOWN) return false
 
     preparing = (async () => {
-      lastAttemptAt = Date.now()
-      const select = formatSelect()
+      lastPrepareAttempt = Date.now()
+
+      const existingEditor = deterministicHtmlEditor()
+      if (existingEditor) return true
+
+      const select = await waitFor(formatSelect, 2600, 80)
       if (!select) return false
 
-      // Se o seletor já mostra HTML, o OWA pode ainda estar terminando a troca
-      // do textarea pelo iframe. Não revertemos o seletor: apenas aguardamos.
       if (isHtmlText(selectedText(select))) {
-        return Boolean(await waitFor(deterministicHtmlEditor, 6000, 90))
+        return Boolean(await waitFor(deterministicHtmlEditor, 3500, 80))
       }
 
       if (!isPlainText(selectedText(select))) return false
@@ -155,16 +178,15 @@
       const htmlOption = Array.from(select.options || []).find((option) => isHtmlText(option.text))
       if (!htmlOption) return false
 
-      applyHtmlOption(select, htmlOption)
+      setStatus('FAST MAIL — preparando e-mail formatado…')
+      const editor = await triggerNativeFormatChange(select, htmlOption)
 
-      let editor = await waitFor(deterministicHtmlEditor, 3000, 90)
-      if (editor) return true
+      if (editor) {
+        setStatus('FAST MAIL — e-mail formatado pronto.')
+        return true
+      }
 
-      // Alguns builds do OWA aplicam a mudança somente após uma segunda
-      // notificação, quando a tela de resposta já terminou de inicializar.
-      applyHtmlOption(select, htmlOption)
-      editor = await waitFor(deterministicHtmlEditor, 4200, 90)
-      return Boolean(editor)
+      return false
     })()
 
     try {
@@ -174,11 +196,11 @@
     }
   }
 
-  function primeHtmlSoon (delay = 80, force = false) {
-    window.setTimeout(() => {
-      if (!fastMailPanelExists()) return
-      tryHtmlInBackground(force).catch(() => {})
-    }, delay)
+  function isInsertionControl (target) {
+    if (!(target instanceof Element)) return null
+    return target.closest(
+      '#spfm-insert-script, #spfm-insert-requirement, #spfm-insert-process-response, #spfm-baixa-direct-insert, #spfm-workflow-v3-identification-insert'
+    )
   }
 
   function cloneLineContainer (doc, nodes) {
@@ -329,38 +351,73 @@
     }
   }
 
-  function scheduleBackgroundPreparation () {
-    if (scheduled) return
-    scheduled = true
-    window.setTimeout(() => {
-      scheduled = false
-      formatPendingResponses()
-      if (fastMailPanelExists()) tryHtmlInBackground().catch(() => {})
-    }, 180)
+  async function normalizeWhenPanelAppears () {
+    if (!fastMailPanelExists()) return false
+    if (deterministicHtmlEditor()) return true
+
+    const select = formatSelect()
+    if (!select || !isPlainText(selectedText(select))) return Boolean(select)
+    return ensureHtmlComposer()
   }
 
-  // Prepara HTML antes do clique final do protocolista. Ações como COBRAR
-  // DOCUMENTOS dão tempo suficiente ao OWA para trocar textarea -> iframe
-  // enquanto o operador confere dados e marca o checklist.
+  document.addEventListener('click', async (event) => {
+    const control = isInsertionControl(event.target)
+    if (!control) return
+
+    if (bypass.has(control)) {
+      bypass.delete(control)
+      return
+    }
+
+    if (deterministicHtmlEditor()) return
+
+    const select = formatSelect()
+    if (!select || !isPlainText(selectedText(select))) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+
+    const ready = await ensureHtmlComposer()
+    if (!ready) {
+      setStatus('HTML não foi ativado pelo OWA. Inserindo em Texto simples para não bloquear o atendimento.')
+    }
+
+    bypass.add(control)
+    control.click()
+  }, true)
+
   document.addEventListener('click', (event) => {
     const control = event.target.closest?.(
       '#spfm-priority-missing, #spfm-priority-reply, .spfm-workflow-v3-service-button, [data-spfm-workflow-stage], #spfm-v2-orientation-open, #spfm-v2-identification-open'
     )
     if (!control) return
-    primeHtmlSoon(70, true)
+    window.setTimeout(() => ensureHtmlComposer().catch(() => {}), 80)
   }, true)
 
-  const observer = new MutationObserver(scheduleBackgroundPreparation)
+  const observer = new MutationObserver(() => {
+    if (scheduled) return
+    scheduled = true
+    window.setTimeout(() => {
+      scheduled = false
+      normalizeWhenPanelAppears().catch(() => {})
+      formatPendingResponses()
+    }, 120)
+  })
+
   observer.observe(document.documentElement, { childList: true, subtree: true })
 
-  window.setTimeout(() => {
+  window.setInterval(() => {
     formatPendingResponses()
-    if (fastMailPanelExists()) tryHtmlInBackground(true).catch(() => {})
-  }, 350)
+    if (!fastMailPanelExists()) return
+    if (deterministicHtmlEditor()) return
+    const select = formatSelect()
+    if (!select || !isPlainText(selectedText(select))) return
+    if (preparing || Date.now() - lastPrepareAttempt < 1600) return
+    ensureHtmlComposer().catch(() => {})
+  }, 700)
 
-  window.setTimeout(() => {
-    if (fastMailPanelExists()) tryHtmlInBackground(true).catch(() => {})
-  }, 2200)
-
-  window.setInterval(formatPendingResponses, 1000)
+  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 250)
+  window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 900)
+  window.setTimeout(formatPendingResponses, 400)
 })()
