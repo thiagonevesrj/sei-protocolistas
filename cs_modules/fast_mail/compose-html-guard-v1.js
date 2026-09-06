@@ -7,7 +7,7 @@
   let preparing = null
   let scheduled = false
   let lastAttemptAt = 0
-  const RETRY_COOLDOWN = 12000
+  const RETRY_COOLDOWN = 3500
 
   function clean (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
@@ -95,7 +95,7 @@
     element?.dispatchEvent(new view.Event(type, { bubbles: true, cancelable: true }))
   }
 
-  function waitFor (getter, timeout = 1400, interval = 70) {
+  function waitFor (getter, timeout = 5200, interval = 90) {
     return new Promise((resolve) => {
       const started = Date.now()
       const timer = window.setInterval(() => {
@@ -108,47 +108,63 @@
     })
   }
 
-  async function tryHtmlInBackground () {
+  function applyHtmlOption (select, htmlOption) {
+    if (!select || !htmlOption) return false
+
+    const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
+    const view = select.ownerDocument?.defaultView || window
+
+    select.focus?.()
+    htmlOption.selected = true
+    select.value = htmlOption.value
+    if (optionIndex >= 0) select.selectedIndex = optionIndex
+
+    dispatch(select, 'input')
+
+    if (typeof select.onchange === 'function') {
+      try {
+        select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
+      } catch (_) {}
+    }
+
+    // O OWA legado possui versões em que o handler está registrado fora da
+    // propriedade onchange. Por isso o change bubbling também é obrigatório.
+    dispatch(select, 'change')
+    dispatch(select, 'blur')
+    return true
+  }
+
+  async function tryHtmlInBackground (force = false) {
     if (deterministicHtmlEditor()) return true
     if (preparing) return preparing
-    if (Date.now() - lastAttemptAt < RETRY_COOLDOWN) return false
+    if (!force && Date.now() - lastAttemptAt < RETRY_COOLDOWN) return false
 
     preparing = (async () => {
       lastAttemptAt = Date.now()
       const select = formatSelect()
-      if (!select || !isPlainText(selectedText(select))) return false
+      if (!select) return false
+
+      // Se o seletor já mostra HTML, o OWA pode ainda estar terminando a troca
+      // do textarea pelo iframe. Não revertemos o seletor: apenas aguardamos.
+      if (isHtmlText(selectedText(select))) {
+        return Boolean(await waitFor(deterministicHtmlEditor, 6000, 90))
+      }
+
+      if (!isPlainText(selectedText(select))) return false
 
       const htmlOption = Array.from(select.options || []).find((option) => isHtmlText(option.text))
       if (!htmlOption) return false
 
-      const originalValue = select.value
-      const originalIndex = select.selectedIndex
-      const optionIndex = Array.from(select.options || []).indexOf(htmlOption)
-      const view = select.ownerDocument?.defaultView || window
+      applyHtmlOption(select, htmlOption)
 
-      htmlOption.selected = true
-      select.value = htmlOption.value
-      if (optionIndex >= 0) select.selectedIndex = optionIndex
-      dispatch(select, 'input')
-
-      if (typeof select.onchange === 'function') {
-        try {
-          select.onchange.call(select, new view.Event('change', { bubbles: true, cancelable: true }))
-        } catch (_) {
-          dispatch(select, 'change')
-        }
-      } else {
-        dispatch(select, 'change')
-      }
-
-      const editor = await waitFor(deterministicHtmlEditor, 1600, 70)
+      let editor = await waitFor(deterministicHtmlEditor, 3000, 90)
       if (editor) return true
 
-      // Se o OWA legado não efetivar a troca, restauramos apenas a aparência do
-      // seletor e deixamos o inseridor central trabalhar normalmente em Texto simples.
-      select.value = originalValue
-      select.selectedIndex = originalIndex
-      return false
+      // Alguns builds do OWA aplicam a mudança somente após uma segunda
+      // notificação, quando a tela de resposta já terminou de inicializar.
+      applyHtmlOption(select, htmlOption)
+      editor = await waitFor(deterministicHtmlEditor, 4200, 90)
+      return Boolean(editor)
     })()
 
     try {
@@ -156,6 +172,13 @@
     } finally {
       preparing = null
     }
+  }
+
+  function primeHtmlSoon (delay = 80, force = false) {
+    window.setTimeout(() => {
+      if (!fastMailPanelExists()) return
+      tryHtmlInBackground(force).catch(() => {})
+    }, delay)
   }
 
   function cloneLineContainer (doc, nodes) {
@@ -316,17 +339,28 @@
     }, 180)
   }
 
+  // Prepara HTML antes do clique final do protocolista. Ações como COBRAR
+  // DOCUMENTOS dão tempo suficiente ao OWA para trocar textarea -> iframe
+  // enquanto o operador confere dados e marca o checklist.
+  document.addEventListener('click', (event) => {
+    const control = event.target.closest?.(
+      '#spfm-priority-missing, #spfm-priority-reply, .spfm-workflow-v3-service-button, [data-spfm-workflow-stage], #spfm-v2-orientation-open, #spfm-v2-identification-open'
+    )
+    if (!control) return
+    primeHtmlSoon(70, true)
+  }, true)
+
   const observer = new MutationObserver(scheduleBackgroundPreparation)
   observer.observe(document.documentElement, { childList: true, subtree: true })
 
   window.setTimeout(() => {
     formatPendingResponses()
-    if (fastMailPanelExists()) tryHtmlInBackground().catch(() => {})
+    if (fastMailPanelExists()) tryHtmlInBackground(true).catch(() => {})
   }, 350)
 
   window.setTimeout(() => {
-    if (fastMailPanelExists()) tryHtmlInBackground().catch(() => {})
-  }, 1800)
+    if (fastMailPanelExists()) tryHtmlInBackground(true).catch(() => {})
+  }, 2200)
 
   window.setInterval(formatPendingResponses, 1000)
 })()
