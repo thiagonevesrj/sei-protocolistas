@@ -17,7 +17,7 @@
   }
 
   function markNativeOutlookBrand () {
-    Array.from(document.querySelectorAll('a, span, div, td'))
+    Array.from(document.querySelectorAll('body *'))
       .filter((element) => cleanText(element) === 'Outlook Web App')
       .forEach((element) => element.classList.add('sp-owa-v4-native-outlook-brand'))
   }
@@ -31,12 +31,18 @@
     trigger.click()
   }
 
-  function ensureBranding () {
+  function prepareExistingThemeUi () {
     const root = document.getElementById(ROOT_ID)
     if (!root || !root.isConnected) return false
 
     root.querySelector('.sp-owa-v3-branding')?.classList.add('sp-owa-v4-superseded')
     root.querySelector('.sp-owa-v3-settings')?.classList.add('sp-owa-v4-menu-anchor')
+    return true
+  }
+
+  function ensureBranding () {
+    if (!document.body) return false
+    if (!prepareExistingThemeUi()) return false
 
     let branding = document.getElementById(BRAND_ID)
     if (!branding) {
@@ -51,14 +57,20 @@
       if (image) image.src = api.runtime.getURL(LOGO_PATH)
 
       branding.querySelector(`#${HOTSPOT_ID}`)?.addEventListener('click', toggleExistingMenu)
-      root.appendChild(branding)
+
+      /*
+       * Branding propositalmente fora do header detectado da V3.
+       * O OWA legado usa um nó interno muito baixo para sessão/usuário,
+       * que recortava o logo mesmo quando a faixa visual era maior.
+       */
+      document.body.appendChild(branding)
     }
 
     markNativeOutlookBrand()
     return true
   }
 
-  ;[0, 180, 450, 900, 1600, 2800].forEach((delay) => {
+  ;[0, 120, 300, 650, 1200, 2200, 3600].forEach((delay) => {
     window.setTimeout(ensureBranding, delay)
   })
 })()
