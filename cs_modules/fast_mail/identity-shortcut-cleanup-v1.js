@@ -82,6 +82,52 @@
       .find((button) => normalize(button.textContent) === 'certidao de identificacao civil') || null
   }
 
+  function certidaoActionHost () {
+    let host = document.querySelector('#spfm-workflow-v3-action-host')
+    if (host) return host
+
+    const shortcuts = document.querySelector('#spfm-workflow-v3-orientation-actions')
+    if (!shortcuts) return null
+
+    host = document.createElement('div')
+    host.id = 'spfm-workflow-v3-action-host'
+    host.style.display = 'grid'
+    host.style.gap = '8px'
+    host.style.margin = '8px 0 2px'
+    host.hidden = true
+    shortcuts.insertAdjacentElement('afterend', host)
+    return host
+  }
+
+  function exposeCertidaoContinuation () {
+    const special = document.querySelector('#spfm-v2-special-actions')
+    const reply = document.querySelector('#spfm-v2-certidao-reply')
+    const host = certidaoActionHost()
+    if (!special || !reply || !host) return false
+
+    special.hidden = false
+    if (special.parentElement !== host) host.appendChild(special)
+    host.hidden = false
+
+    const reason = document.querySelector('#spfm-v2-special-reason')
+    if (reason && !normalize(reason.textContent)) {
+      reason.textContent = 'Certidão de Identificação Civil: confira a orientação antes de responder.'
+    }
+
+    const workflowStatus = document.querySelector('#spfm-workflow-v3-status')
+    if (workflowStatus) workflowStatus.textContent = 'Certidão de Identificação Civil selecionada. Confira a orientação e clique em RESPONDER.'
+
+    reply.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    return true
+  }
+
+  function openCertidaoShortcut (legacy) {
+    legacy?.click()
+    ;[0, 50, 140, 320].forEach((delay) => {
+      window.setTimeout(exposeCertidaoContinuation, delay)
+    })
+  }
+
   function ensureCertidaoShortcut (container) {
     const existing = Array.from(container.querySelectorAll('.spfm-workflow-v3-service-button'))
       .find((button) => normalize(button.textContent) === 'certidao de identificacao civil')
@@ -96,7 +142,7 @@
     button.setAttribute('aria-pressed', 'false')
     button.textContent = 'Certidão de Identificação Civil'
     button.title = 'Certidão de Identificação Civil — confira a orientação antes de responder'
-    button.addEventListener('click', () => legacy.click())
+    button.addEventListener('click', () => openCertidaoShortcut(legacy))
     container.appendChild(button)
     return button
   }
