@@ -14,6 +14,20 @@
     'inventario'
   ])
 
+  const ORIENTATION_PRIORITY = [
+    'devolucao de taxas',
+    'desistencia de categoria',
+    'generico habilitacao',
+    'generico veiculos',
+    'baixa de restricao',
+    'pericia medica',
+    'transferencia de prontuario',
+    'troca de clinica',
+    'leilao',
+    'certidao de identificacao civil',
+    'oficios'
+  ]
+
   const normalize = (value) => String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -63,6 +77,70 @@
     }
   }
 
+  function legacyCertidaoButton () {
+    return Array.from(document.querySelectorAll('#spfm-v2-orientation-shortcuts .spfm-v2-quick-button'))
+      .find((button) => normalize(button.textContent) === 'certidao de identificacao civil') || null
+  }
+
+  function ensureCertidaoShortcut (container) {
+    const existing = Array.from(container.querySelectorAll('.spfm-workflow-v3-service-button'))
+      .find((button) => normalize(button.textContent) === 'certidao de identificacao civil')
+    if (existing) return existing
+
+    const legacy = legacyCertidaoButton()
+    if (!legacy) return null
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'spfm-workflow-v3-service-button'
+    button.setAttribute('aria-pressed', 'false')
+    button.textContent = 'Certidão de Identificação Civil'
+    button.title = 'Certidão de Identificação Civil — confira a orientação antes de responder'
+    button.addEventListener('click', () => legacy.click())
+    container.appendChild(button)
+    return button
+  }
+
+  function setOficiosAttentionStyle (button) {
+    if (!button) return
+    button.style.gridColumn = '1 / -1'
+    button.style.minHeight = '50px'
+    button.style.background = '#7d3218'
+    button.style.color = '#ffffff'
+    button.style.border = '2px solid #f4c84d'
+    button.style.boxShadow = '0 0 0 2px rgba(244, 200, 77, .14)'
+    button.style.letterSpacing = '.02em'
+    if (button.textContent !== '⚠ OFÍCIOS — ATENÇÃO') button.textContent = '⚠ OFÍCIOS — ATENÇÃO'
+    button.title = 'OFÍCIOS — atendimento de atenção especial. Confira o cenário antes de prosseguir.'
+  }
+
+  function reconcileOrientationShortcuts () {
+    const container = document.querySelector('#spfm-workflow-v3-orientation-actions')
+    if (!container) return
+
+    ensureCertidaoShortcut(container)
+
+    const buttons = Array.from(container.querySelectorAll('.spfm-workflow-v3-service-button'))
+    if (!buttons.length) return
+
+    const buttonFor = (wanted) => buttons.find((button) => {
+      const text = normalize(button.textContent)
+      if (wanted === 'oficios') return text.includes('oficios')
+      return text === wanted
+    })
+
+    const ordered = ORIENTATION_PRIORITY.map(buttonFor).filter(Boolean)
+    const leftovers = buttons.filter((button) => !ordered.includes(button))
+    const desired = [...ordered, ...leftovers]
+    const current = Array.from(container.querySelectorAll('.spfm-workflow-v3-service-button'))
+
+    const orderChanged = desired.length === current.length && desired.some((button, index) => current[index] !== button)
+    if (orderChanged) desired.forEach((button) => container.appendChild(button))
+
+    const oficios = desired.find((button) => normalize(button.textContent).includes('oficios'))
+    setOficiosAttentionStyle(oficios)
+  }
+
   let scheduled = false
   function scheduleReconcile () {
     if (scheduled) return
@@ -70,12 +148,20 @@
     window.setTimeout(() => {
       scheduled = false
       reconcileIdentificationShortcuts()
+      reconcileOrientationShortcuts()
     }, 40)
   }
 
   reconcileIdentificationShortcuts()
-  window.setTimeout(reconcileIdentificationShortcuts, 250)
-  window.setTimeout(reconcileIdentificationShortcuts, 900)
+  reconcileOrientationShortcuts()
+  window.setTimeout(() => {
+    reconcileIdentificationShortcuts()
+    reconcileOrientationShortcuts()
+  }, 250)
+  window.setTimeout(() => {
+    reconcileIdentificationShortcuts()
+    reconcileOrientationShortcuts()
+  }, 900)
 
   const observer = new MutationObserver(scheduleReconcile)
   observer.observe(document.documentElement, {
