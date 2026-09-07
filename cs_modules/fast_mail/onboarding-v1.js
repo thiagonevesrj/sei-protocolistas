@@ -17,7 +17,7 @@
         ['FAST MAIL', 'Orienta respostas, cobra documentos, prepara assunto e mantém o atendimento organizado no OWA.'],
         ['FAST PROC', 'Leva os dados do atendimento para o SEI e guia a abertura do processo sem substituir a conferência humana.'],
         ['Próximo clique guiado', 'A extensão destaca o próximo passo, mas ENVIAR, SALVAR e demais cliques finais continuam com o protocolista.'],
-        ['Tema Protocolista', 'O OWA recebe uma camada visual mais limpa e integrada à identidade do SEI Protocolistas.']
+        ['Tema Protocolista', 'O OWA recebe uma camada visual integrada à identidade do SEI Protocolistas, que pode ser desligada sem afetar as funções.']
       ],
       callout: 'Regra principal: a extensão ajuda a decidir o caminho e preparar o trabalho; a conferência final continua sendo sua.'
     },
@@ -64,28 +64,42 @@
       cards: [
         ['REQUERIMENTO RÁPIDO', 'Atalho do FAST PROC para acelerar a inclusão do requerimento quando o fluxo permitir.'],
         ['Buscar outro atendimento', 'Se o serviço não estiver entre os principais, use a busca completa do FAST MAIL.'],
-        ['Rever este guia', 'O botão REVER GUIA fica no FAST MAIL e pode abrir este tutorial a qualquer momento.'],
-        ['Problema conhecido?', 'Antes de reinventar uma solução, o projeto consulta o runbook de soluções validadas para evitar retrabalho.']
+        ['REVER GUIA', 'O botão fica no FAST MAIL e abre este tutorial novamente a qualquer momento.'],
+        ['OWA ORIGINAL', 'O botão USAR OWA ORIGINAL desliga somente o Tema Protocolista. FAST MAIL e FAST PROC continuam funcionando normalmente.']
       ],
       callout: 'Se marcar “Não exibir novamente”, este guia deixa de abrir sozinho. Você ainda poderá reabri-lo pelo botão REVER GUIA.'
     }
   ]
 
   const storageGet = (key) => new Promise((resolve) => {
+    let settled = false
+    const done = (items = {}) => {
+      if (settled) return
+      settled = true
+      resolve(items || {})
+    }
+
     try {
-      const result = api.storage.local.get(key, (items) => resolve(items || {}))
-      if (result?.then) result.then((items) => resolve(items || {}), () => resolve({}))
+      const result = api.storage.local.get(key, done)
+      if (result?.then) result.then(done, () => done({}))
     } catch (_) {
-      resolve({})
+      done({})
     }
   })
 
   const storageSet = (items) => new Promise((resolve) => {
-    try {
-      const result = api.storage.local.set(items, resolve)
-      if (result?.then) result.then(resolve, resolve)
-    } catch (_) {
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
       resolve()
+    }
+
+    try {
+      const result = api.storage.local.set(items, done)
+      if (result?.then) result.then(done, done)
+    } catch (_) {
+      done()
     }
   })
 
@@ -112,8 +126,8 @@
       <section id="sp-protocolista-guide">
         <header class="sp-guide-header">
           <div class="sp-guide-brand">
-            <strong>SEI PROTOCOLISTAS</strong>
-            <span>GUIA RÁPIDO</span>
+            <strong>SEI PROTOCOLISTAS ❄</strong>
+            <span>⚡ FAST MAIL · GUIA RÁPIDO</span>
           </div>
           <button class="sp-guide-close" type="button" aria-label="Fechar guia" title="Fechar">×</button>
         </header>
@@ -138,6 +152,7 @@
   }
 
   let currentStep = 0
+  let guideDismissed = false
 
   function renderStep () {
     const overlay = createGuide()
@@ -169,20 +184,17 @@
   async function closeGuide () {
     const overlay = createGuide()
     const noShow = overlay.querySelector('#sp-guide-no-show')
-    if (noShow?.checked) {
-      await storageSet({ [STORAGE_KEY]: true })
-    }
+    guideDismissed = Boolean(noShow?.checked)
+    await storageSet({ [STORAGE_KEY]: guideDismissed })
     overlay.hidden = true
   }
 
-  function openGuide ({ manual = false } = {}) {
+  function openGuide () {
     const overlay = createGuide()
     currentStep = 0
     renderStep()
-    if (manual) {
-      const noShow = overlay.querySelector('#sp-guide-no-show')
-      if (noShow) noShow.checked = false
-    }
+    const noShow = overlay.querySelector('#sp-guide-no-show')
+    if (noShow) noShow.checked = guideDismissed
     overlay.hidden = false
     window.setTimeout(() => overlay.querySelector('#sp-guide-next')?.focus(), 30)
   }
@@ -225,23 +237,25 @@
     const button = document.createElement('button')
     button.id = 'spfm-review-guide'
     button.type = 'button'
+    button.className = 'spfm-experience-button'
     button.textContent = 'REVER GUIA'
     button.title = 'Abrir novamente o Guia do Protocolista'
-    button.addEventListener('click', () => openGuide({ manual: true }))
+    button.addEventListener('click', openGuide)
     body.appendChild(button)
     return true
   }
 
   async function init () {
-    document.documentElement.classList.add('sp-protocolista-theme')
+    const stored = await storageGet(STORAGE_KEY)
+    guideDismissed = Boolean(stored[STORAGE_KEY])
+
     bindGuide()
 
     const observer = new MutationObserver(() => installReviewButton())
     observer.observe(document.documentElement, { childList: true, subtree: true })
     installReviewButton()
 
-    const stored = await storageGet(STORAGE_KEY)
-    if (!stored[STORAGE_KEY]) {
+    if (!guideDismissed) {
       window.setTimeout(() => openGuide(), 650)
     }
   }
