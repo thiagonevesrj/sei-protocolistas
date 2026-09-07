@@ -163,7 +163,6 @@
     },
     {
       "matches": ["https://venus2.detran.rj.gov.br/owa/*"],
-      "exclude_globs": ["*venus2.detran.rj.gov.br/owa/*ae=Item*", "*venus2.detran.rj.gov.br/owa/*ae=PreFormAction*"],
       "run_at": "document_idle",
       "all_frames": false,
       "css": ["cs_modules/fast_mail/onboarding-v1.css"],
