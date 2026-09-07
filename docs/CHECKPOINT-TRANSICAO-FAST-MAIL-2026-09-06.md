@@ -75,24 +75,33 @@ Com isso, considerar **VALIDADO / CONGELADO** o padrão central compartilhado po
 
 Não continuar testando todos os serviços botão por botão quando eles usam a mesma infraestrutura central. Reabrir apenas diante de falha concreta.
 
-## Certidão de Identificação Civil — validação parcial concluída
+## Certidão de Identificação Civil — VALIDADA / CONGELADA
 
-Em 06/09/2026, após integrar a Certidão ao fluxo nativo do FAST MAIL e transcrever o checklist documental do card oficial, Thiago confirmou em ambiente real:
+Em 06/09/2026, a Certidão de Identificação Civil foi validada de ponta a ponta em ambiente real.
+
+Confirmado por Thiago:
 
 - `ORIENTAR` = **OK**;
-- `COBRAR DOCUMENTOS` = **OK**.
+- `COBRAR DOCUMENTOS` = **OK**;
+- `ABRIR PROCESSO` = **OK**;
+- processo criado com o tipo SEI correto;
+- destino real retornado pelo fluxo: `DETRAN/DIVCA`;
+- devolutiva do processo inserida no Webmail em HTML;
+- rótulo interno `⚡ REQUERIMENTO RÁPIDO` removido da resposta ao cidadão;
+- assunto final preserva obrigatoriamente `TRIAGEM - FECHADO`.
 
-Commit funcional de referência:
+Commits funcionais de referência:
 
-`bdb6d041c994f7dd01449e7041120a3a1a9eb486` — `fix: integrar certidão civil sem alterar o manifest`.
+- `bdb6d041c994f7dd01449e7041120a3a1a9eb486` — `fix: integrar certidão civil sem alterar o manifest`;
+- `4b3874f28992122b5688918d5700d94fc2f52a94` — `fix: preservar TRIAGEM e remover rótulo interno no fechamento`.
 
-A validação automática desse commit passou com `SUCCESS`.
+A validação automática dos commits passou com `SUCCESS` e o comportamento final foi confirmado por Thiago com:
 
-Pendência única para fechar a Certidão de ponta a ponta:
+`TUDO LINDO E PERFEITO!`
 
-- validar `ABRIR PROCESSO` e confirmar tipo SEI / destino `DIRIC` no handoff para o FAST PROC.
+Estado: **VALIDADO / CONGELADO**.
 
-Até regressão concreta, não reabrir a lógica de `ORIENTAR` nem o checklist de `COBRAR DOCUMENTOS` da Certidão.
+Não reabrir Certidão, fechamento de assunto ou limpeza do rótulo interno sem regressão concreta.
 
 ## Estado operacional relacionado
 
@@ -101,23 +110,24 @@ Até regressão concreta, não reabrir a lógica de `ORIENTAR` nem o checklist d
 - checklist de documentos faltantes: validado em múltiplos serviços;
 - caminho visual de fase → serviço → ação: validado em múltiplos serviços;
 - assunto automático de TRIAGEM: validado no fluxo operacional;
+- fechamento do assunto em `TRIAGEM - FECHADO`: validado;
+- rótulos internos não devem aparecer na devolutiva ao cidadão;
 - `Perícia Médica`: validada no fluxo testado;
 - `Desistência de Categoria`: validada e permanece referência de padrão;
 - `Transferência de Prontuário`: validada no FAST MAIL;
 - `Devolução de Taxas`: fluxo de cobrança documental validado;
-- `Certidão de Identificação Civil`: ORIENTAR e COBRAR DOCUMENTOS validados; ABRIR PROCESSO pendente;
+- `Certidão de Identificação Civil`: validada de ponta a ponta;
 - Bcc não deve ser reaberto sem regressão concreta.
 
 ## Próxima fila de trabalho
 
 Não reabrir os itens acima. A próxima rodada deve priorizar fluxos ainda não congelados ou pendências fora desse mecanismo central, especialmente:
 
-1. `Certidão de Identificação Civil` — validar apenas `ABRIR PROCESSO`, conferindo tipo SEI e destino `DIRIC`;
-2. `Troca de Clínica` — validar fluxo e manter a resposta curada; não inventar URL de formulário ausente;
-3. `Leilão` — validar o fluxo e eventuais pendências específicas;
-4. `Genérico Habilitação` e `Genérico Veículos` — validar roteamento/conteúdo sem alterar scripts do Trello/Trellinho;
-5. `Ofícios` — validar os cenários de triagem já mapeados;
-6. FAST PROC / `Transferência de Prontuário` — permanece separada a pendência de validação real da automação de destino `NUCRA` na tela Enviar Processo.
+1. `Troca de Clínica` — validar fluxo e manter a resposta curada; não inventar URL de formulário ausente;
+2. `Leilão` — validar o fluxo e eventuais pendências específicas;
+3. `Genérico Habilitação` e `Genérico Veículos` — validar roteamento/conteúdo sem alterar scripts do Trello/Trellinho;
+4. `Ofícios` — validar os cenários de triagem já mapeados;
+5. FAST PROC / `Transferência de Prontuário` — permanece separada a pendência de validação real da automação de destino `NUCRA` na tela Enviar Processo.
 
 ## Modo de trabalho
 
