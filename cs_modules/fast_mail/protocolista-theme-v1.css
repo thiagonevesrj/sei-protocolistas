@@ -1,12 +1,14 @@
 /*
  * Tema Protocolista — OWA legado
- * Camada exclusivamente visual. Não altera o corpo da mensagem nem a lógica do OWA.
+ * Camada exclusivamente visual e reversível.
+ * Regra de segurança: não estilizar #divBdy, #txtBdy, iframe#ifBdy
+ * nem o conteúdo interno das mensagens.
  */
 
 html.sp-protocolista-theme {
   --sp-theme-navy: #07182c;
   --sp-theme-navy-2: #0d2744;
-  --sp-theme-yellow: #f1c44f;
+  --sp-theme-gold: #f1c44f;
   --sp-theme-bg: #f3f6fa;
   --sp-theme-surface: #ffffff;
   --sp-theme-border: #cbd5e1;
@@ -24,42 +26,61 @@ html.sp-protocolista-theme::before {
   right: 0;
   height: 3px;
   pointer-events: none;
-  background: linear-gradient(90deg, var(--sp-theme-navy), var(--sp-theme-yellow), var(--sp-theme-navy));
+  background: linear-gradient(90deg, var(--sp-theme-navy), var(--sp-theme-gold), var(--sp-theme-navy));
 }
 
 html.sp-protocolista-theme body {
   background-color: var(--sp-theme-bg) !important;
-  color: var(--sp-theme-text);
 }
 
-/* Cabeçalho da composição. O corpo da mensagem (#divBdy) fica deliberadamente fora. */
+/*
+ * Cabeçalho da composição do OWA.
+ * O corpo da mensagem (#divBdy) fica deliberadamente fora de todos os seletores.
+ */
 html.sp-protocolista-theme #divHdrMessage {
   background: #f8fbff !important;
   border-bottom-color: #b9c7d8 !important;
+  box-shadow: inset 0 3px 0 rgba(241, 196, 79, 0.22);
 }
 
-html.sp-protocolista-theme #divWellTo,
-html.sp-protocolista-theme #divWellCc,
-html.sp-protocolista-theme #divWellBcc,
-html.sp-protocolista-theme #divWellSubject {
-  background: rgba(255, 255, 255, 0.92) !important;
+html.sp-protocolista-theme #divHdrMessage #divWellTo,
+html.sp-protocolista-theme #divHdrMessage #divWellCc,
+html.sp-protocolista-theme #divHdrMessage #divWellBcc,
+html.sp-protocolista-theme #divHdrMessage #divWellSubject {
+  background: rgba(255, 255, 255, 0.94) !important;
 }
 
-html.sp-protocolista-theme input:not(#divBdy input):not(#sei-protocolistas-fast-mail-status input),
-html.sp-protocolista-theme textarea:not(#txtBdy):not(#sei-protocolistas-fast-mail-status textarea),
-html.sp-protocolista-theme select:not(#sei-protocolistas-fast-mail-status select) {
+html.sp-protocolista-theme #divHdrMessage input,
+html.sp-protocolista-theme #divHdrMessage textarea,
+html.sp-protocolista-theme #divHdrMessage select {
   border-color: #b7c4d4 !important;
+  background-color: #ffffff !important;
 }
 
-html.sp-protocolista-theme input:focus:not(#sei-protocolistas-fast-mail-status input),
-html.sp-protocolista-theme textarea:focus:not(#txtBdy):not(#sei-protocolistas-fast-mail-status textarea),
-html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status select) {
+html.sp-protocolista-theme #divHdrMessage input:focus,
+html.sp-protocolista-theme #divHdrMessage textarea:focus,
+html.sp-protocolista-theme #divHdrMessage select:focus {
   outline: 2px solid rgba(23, 74, 126, 0.18) !important;
   outline-offset: 1px;
 }
 
-/* Guia inicial */
+/* Identidade visual no painel sem alterar a marcação operacional do FAST MAIL. */
+html.sp-protocolista-theme #sei-protocolistas-fast-mail-status .spfm-title::after {
+  content: ' ❄';
+  color: var(--sp-theme-gold);
+}
+
+html.sp-protocolista-theme #sei-protocolistas-fast-mail-status .spfm-subtitle::before {
+  content: '⚡ ';
+  color: var(--sp-theme-gold);
+}
+
+/* Guia inicial: possui paleta própria e continua legível mesmo com o Tema desligado. */
 #sp-protocolista-guide-overlay {
+  --sp-guide-navy: #07182c;
+  --sp-guide-navy-2: #0d2744;
+  --sp-guide-gold: #f1c44f;
+
   position: fixed;
   z-index: 2147483646;
   inset: 0;
@@ -80,7 +101,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
   max-height: min(760px, calc(100vh - 32px));
   overflow: hidden;
   color: #eef4fb;
-  background: var(--sp-theme-navy);
+  background: var(--sp-guide-navy);
   border: 1px solid rgba(241, 196, 79, 0.68);
   border-radius: 18px;
   box-shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
@@ -110,7 +131,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
 }
 
 .sp-guide-brand span {
-  color: var(--sp-theme-yellow);
+  color: var(--sp-guide-gold);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -121,7 +142,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
   height: 34px;
   margin: 0;
   padding: 0;
-  color: var(--sp-theme-yellow);
+  color: var(--sp-guide-gold);
   background: #030d1b;
   border: 1px solid rgba(241, 196, 79, 0.48);
   border-radius: 9px;
@@ -143,7 +164,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
   padding: 4px 9px;
   margin-bottom: 12px;
   color: #07182c;
-  background: var(--sp-theme-yellow);
+  background: var(--sp-guide-gold);
   border-radius: 999px;
   font-size: 10px;
   font-weight: 900;
@@ -181,7 +202,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
 .sp-guide-card strong {
   display: block;
   margin-bottom: 5px;
-  color: var(--sp-theme-yellow);
+  color: var(--sp-guide-gold);
   font-size: 12px;
 }
 
@@ -198,7 +219,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
   color: #eaf2fb;
   background: rgba(23, 74, 126, 0.28);
   border: 1px solid rgba(120, 164, 209, 0.34);
-  border-left: 4px solid var(--sp-theme-yellow);
+  border-left: 4px solid var(--sp-guide-gold);
   border-radius: 9px;
   font-size: 12px;
   line-height: 1.45;
@@ -233,7 +254,7 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: var(--sp-theme-yellow);
+  accent-color: var(--sp-guide-gold);
 }
 
 .sp-guide-progress {
@@ -266,11 +287,12 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
 
 .sp-guide-primary {
   color: #07182c;
-  background: var(--sp-theme-yellow);
-  border: 1px solid var(--sp-theme-yellow);
+  background: var(--sp-guide-gold);
+  border: 1px solid var(--sp-guide-gold);
 }
 
-#spfm-review-guide {
+/* Controles permanentes de experiência: não executam nenhuma ação operacional. */
+#sei-protocolistas-fast-mail-status .spfm-experience-button {
   width: 100%;
   min-height: 34px;
   margin-top: 7px;
@@ -284,9 +306,15 @@ html.sp-protocolista-theme select:focus:not(#sei-protocolistas-fast-mail-status 
   letter-spacing: 0.05em;
 }
 
-#spfm-review-guide:hover {
-  color: var(--sp-theme-yellow);
+#sei-protocolistas-fast-mail-status .spfm-experience-button:hover,
+#sei-protocolistas-fast-mail-status .spfm-experience-button:focus-visible {
+  color: #f1c44f;
   border-color: rgba(241, 196, 79, 0.55);
+}
+
+#spfm-theme-toggle[data-theme-enabled="false"] {
+  color: #f1c44f;
+  border-style: solid;
 }
 
 @media (max-width: 620px) {
