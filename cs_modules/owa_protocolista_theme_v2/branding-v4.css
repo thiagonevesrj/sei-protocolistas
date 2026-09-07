@@ -3,11 +3,10 @@
  * Camada visual isolada. Reaproveita o menu de tema da V3 sem tocar no FAST MAIL.
  */
 
-html.sp-owa-protocolista-v2 .sp-owa-v2-header-zone {
-  min-height: 50px !important;
-}
-
-html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand {
+/* O rótulo nativo é ocultado somente quando identificado pelo JS visual. */
+html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
+.sp-owa-v4-native-outlook-brand {
+  display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
 }
@@ -16,14 +15,19 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand {
   display: none !important;
 }
 
+/*
+ * O logo não fica mais preso ao nó interno que contém sessão/usuário.
+ * Ele é fixado diretamente na faixa superior do viewport do OWA legado.
+ */
 #sp-owa-v4-branding {
-  position: absolute;
-  z-index: 2147483645;
-  top: 50%;
+  position: fixed;
+  z-index: 2147483646;
+  top: 7px;
   left: 12px;
-  width: min(340px, 38vw);
-  height: 46px;
-  transform: translateY(-50%);
+  width: 360px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
   pointer-events: none;
 }
 
@@ -31,10 +35,13 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand {
   display: block;
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   object-fit: contain;
   object-position: left center;
   pointer-events: none;
   user-select: none;
+  -webkit-user-drag: none;
 }
 
 /* Easter egg: somente o floco dentro de PR❄TOCOL!STA recebe clique. */
@@ -71,14 +78,20 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand {
   transform: scale(1.08);
 }
 
-/* O antigo trigger continua existindo apenas como motor do menu. */
+/*
+ * O trigger antigo continua existindo apenas como motor do menu.
+ * O próprio menu também deixa de depender da geometria do header interno.
+ */
 #sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
-  top: 50% !important;
-  left: 130px !important;
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  top: 0 !important;
+  left: 0 !important;
   right: auto !important;
   width: 1px !important;
   height: 1px !important;
-  transform: translateY(-50%) !important;
+  margin: 0 !important;
+  transform: none !important;
   pointer-events: none !important;
 }
 
@@ -94,37 +107,51 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand {
 }
 
 #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
-  top: 34px !important;
-  left: -104px !important;
+  position: fixed !important;
+  top: 60px !important;
+  left: 24px !important;
   right: auto !important;
   pointer-events: auto !important;
 }
 
 #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
-  left: 112px !important;
+  left: 136px !important;
   right: auto !important;
 }
 
-#sp-owa-protocolista-theme-v2-root[data-theme-enabled="false"] #sp-owa-v4-branding {
+#sp-owa-protocolista-theme-v2-root[data-theme-enabled="false"] ~ #sp-owa-v4-branding,
+html[data-sp-owa-protocolista-theme-v2="off"] #sp-owa-v4-branding {
   opacity: .88;
 }
 
 @media (max-width: 1180px) {
   #sp-owa-v4-branding {
-    width: 300px;
+    width: 320px;
+    height: 43px;
+    top: 9px;
   }
 
-  #sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
-    left: 114px !important;
+  #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
+    left: 18px !important;
+  }
+
+  #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
+    left: 126px !important;
   }
 }
 
 @media (max-width: 880px) {
   #sp-owa-v4-branding {
-    width: 255px;
+    width: 270px;
+    height: 36px;
+    top: 12px;
   }
 
-  #sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
-    left: 97px !important;
+  #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
+    left: 12px !important;
+  }
+
+  #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
+    left: 108px !important;
   }
 }
