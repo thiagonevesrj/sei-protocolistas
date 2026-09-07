@@ -40,6 +40,20 @@ function expectFile (relativePath, source) {
   expect(fs.existsSync(fullPath), `${source}: arquivo não encontrado: ${relativePath}`)
 }
 
+function expectIconFiles (icons, source) {
+  if (typeof icons === 'string') {
+    expectFile(icons, source)
+    return
+  }
+
+  expect(icons && typeof icons === 'object', `${source}: configuração de ícones inválida`)
+  if (!icons || typeof icons !== 'object') return
+
+  Object.entries(icons).forEach(([size, iconPath]) => {
+    expectFile(iconPath, `${source}[${size}]`)
+  })
+}
+
 function isAllowedMatch (match) {
   return allowedOrigins.some((origin) => match.startsWith(origin))
 }
@@ -55,6 +69,8 @@ function expectUniqueValues (values, source) {
 const manifest = readJson('manifest.json')
 const packageJson = readJson('package.json')
 const catalog = readJson('data/catalogo-processos.json')
+const scriptCatalog = readJson('data/catalogo-scripts.json')
+const curatedResponses = readJson('data/respostas-curadas.json')
 const responseModels = readJson('data/modelos-resposta.json')
 const fastMailSource = readText('cs_modules/fast_mail/index.js')
 const fastProcSource = readText('cs_modules/clique_protocolista/index.js')
@@ -62,6 +78,9 @@ const seiLoginSource = readText('cs_modules/core/login/index.js')
 const handoffSource = readText('cs_modules/fast_proc_handoff/index.js')
 const returnCoordinatorSource = readText('background/service-worker.js')
 const protocolSource = readText('cs_modules/protocolo_cliente/index.js')
+const centralSource = readText('central_protocolista/main.js')
+const centralHtml = readText('central_protocolista/index.html')
+const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
 
 if (manifest && packageJson) {
   expect(
@@ -71,6 +90,13 @@ if (manifest && packageJson) {
   expect(/^\d+\.\d+\.\d+$/.test(manifest.version), 'Manifesto: versão deve usar o formato X.Y.Z')
   expect(manifest.manifest_version === 3, 'Manifesto: manifest_version deve ser 3')
   expect(!/[ÃÂ]/.test(manifest.description || ''), 'Manifesto: descrição contém texto corrompido')
+  const expectedPermissions = ['storage', 'sessions']
+  const permissions = manifest.permissions || []
+  expect(
+    expectedPermissions.length === permissions.length &&
+      expectedPermissions.every((permission) => permissions.includes(permission)),
+    `Manifesto: permissions deve conter somente ${expectedPermissions.join(' e ')}`
+  )
 
   const expectedHostPermissions = [
     '*://sei.rj.gov.br/*',
@@ -87,7 +113,10 @@ if (manifest && packageJson) {
     expectFile(manifest.action.default_popup, 'manifest.action.default_popup')
   }
   if (manifest.action?.default_icon) {
-    expectFile(manifest.action.default_icon, 'manifest.action.default_icon')
+    expectIconFiles(manifest.action.default_icon, 'manifest.action.default_icon')
+  }
+  if (manifest.icons) {
+    expectIconFiles(manifest.icons, 'manifest.icons')
   }
   expect(
     manifest.background?.service_worker === 'background/service-worker.js',
@@ -130,7 +159,61 @@ if (manifest && packageJson) {
   expect(handoffEntry?.all_frames === false, 'Manifesto: orquestrador deve executar apenas no frame principal')
 }
 
-[
+expect(centralHtml.includes('FINALIZAR EXPEDIENTE') === false, 'Central: o botão deve alternar o texto pelo estado salvo')
+expect(centralHtml.includes('EXPORTAR MEU RELATÓRIO EM CSV'), 'Central: exportação individual do relatório não encontrada')
+expect(centralHtml.includes('Sugestões e bugs'), 'Central: canal de sugestões e bugs não encontrado')
+expect(
+  centralHtml.indexOf('Sugestões e bugs') < centralHtml.indexOf('Catálogo operacional'),
+  'Central: sugestões e bugs devem aparecer antes do catálogo operacional'
+)
+expect(centralSource.includes("const METRICS_KEY = 'centralProtocolistaMetricsByOperator'"), 'Central: métricas não estão separadas por protocolista')
+expect(centralSource.includes("button.textContent = 'FINALIZAR EXPEDIENTE'"), 'Central: finalização do expediente não encontrada')
+expect(centralSource.includes('state.report?.dayKey === today'), 'Central: limpeza do relatório no dia seguinte não encontrada')
+expect(!centralHtml.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular não pode aparecer na interface')
+expect(!centralSource.includes('thiagonevesrj@gmail.com'), 'Central: e-mail particular deve permanecer ofuscado no código da interface')
+expect(!centralSource.includes('formsubmit.co'), 'Central: FormSubmit não deve permanecer no canal de relatos')
+expect(centralSource.includes('sei-protocolistas:send-feedback-via-webmail'), 'Central: envio de relatos pelo Webmail não encontrado')
+expect(centralSource.includes('sei-protocolistas:open-workday-systems'), 'Central: abertura garantida de Webmail e SEI não encontrada')
+expect(centralSource.includes('sei-protocolistas:open-webmail'), 'Central: abertura reutilizável do Webmail não encontrada')
+expect(!centralSource.includes("window.open(WEBMAIL_URL, '_blank'"), 'Central: Webmail não pode abrir uma nova aba sem consultar as existentes')
+expect(centralHtml.includes('id="reopen-systems"'), 'Central: botão para reabrir sistemas não encontrado')
+expect(centralSource.includes('async function reopenWorkdaySystems ()'), 'Central: reabertura sem finalizar expediente não encontrada')
+expect(centralSource.includes("$('#reopen-systems').addEventListener('click', reopenWorkdaySystems)"), 'Central: botão de reabertura não está conectado')
+expect(centralSource.includes('reopenButton.hidden = false'), 'Central: reabertura não é exibida durante o expediente')
+expect(centralSource.includes('reopenButton.hidden = true'), 'Central: reabertura não é ocultada fora do expediente')
+const reopenSystemsStart = centralSource.indexOf('async function reopenWorkdaySystems ()')
+const reopenSystemsEnd = centralSource.indexOf('\n  async function exportWorkdayReport', reopenSystemsStart)
+const reopenSystemsSource = centralSource.slice(reopenSystemsStart, reopenSystemsEnd)
+expect(reopenSystemsStart >= 0 && reopenSystemsEnd > reopenSystemsStart, 'Central: bloco de reabertura não localizado')
+expect(reopenSystemsSource.includes('OPEN_WORKDAY_SYSTEMS_MESSAGE'), 'Central: reabertura não aciona os dois sistemas')
+expect(!reopenSystemsSource.includes('beginWorkday('), 'Central: reabertura não pode reiniciar a contagem')
+expect(!reopenSystemsSource.includes('finishWorkday('), 'Central: reabertura não pode finalizar o expediente')
+expect(!centralSource.includes('window.setTimeout(openSei, 350)'), 'Central: expediente não pode depender de duas janelas sujeitas a bloqueio de popup')
+expect(returnCoordinatorSource.includes('openFeedbackCompose'), 'Webmail: abertura da mensagem de relato não encontrada')
+expect(returnCoordinatorSource.includes('findReusableWebmailTab(false)'), 'Webmail: relato não reutiliza a sessão principal existente')
+expect(returnCoordinatorSource.includes('Conclua ou feche a resposta aberta'), 'Webmail: relato não bloqueia segunda sessão durante uma resposta')
+expect(returnCoordinatorSource.includes('url: \'about:blank\'') && returnCoordinatorSource.includes('{ url: FEEDBACK_COMPOSE_URL }'), 'Webmail: aba exclusiva do relato deve ser identificada antes de carregar o formulário')
+expect(returnCoordinatorSource.includes('/owa/?ae=Item&a=New&t=IPM.Note'), 'Webmail: relato deve usar a rota de composição compatível com o Exchange')
+expect(!returnCoordinatorSource.includes('/owa/?ae=PreFormAction&a=New&t=IPM.Note'), 'Webmail: rota PreFormAction incompatível não pode ser usada no relato')
+expect(returnCoordinatorSource.includes('openWorkdaySystems'), 'Central: coordenador não abre Webmail e SEI para o expediente')
+expect(returnCoordinatorSource.includes('openOrReuseWebmail'), 'Central: coordenador não reutiliza a aba existente do Webmail')
+expect(returnCoordinatorSource.includes("callApi(api.tabs, 'query'"), 'Central: coordenador não consulta abas existentes do Webmail')
+expect(returnCoordinatorSource.includes('WEBMAIL_MATCH_PATTERN'), 'Central: padrão de busca da aba do Webmail não encontrado')
+expect(returnCoordinatorSource.includes('restoreRecentWebmailTab'), 'Central: restauração da aba fechada do Webmail não encontrada')
+expect(returnCoordinatorSource.includes('moveTabToWindow'), 'Central: aba restaurada do Webmail não retorna à janela da Central')
+expect(returnCoordinatorSource.includes("callApi(api.tabs, 'move'"), 'Central: movimentação da aba restaurada não encontrada')
+expect(returnCoordinatorSource.includes('sender.tab?.windowId'), 'Central: janela de origem do comando não é preservada')
+expect(returnCoordinatorSource.includes("callApi(api.sessions, 'getRecentlyClosed'"), 'Central: consulta de abas fechadas do Webmail não encontrada')
+expect(returnCoordinatorSource.includes("'restore'"), 'Central: restauração da sessão fechada do Webmail não encontrada')
+expect(returnCoordinatorSource.includes('url: SEI_LOGIN_URL'), 'Central: abertura do SEI pelo coordenador não encontrada')
+expect(fastMailSource.includes('processPendingFeedback'), 'Webmail: processamento do relato pendente não encontrado')
+expect(fastMailSource.includes('currentTab.tabId !== feedback.webmailTabId'), 'Webmail: relato pendente precisa ficar restrito à aba exclusiva do envio')
+expect(fastMailSource.includes('FEEDBACK_DESTINATION'), 'Webmail: destinatário interno do relato não encontrado')
+expect(fastMailSource.includes("recordWorkdayMetric('emails')"), 'FAST MAIL: contagem de e-mails do expediente não encontrada')
+expect(fastMailSource.includes("recordWorkdayMetric('requirements')"), 'FAST MAIL: contagem de exigências do expediente não encontrada')
+expect(protocolSource.includes('recordProcessMetric'), 'Protocolo: contagem de processos do expediente não encontrada')
+
+;[
   'name',
   'cpf',
   'procedureId',
@@ -144,6 +227,31 @@ if (manifest && packageJson) {
 })
 expect(fastMailSource.includes('window.open(\'about:blank\''), 'FAST MAIL: deve abrir o SEI a partir do clique do operador')
 expect(fastMailSource.includes('autoLoginWebmail'), 'Webmail: retomada automática de login obrigatória')
+expect(fastMailSource.includes('spfm-priority-areas'), 'FAST MAIL: áreas prioritárias devem aparecer na tela inicial')
+expect(fastMailSource.includes('spfm-priority-topic'), 'FAST MAIL: seletor de assunto prioritário obrigatório')
+expect(fastMailSource.includes('openPriorityResponses'), 'FAST MAIL: caminho de resposta por assunto obrigatório')
+expect(fastMailSource.includes('openPriorityMissingDocuments'), 'FAST MAIL: pendência documental deve ser uma ação vinculada ao assunto')
+expect(fastMailSource.includes('openPriorityProcess'), 'FAST MAIL: caminho de abertura no FAST PROC obrigatório')
+expect(fastMailSource.includes('CURATED_RESPONSES_PATH'), 'FAST MAIL: respostas curadas devem prevalecer sobre exportações antigas')
+expect(fastMailSource.includes('PREPARAR E-MAIL'), 'FAST MAIL: botão PREPARAR E-MAIL obrigatório no fluxo de resposta')
+expect(fastMailSource.includes('spfm-email-preparation'), 'FAST MAIL: área de preparação do e-mail obrigatória')
+expect(
+  fastMailSource.includes("phase.value = mappedScript?.phase || ''"),
+  'FAST MAIL: assunto prioritário deve abrir na fase da resposta principal'
+)
+expect(
+  fastMailSource.includes('Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ'),
+  'FAST MAIL: respostas devem usar a assinatura institucional'
+)
+expect(!fastMailSource.includes('background:#fff1f1'), 'FAST MAIL: alerta de reenvio não deve usar caixa vermelha')
+expect(
+  fastMailSource.includes("replace(/[\\u200B-\\u200D\\uFEFF]/g, '')"),
+  'FAST MAIL: respostas do Trello devem remover caracteres invisíveis'
+)
+expect(
+  fastMailSource.includes("replace(/\\n{3,}/g, '\\n\\n')"),
+  'FAST MAIL: respostas do Trello devem reduzir excesso de linhas vazias'
+)
 expect(fastProcSource.includes("source: 'fast-mail'"), 'FAST PROC: origem do FAST MAIL obrigatória')
 expect(fastProcSource.includes('sp-clique-prefill-missing'), 'FAST PROC: campos ausentes devem ser destacados')
 expect(seiLoginSource.includes('centralProtocolistaSeiCredentials'), 'SEI: credenciais da Central não são reaproveitadas')
@@ -151,6 +259,15 @@ expect(handoffSource.includes('procedimento_escolher_tipo'), 'SEI: navegação a
 expect(returnCoordinatorSource.includes('fastMailAttendanceRoutes'), 'Retorno: mapa de abas por atendimento obrigatório')
 expect(returnCoordinatorSource.includes("api.tabs, 'update'"), 'Retorno: aba original deve receber foco')
 expect(protocolSource.includes('sei-protocolistas:return-fast-mail'), 'PROTOCOLO CLIENTE: comando de retorno obrigatório')
+expect(scriptCatalogBuilderSource.includes('txt-attachment'), 'Importador Trello: scripts em anexos .txt devem prevalecer sobre a descrição')
+expect(scriptCatalogBuilderSource.includes('destino[\\s_]+do[\\s_]+processo'), 'Importador Trello: DESTINO DO PROCESSO.txt não pode virar resposta')
+expect(scriptCatalogBuilderSource.includes('attachedDestination'), 'Importador Trello: destino anexado deve alimentar o catálogo de processos')
+expect(scriptCatalogBuilderSource.includes('syncProcessDestinations'), 'Importador Trello: destino deve ficar salvo por procedimento')
+expect(!centralHtml.includes('Administração e manutenção'), 'Central: bloco administrativo redundante deve permanecer removido')
+expect(!centralHtml.includes('clear-all-credentials'), 'Central: exclusão geral de credenciais não pode ficar exposta')
+expect(centralSource.includes('clearExpiredMetrics'), 'Central: métricas vencidas devem ser removidas globalmente')
+expect(centralSource.includes('FEEDBACK_SENSITIVE_PATTERNS'), 'Central: relatos devem bloquear dados pessoais aparentes')
+expect(centralSource.includes("placeholder = 'Senha já salva'"), 'Central: senha salva não deve voltar ao campo visível')
 
 let processTypes = []
 let processIds = new Set()
@@ -200,6 +317,15 @@ if (catalog) {
     expect(daf.missingDocuments?.length > 0, 'Catálogo DAF: pendências obrigatórias')
   }
 
+  const transfer = processTypes.find((item) => item.id === 'transferencia-prontuario-habilitacao')
+  expect(Boolean(transfer), 'Catálogo: transferência de prontuário obrigatória')
+  if (transfer) {
+    expect(
+      transfer.seiNames?.includes('Detran: Solicitação Geral - Habilitação'),
+      'Transferência: deve usar Solicitação Geral - Habilitação'
+    )
+  }
+
   const areas = catalog.fastMailNavigation?.areas
   expect(Array.isArray(areas) && areas.length > 0, 'FAST MAIL: áreas de navegação obrigatórias')
   if (Array.isArray(areas)) {
@@ -219,6 +345,146 @@ if (catalog) {
       })
     })
   }
+
+  const priorityTopics = catalog.fastMailPriorityTopics
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 17, 'FAST MAIL: 17 assuntos principais obrigatórios')
+  if (Array.isArray(priorityTopics)) {
+    expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
+    const priorityAreaIds = new Set((areas || []).map((area) => area.id))
+    priorityTopics.forEach((topic, topicIndex) => {
+      const prefix = `FAST MAIL: fastMailPriorityTopics[${topicIndex}]`
+      const routes = Array.isArray(topic.variants) && topic.variants.length ? topic.variants : [topic]
+      expect(Boolean(topic.id), `${prefix}: id obrigatório`)
+      expect(Boolean(topic.label), `${prefix}: label obrigatório`)
+      expect(priorityAreaIds.has(topic.area), `${prefix}: área inexistente ${topic.area}`)
+      expect(Number.isInteger(topic.recentUsageCount), `${prefix}: frequência recente obrigatória`)
+      expect(typeof topic.canOpenProcess === 'boolean', `${prefix}: canOpenProcess deve ser booleano`)
+      if (topic.canOpenProcess) {
+        expect(processIds.has(topic.processId), `${prefix}: processo inexistente ${topic.processId}`)
+      } else {
+        expect(Boolean(topic.blockedReason), `${prefix}: motivo do atendimento somente presencial obrigatório`)
+      }
+      routes.forEach((route, routeIndex) => {
+        const routePrefix = `${prefix}.routes[${routeIndex}]`
+        expect(Boolean(route.scriptId), `${routePrefix}: scriptId obrigatório`)
+        expect(
+          Array.isArray(route.responseScriptIds) && route.responseScriptIds.includes(route.scriptId),
+          `${routePrefix}: responseScriptIds deve incluir o script principal`
+        )
+        expect(
+          scriptCatalog?.scripts?.some((script) => script.id === route.scriptId && script.body),
+          `${routePrefix}: script inexistente ou vazio ${route.scriptId}`
+        )
+        ;(route.responseScriptIds || []).forEach((scriptId) => {
+          expect(
+            scriptCatalog?.scripts?.some((script) => script.id === scriptId && script.body),
+            `${routePrefix}: resposta relacionada inexistente ou vazia ${scriptId}`
+          )
+        })
+      })
+    })
+
+    const expectedOpenProcesses = {
+      'devolucao-taxas': 'devolucao-taxas',
+      'desistencia-categoria': 'desistencia-categoria-primeira-habilitacao',
+      'pericia-medica-pcd': 'solicitacao-pericia-medica',
+      'troca-clinica': 'troca-retirada-clinica',
+      'rebaixamento-categoria': 'rebaixamento-categoria-cnh',
+      'retorno-categoria': 'retorno-categoria-cnh-rebaixada',
+      'transferencia-prontuario': 'transferencia-prontuario-habilitacao',
+      'generico-habilitacao': 'solicitacao-geral-habilitacao',
+      'generico-veiculos': 'solicitacoes-gerais-veiculos',
+      'cnh-estrangeira': 'averbacao-cnh-estrangeira',
+      oficios: 'oficio-mero-expediente'
+    }
+    Object.entries(expectedOpenProcesses).forEach(([topicId, processId]) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      const processType = processTypes.find((item) => item.id === processId)
+      expect(topic?.canOpenProcess === true, `FAST MAIL: ${topicId} deve permitir FAST PROC`)
+      expect(topic?.processId === processId, `FAST MAIL: ${topicId} deve usar ${processId}`)
+      expect(processType?.missingDocuments?.length > 0, `FAST MAIL: ${topicId} deve ter checklist`)
+    })
+
+    ;['cancelamento-comunicacao-venda', 'comunicacao-venda', 'intencao-venda', 'motor', 'chassi', 'leilao-veiculos'].forEach((topicId) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      expect(topic?.canOpenProcess === false, `FAST MAIL: ${topicId} deve ser somente orientação`)
+      expect(!topic?.processId, `FAST MAIL: ${topicId} não pode apontar para o FAST PROC`)
+    })
+    const auctionTopic = priorityTopics.find((item) => item.id === 'leilao-veiculos')
+    const auctionScript = scriptCatalog?.scripts?.find((item) => item.id === auctionTopic?.scriptId)
+    expect(auctionScript?.phase === 'orientacao', 'FAST MAIL: leilão deve usar o script da fase de orientação')
+    expect(auctionScript?.group === 'Leilão', 'FAST MAIL: leilão deve preservar o grupo de origem do Trellinho')
+    expect(auctionTopic?.blockedReason?.includes('destino COMISLE estão confirmados'), 'FAST MAIL: leilão deve informar que o destino COMISLE está confirmado')
+
+    const expectedPriorityAreas = {
+      'devolucao-taxas': 'taxas',
+      'desistencia-categoria': 'habilitacao',
+      'pericia-medica-pcd': 'pericia-medica',
+      'troca-clinica': 'habilitacao',
+      'rebaixamento-categoria': 'habilitacao',
+      'retorno-categoria': 'habilitacao',
+      'transferencia-prontuario': 'habilitacao',
+      'generico-habilitacao': 'habilitacao',
+      'cnh-estrangeira': 'habilitacao',
+      'cancelamento-comunicacao-venda': 'veiculos',
+      'comunicacao-venda': 'veiculos',
+      'intencao-venda': 'veiculos',
+      motor: 'veiculos',
+      chassi: 'veiculos',
+      'leilao-veiculos': 'veiculos',
+      'generico-veiculos': 'veiculos',
+      oficios: 'oficios'
+    }
+    Object.entries(expectedPriorityAreas).forEach(([topicId, areaId]) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      expect(topic?.area === areaId, `FAST MAIL: ${topicId} deve aparecer somente em ${areaId}`)
+    })
+
+    const expectedCorePriority = [
+      'devolucao-taxas',
+      'desistencia-categoria',
+      'pericia-medica-pcd',
+      'transferencia-prontuario',
+      'cancelamento-comunicacao-venda',
+      'comunicacao-venda',
+      'intencao-venda'
+    ]
+    expectedCorePriority.forEach((topicId, index) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      expect(topic?.corePriority === true, `FAST MAIL: ${topicId} deve ser prioridade central`)
+      expect(topic?.corePriorityRank === index + 1, `FAST MAIL: ordem central incorreta para ${topicId}`)
+    })
+
+    const genericTopics = {
+      'generico-habilitacao': 'trello-64e2a0fc88d682bd3ad5edb5',
+      'generico-veiculos': 'trello-64dfa7d9de9f8501856b0f8c'
+    }
+    Object.entries(genericTopics).forEach(([topicId, scriptId]) => {
+      const topic = priorityTopics.find((item) => item.id === topicId)
+      const script = scriptCatalog?.scripts?.find((item) => item.id === scriptId)
+      const processType = processTypes.find((item) => item.id === topic?.processId)
+      const documentIds = new Set((processType?.missingDocuments || []).map((item) => item.id))
+      expect(topic?.scriptId === scriptId, `FAST MAIL: ${topicId} deve usar o script genérico do Trello`)
+      expect(documentIds.has('general-request'), `FAST MAIL: ${topicId} deve oferecer Requerimento Geral`)
+      expect(documentIds.has('residence'), `FAST MAIL: ${topicId} deve oferecer Declaração de Residência`)
+      expect(script?.body?.includes('DETRAN_0049_requerimento_geral.pdf'), `FAST MAIL: ${topicId} deve incluir link do Requerimento Geral`)
+      expect(script?.body?.includes('DETRAN0034_declararesid.pdf'), `FAST MAIL: ${topicId} deve incluir link da Declaração de Residência`)
+    })
+  }
+
+  const formPolicy = catalog.formPolicy
+  expect(formPolicy?.default === 'Requerimento Geral', 'Catálogo: Requerimento Geral deve ser o padrão')
+  expect(Object.keys(formPolicy?.specificForms || {}).length === 6, 'Catálogo: seis requerimentos específicos confirmados obrigatórios')
+  Object.keys(formPolicy?.specificForms || {}).forEach((processId) => {
+    expect(processIds.has(processId), `Catálogo: formulário específico aponta para processo inexistente ${processId}`)
+  })
+
+  const clinic = processTypes.find((item) => item.id === 'troca-retirada-clinica')
+  const clinicDocumentIds = (clinic?.missingDocuments || []).map((document) => document.id)
+  expect(clinic?.documentsStatus === 'operator-confirmed-2026-08-19', 'Troca de clínica: fonte real atual deve estar confirmada')
+  expect(clinicDocumentIds.join(',') === 'clinic-change-form,supporting-document,renach,workplace-declaration,identification,cpf,residence,lawyer-representation,documentary-agent-representation,public-agent-representation,other-representation', 'Troca de clínica: checklist deve seguir o script confirmado em 19/08/2026')
+  expect(clinic?.destinationUnit === 'SERVMT', 'Troca de clínica: destino deve ser SERVMT conforme Trello e SEI')
+  expect(JSON.stringify(clinic).includes('HAB0135_comprovacao_local_trabalho.pdf'), 'Troca de clínica: declaração de trabalho HAB0135 obrigatória')
 }
 
 if (responseModels) {
@@ -241,6 +507,67 @@ if (responseModels) {
   })
 }
 
+if (scriptCatalog) {
+  expect(scriptCatalog.schemaVersion === 1, 'Catálogo de scripts: schemaVersion deve ser 1')
+  expect(scriptCatalog.originalActiveCards === 181, 'Catálogo de scripts: origem deve conter 181 cartões ativos')
+  expect(scriptCatalog.activeScripts === 176, 'Catálogo de scripts: deve conter 176 scripts vigentes')
+  expect(scriptCatalog.actionableScripts === 175, 'Catálogo de scripts: deve conter 175 respostas com conteúdo')
+  expect(
+    Array.isArray(scriptCatalog.emptyCards) && scriptCatalog.emptyCards.length === 1,
+    'Catálogo de scripts: deve registrar o cartão ativo sem conteúdo'
+  )
+  expect(
+    Array.isArray(scriptCatalog.retiredDuplicateCards) && scriptCatalog.retiredDuplicateCards.length === 5,
+    'Catálogo de scripts: deve aposentar as 5 versões antigas confirmadas'
+  )
+  expect(Array.isArray(scriptCatalog.scripts), 'Catálogo de scripts: scripts deve ser uma lista')
+
+  const scripts = Array.isArray(scriptCatalog.scripts) ? scriptCatalog.scripts : []
+  expect(scripts.length === 176, 'Catálogo de scripts: quantidade operacional incorreta')
+  expectUniqueValues(scripts.map((script) => script.id), 'Catálogo de scripts')
+  scripts.forEach((script, index) => {
+    const prefix = `Catálogo de scripts: scripts[${index}]`
+    expect(Boolean(script.id), `${prefix}: id obrigatório`)
+    expect(Boolean(script.title), `${prefix}: title obrigatório`)
+    expect(Boolean(script.phase), `${prefix}: phase obrigatória`)
+    expect(Boolean(script.group), `${prefix}: group obrigatório`)
+    expect(typeof script.body === 'string', `${prefix}: body deve ser texto`)
+    expect(Boolean(script.source?.cardId), `${prefix}: origem do Trello obrigatória`)
+  })
+
+  const auction = scripts.find((script) => script.id === 'trello-64fa2d423054d29c17159a38')
+  expect(Boolean(auction), 'Leilão: script geral da COMISLE obrigatório')
+  expect(auction?.routing?.destinationUnit === 'COMISLE', 'Leilão: destino estruturado deve ser COMISLE')
+}
+
+if (curatedResponses && scriptCatalog) {
+  expect(curatedResponses.schemaVersion === 1, 'Respostas curadas: schemaVersion deve ser 1')
+  expect(Array.isArray(curatedResponses.scripts), 'Respostas curadas: scripts deve ser uma lista')
+  const curatedScripts = Array.isArray(curatedResponses.scripts) ? curatedResponses.scripts : []
+  expectUniqueValues(curatedScripts.map((script) => script.id), 'Respostas curadas')
+  curatedScripts.forEach((script, index) => {
+    const prefix = `Respostas curadas: scripts[${index}]`
+    expect(scriptCatalog.scripts.some((catalogScript) => catalogScript.id === script.id), `${prefix}: script original inexistente`)
+    expect(Boolean(script.title), `${prefix}: title obrigatório`)
+    expect(Boolean(script.validation), `${prefix}: validation obrigatória`)
+    expect(Array.isArray(script.bodyLines) && script.bodyLines.join('\n').trim().length > 0, `${prefix}: bodyLines obrigatório`)
+  })
+
+  const clinicResponse = curatedScripts.find((script) => script.id === 'trello-64fe3bd5d6087d02fc82d184')
+  const clinicBody = clinicResponse?.bodyLines?.join('\n') || ''
+  expect(clinicResponse?.validation === 'operator-confirmed-2026-08-19', 'Troca de clínica: confirmação atual do operador obrigatória')
+  expect(clinicBody.includes('PRESENCIALMENTE ou POR E-MAIL'), 'Troca de clínica: duas formas de abertura obrigatórias')
+  expect(clinicBody.includes('agendamento-recursos-e-protocolo.html'), 'Troca de clínica: link de agendamento obrigatório')
+  expect(clinicBody.includes('FORMULÁRIO DE TROCA DE CLÍNICA'), 'Troca de clínica: formulário específico obrigatório')
+  expect(clinicBody.includes('Formulário RENACH; (Caso possua)'), 'Troca de clínica: RENACH deve permanecer condicional')
+  expect(clinicBody.includes('HAB0135_comprovacao_local_trabalho.pdf'), 'Troca de clínica: declaração de trabalho HAB0135 obrigatória')
+  expect(clinicBody.includes('arquivos que estão em NUVEM'), 'Troca de clínica: proibição de arquivos em nuvem obrigatória')
+  expect(clinicBody.includes('Os arquivos devem ser enviados em um único e-mail'), 'Troca de clínica: envio em um único e-mail obrigatório')
+  expect(!clinicBody.includes('Requerimento Geral'), 'Troca de clínica: resposta antiga com Requerimento Geral não pode retornar')
+  expect(!clinicBody.includes('100 DPI'), 'Troca de clínica: regra antiga de 100 DPI não pode retornar')
+  expect(!clinicBody.includes('2,9 MB'), 'Troca de clínica: limite antigo de 2,9 MB não pode retornar')
+}
+
 [
   'browser_action/index.html',
   'browser_action/main.js',
@@ -253,9 +580,16 @@ if (responseModels) {
   'cs_modules/fast_mail/index.js',
   'cs_modules/fast_mail/styles.css',
   'cs_modules/fast_proc_handoff/index.js',
+  'data/relatorio-importacao-trellinho.json',
+  'data/trellinho-import-rules.json',
+  'docs/ATUALIZACAO-TRELLINHO.md',
+  'docs/CHECKPOINT-OPERACIONAL-0.5.0.md',
+  'docs/CHECKPOINT-TRANSICAO-FAST-MAIL-TRELINHO-2026-08-14.md',
   'docs/CHECKLIST-REGRESSAO.md',
   'docs/PLANO-MESTRE.md',
-  'docs/REGRAS-FUNCIONAIS.md'
+  'docs/REGRAS-FUNCIONAIS.md',
+  'scripts/import-trellinho-html.js',
+  'scripts/test-trellinho-import.js'
 ].forEach((file) => expectFile(file, 'Linha de base funcional'))
 
 if (errors.length) {

@@ -7,24 +7,23 @@ body {
 }
 
 #title {
-    display: grid;
-    gap: 2px;
+    display: flex;
+    align-items: center;
     color: #fff;
     background-color: #06172d;
     margin: 0;
-    padding: 15px 18px 13px;
+    min-height: 72px;
+    padding: 12px 16px;
     border-bottom: 3px solid #e0ae28;
 }
 
-#title strong {
-    font-size: 17px;
-}
-
-#title small {
-    color: #f1c44f;
-    font-family: "Segoe Script", "Brush Script MT", cursive;
-    font-size: 9px;
-    font-style: italic;
+#title img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 48px;
+    object-fit: contain;
+    object-position: left center;
 }
 
 #popup-content {

@@ -3,7 +3,7 @@
 
   if (window.top !== window) return
 
-  const IS_COMPOSE_WINDOW = /[?&]ae=PreFormAction(?:&|$)/i.test(location.search) &&
+  const IS_COMPOSE_WINDOW = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(location.search) &&
     /[?&]a=(?:Reply|ReplyAll|Forward|New)(?:&|$)/i.test(location.search)
 
   const api = typeof browser === 'undefined' ? chrome : browser
@@ -12,20 +12,37 @@
   const FAST_PROC_HANDOFF_KEY = 'fastMailFastProcHandoff'
   const EMAIL_RESULT_KEY = 'fastMailProcessoFinalizado'
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
+  const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
+  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+  const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
+  const FEEDBACK_DESTINATION = atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
+  const SCRIPT_CATALOG_PATH = 'data/catalogo-scripts.json'
+  const CURATED_RESPONSES_PATH = 'data/respostas-curadas.json'
   const HISTORY_SEPARATOR = '----- HISTÓRICO DE MENSAGENS ANTERIORES -----'
-  const DAF_FORM_URL = 'https://www.detran.rj.gov.br/images/formularios/DA0032_devolutaxa.pdf'
-  const RESIDENCE_DECLARATION_URL = 'https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf'
-  const GENERAL_REQUEST_URL = 'https://www5.detran.rj.gov.br/_include/on_line/formularios/DETRAN_0049_requerimento_geral.pdf'
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
+  const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
+  const PRIORITY_AREA_ORDER = ['habilitacao', 'pericia-medica', 'veiculos', 'taxas', 'oficios']
+  const CATALOG_OPEN_LABEL = 'BUSCAR OUTRO ATENDIMENTO'
+  const CATALOG_CLOSE_LABEL = 'FECHAR BUSCA'
 
   let catalogProcesses = []
   let catalogNavigation = { areas: [] }
+  let priorityTopics = []
+  let responseScripts = []
+  let responseScriptPhases = []
+  let priorityResponseScriptIds = null
+  let selectedWorkflowPhaseId = ''
+  let selectedPriorityAreaId = ''
+  let activePriorityAction = ''
   let currentOperator = null
+  let attendanceSenderEmail = ''
+  let attendanceInitialized = false
   let processResultAutofillRunning = false
+  const recordedMetricEvents = new Set()
 
   function processTypeById (procedureId) {
     return catalogProcesses.find((item) => item.id === procedureId) || null
@@ -64,6 +81,40 @@
     })
     if (result?.then) result.then(resolve, reject)
   })
+
+  async function recordWorkdayMetric (metric) {
+    try {
+      const subject = findSubjectField()
+      const eventKey = `${metric}:${findSenderEmail()}:${cleanValue(subject?.value || subject?.textContent)}`
+      if (recordedMetricEvents.has(eventKey)) return
+
+      const stored = await storageGet([OPERATOR_KEY, METRICS_KEY])
+      const operatorNumber = cleanValue(stored[OPERATOR_KEY]?.number)
+      const allMetrics = stored[METRICS_KEY] && typeof stored[METRICS_KEY] === 'object'
+        ? stored[METRICS_KEY]
+        : {}
+      const state = operatorNumber ? allMetrics[operatorNumber] : null
+      if (!state?.active) return
+
+      const counters = state.active.counters || {}
+      const nextState = {
+        ...state,
+        active: {
+          ...state.active,
+          counters: {
+            emails: Number(counters.emails || 0),
+            processes: Number(counters.processes || 0),
+            requirements: Number(counters.requirements || 0),
+            [metric]: Number(counters[metric] || 0) + 1
+          }
+        }
+      }
+      await storageSet({ [METRICS_KEY]: { ...allMetrics, [operatorNumber]: nextState } })
+      recordedMetricEvents.add(eventKey)
+    } catch (error) {
+      console.warn('[SEI Protocolistas] Não foi possível registrar a métrica local:', error)
+    }
+  }
 
   const runtimeMessage = (message) => new Promise((resolve, reject) => {
     const result = api.runtime.sendMessage(message, (response) => {
@@ -181,10 +232,48 @@
     }
   }
 
+  function validStoredOperator (value) {
+    const number = cleanValue(value?.number)
+    const email = normalizeEmail(value?.email)
+    const expectedEmail = number
+      ? `protocolista${number}@detran.rj.gov.br`
+      : ''
+
+    if (
+      !/^\d{1,4}$/.test(number) ||
+      email !== expectedEmail
+    ) {
+      return null
+    }
+
+    return {
+      ...value,
+      number,
+      email: expectedEmail,
+      source: value.source || 'central-config'
+    }
+  }
+
+  async function resolveOperator () {
+    const visibleOperator = findOperator()
+
+    if (visibleOperator) {
+      await storageSet({
+        [OPERATOR_KEY]: visibleOperator
+      })
+      return visibleOperator
+    }
+
+    const stored = await storageGet(OPERATOR_KEY)
+    return validStoredOperator(
+      stored[OPERATOR_KEY]
+    )
+  }
+
   function normalizeEmail (value) {
     return String(value || '')
       .replace(/^mailto:/i, '')
-      .replace(/[\[\]<>]/g, '')
+      .replace(/[[\]<>]/g, '')
       .split('?')[0]
       .trim()
       .toLowerCase()
@@ -214,6 +303,7 @@
       const email = extractEmailFromCurrentHeaderText(text)
       if (!email) return
       if (/^protocolista\d+@detran\.rj\.gov\.br$/i.test(email)) return
+      if (email === normalizeEmail(BCC_EMAIL)) return
 
       const paraIndex = text.search(/(?:^|\n)\s*Para:\s*/i)
       candidates.push({
@@ -498,7 +588,6 @@
     return filled
   }
 
-
   function escapeHtml (value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -508,32 +597,142 @@
       .replace(/'/g, '&#039;')
   }
 
+  function messageBodyFrame (element) {
+    try {
+      return element?.ownerDocument?.defaultView?.frameElement || null
+    } catch (_) {
+      return null
+    }
+  }
+
+  function isInsideMessageHeader (element) {
+    if (!element) return false
+    if (element.closest?.('#divHdrMessage')) return true
+    const frame = messageBodyFrame(element)
+    return Boolean(frame?.closest?.('#divHdrMessage'))
+  }
+
+  function isPlainTextMessageBody (element) {
+    return Boolean(
+      element &&
+      element.matches?.('textarea#txtBdy') &&
+      element.closest?.('#divBdy') &&
+      !element.disabled &&
+      !element.readOnly &&
+      !isInsideMessageHeader(element)
+    )
+  }
+
+  function isHtmlMessageBody (element) {
+    if (!element || element !== element.ownerDocument?.body) return false
+
+    const frame = messageBodyFrame(element)
+    if (!frame?.matches?.('iframe#ifBdy')) return false
+    if (!frame.closest?.('#divBdy') || frame.closest?.('#divHdrMessage')) return false
+
+    const doc = element.ownerDocument
+    return doc.designMode?.toLowerCase() === 'on' || element.isContentEditable
+  }
+
+  function isSafeMessageBodyEditor (element) {
+    if (!element || isInsideMessageHeader(element)) return false
+    return isPlainTextMessageBody(element) || isHtmlMessageBody(element)
+  }
+
   function findMessageBodyEditor () {
-    const candidates = []
-
     for (const doc of allDocuments()) {
-      const elements = Array.from(doc.querySelectorAll('[contenteditable="true"], body[contenteditable="true"]'))
-
-      if (doc.designMode?.toLowerCase() === 'on' && doc.body) elements.push(doc.body)
-
-      for (const element of elements) {
-        if (!isVisible(element)) continue
-        if (element.closest?.('#sei-protocolistas-fast-mail-status')) continue
-        if (element.matches?.('input,textarea')) continue
-
-        const rect = element.getBoundingClientRect()
-        const area = rect.width * rect.height
-        if (area < 12000) continue
-
-        const label = `${element.getAttribute?.('aria-label') || ''} ${element.getAttribute?.('title') || ''}`
-        if (/assunto|subject|bcc|cc|destinat|recipient/i.test(label)) continue
-
-        candidates.push({ element, score: area + (element.innerText?.length || 0) })
+      const plainTextBody = doc.querySelector('#divBdy textarea#txtBdy')
+      if (plainTextBody && isVisible(plainTextBody) && isPlainTextMessageBody(plainTextBody)) {
+        return plainTextBody
       }
+
+      const htmlFrame = doc.querySelector('#divBdy iframe#ifBdy')
+      if (!htmlFrame || !isVisible(htmlFrame) || htmlFrame.closest?.('#divHdrMessage')) continue
+
+      try {
+        const htmlBody = htmlFrame.contentDocument?.body
+        if (htmlBody && isHtmlMessageBody(htmlBody)) return htmlBody
+      } catch (_) {}
     }
 
-    candidates.sort((a, b) => b.score - a.score)
-    return candidates[0]?.element || null
+    return null
+  }
+
+  function assertSafeMessageBodyEditor (editor) {
+    if (!isSafeMessageBodyEditor(editor)) {
+      throw new Error('SEGURANÇA: o corpo do e-mail não foi identificado com segurança. Nada foi inserido.')
+    }
+  }
+
+  function dispatchBodyEvent (editor, type) {
+    const view = editor?.ownerDocument?.defaultView || window
+    editor?.dispatchEvent(new view.Event(type, { bubbles: true }))
+  }
+
+  function setPlainTextBodyValue (editor, value) {
+    assertSafeMessageBodyEditor(editor)
+    if (!isPlainTextMessageBody(editor)) {
+      throw new Error('SEGURANÇA: o editor em Texto simples não foi identificado com segurança.')
+    }
+
+    const view = editor.ownerDocument?.defaultView || window
+    const prototype = view.HTMLTextAreaElement?.prototype
+    const descriptor = prototype && Object.getOwnPropertyDescriptor(prototype, 'value')
+
+    editor.focus()
+    if (descriptor?.set) descriptor.set.call(editor, value)
+    else editor.value = value
+    dispatchBodyEvent(editor, 'input')
+    dispatchBodyEvent(editor, 'change')
+  }
+
+  function htmlToPlainText (html, doc = document) {
+    const container = doc.createElement('div')
+    container.innerHTML = String(html || '')
+
+    container.querySelectorAll('a[href]').forEach((link) => {
+      const href = String(link.getAttribute('href') || '').replace(/^mailto:/i, '')
+      const label = cleanValue(link.textContent)
+      if (!href) return
+      if (label.toLowerCase() === href.toLowerCase() || label.includes(href)) return
+      link.appendChild(doc.createTextNode(`${label ? ' — ' : ''}${href}`))
+    })
+
+    container.querySelectorAll('br').forEach((br) => {
+      br.replaceWith(doc.createTextNode('\n'))
+    })
+
+    container.querySelectorAll('li').forEach((item) => {
+      item.insertBefore(doc.createTextNode('• '), item.firstChild)
+      item.appendChild(doc.createTextNode('\n'))
+    })
+
+    container.querySelectorAll('p,div,ul,ol,h1,h2,h3,h4,h5,h6').forEach((block) => {
+      block.appendChild(doc.createTextNode('\n'))
+    })
+
+    return String(container.textContent || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n[ \t]+/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
+  function messageBodyContainsResponse (editor, selector, responseHtml) {
+    assertSafeMessageBodyEditor(editor)
+
+    if (!isPlainTextMessageBody(editor)) {
+      return Boolean(editor.querySelector?.(selector))
+    }
+
+    const responseText = htmlToPlainText(responseHtml, editor.ownerDocument)
+    const probe = responseText
+      .split(/\n+/)
+      .map(cleanValue)
+      .find((line) => line.length >= 24) || cleanValue(responseText).slice(0, 80)
+
+    return Boolean(probe && String(editor.value || '').includes(probe))
   }
 
   function selectedMissingDocuments () {
@@ -547,6 +746,7 @@
 
   function buildMissingDocumentsRequirementHtml (name, procedureLabel, documents) {
     const safeName = escapeHtml(cleanValue(name))
+    const greeting = safeName ? `Olá, ${safeName}.` : 'Olá.'
     const safeProcedureLabel = escapeHtml(cleanValue(procedureLabel))
     const items = documents
       .map((item) => `<li style="margin:0 0 7px 0;">${escapeHtml(item.text)}</li>`)
@@ -564,12 +764,12 @@
 
     return `
       <div data-sei-protocolistas="missing-documents-requirement" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
-        <p style="margin:0 0 14px 0;">Olá, ${safeName}.</p>
+        <p style="margin:0 0 14px 0;">${greeting}</p>
         <p style="margin:0 0 12px 0;">Após a análise da documentação encaminhada, identificamos a necessidade do envio dos seguintes documentos para dar continuidade à solicitação de ${safeProcedureLabel}:</p>
         <ul style="margin:0 0 14px 22px;padding:0;">${items}</ul>
         ${links}
-        <div style="margin:16px 0 0 0;padding:12px 14px;background:#fff1f1;border:1px solid #c94b4b;border-left:4px solid #b42318;border-radius:4px;color:#1f1f1f;">
-          <p style="margin:0 0 7px 0;color:#9f1c13;font-weight:700;">ATENÇÃO</p>
+        <div style="margin:16px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #7a8491;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 7px 0;font-weight:700;">ATENÇÃO</p>
           <p style="margin:0 0 7px 0;">Para prosseguirmos com o atendimento, responda a esta mesma mensagem e reenvie, em um único e-mail, <strong>todos os documentos necessários, inclusive aqueles que já foram enviados anteriormente</strong>.</p>
           <p style="margin:0;"><strong>O envio apenas dos documentos indicados como faltantes não será suficiente para a continuidade da solicitação.</strong></p>
         </div>
@@ -579,8 +779,28 @@
   }
 
   function insertRequirementIntoBody (editor, responseHtml) {
-    if (editor.querySelector?.('[data-sei-protocolistas="missing-documents-requirement"]')) {
+    if (messageBodyContainsResponse(
+      editor,
+      '[data-sei-protocolistas="missing-documents-requirement"]',
+      responseHtml
+    )) {
       throw new Error('A exigência já foi inserida nesta resposta.')
+    }
+
+    insertResponseBeforeHistory(editor, responseHtml)
+  }
+
+  function insertResponseBeforeHistory (editor, responseHtml) {
+    assertSafeMessageBodyEditor(editor)
+
+    if (isPlainTextMessageBody(editor)) {
+      const responseText = htmlToPlainText(responseHtml, editor.ownerDocument)
+      if (!responseText) throw new Error('A resposta não possui conteúdo para inserir.')
+
+      const oldText = String(editor.value || '').replace(/\r\n/g, '\n')
+      const separator = `\n\n${HISTORY_SEPARATOR}\n\n`
+      setPlainTextBodyValue(editor, `${responseText}${separator}${oldText}`)
+      return
     }
 
     const oldHtml = editor.innerHTML || ''
@@ -588,8 +808,8 @@
 
     editor.focus()
     editor.innerHTML = `${responseHtml}${separator}${oldHtml}`
-    editor.dispatchEvent(new Event('input', { bubbles: true }))
-    editor.dispatchEvent(new Event('change', { bubbles: true }))
+    dispatchBodyEvent(editor, 'input')
+    dispatchBodyEvent(editor, 'change')
   }
 
   function renderMissingDocumentsOptions () {
@@ -614,20 +834,15 @@
 
     const documents = missingDocumentsForProcedure(procedure.value)
     const hasDocumentModel = documents.length > 0
-    box.hidden = !hasDocumentModel
+    box.hidden = !hasDocumentModel || activePriorityAction !== 'missing'
 
-    if (!hasDocumentModel) {
+    if (!hasDocumentModel || activePriorityAction !== 'missing') {
       if (list) list.hidden = true
       return
     }
 
     renderMissingDocumentsOptions()
-  }
-
-  function toggleMissingDocuments () {
-    const list = document.querySelector('#spfm-missing-list')
-    if (!list) return
-    list.hidden = !list.hidden
+    if (list) list.hidden = false
   }
 
   async function insertMissingDocumentsRequirement () {
@@ -639,7 +854,6 @@
       if (!processType) throw new Error('Selecione o procedimento.')
 
       const name = cleanValue(document.querySelector('#spfm-requester-name')?.value)
-      if (!name) throw new Error('Digite o nome do requerente.')
 
       const documents = selectedMissingDocuments()
       if (!documents.length) throw new Error('Marque pelo menos um documento faltante.')
@@ -656,43 +870,138 @@
           documents
         )
       )
-      if (status) status.textContent = 'Exigência inserida com sucesso.'
+      await recordWorkdayMetric('emails')
+      await recordWorkdayMetric('requirements')
+      setEmailPreparationVisible(true)
+      if (status) status.textContent = 'Exigência inserida. Agora prepare o e-mail.'
+      document.querySelector('#spfm-email-preparation')?.scrollIntoView?.({ block: 'nearest' })
     } catch (error) {
       if (status) status.textContent = error.message || 'Não foi possível inserir a exigência'
     }
   }
 
+  function processCompletedResponseModel (payload) {
+    const procedureId = cleanValue(payload?.procedureId)
+    const processType = processTypeById(procedureId)
+    const configuredModel = cleanValue(processType?.responseModel).toLowerCase()
+    const areaId = cleanValue(payload?.areaId || processType?.category).toLowerCase()
+    const destination = cleanValue(payload?.destino).toUpperCase()
+    const processLabel = cleanValue(payload?.tipo).toUpperCase()
+
+    if (configuredModel === 'daf' || procedureId === 'devolucao-taxas' || areaId === 'taxas' || /\b(?:DIVAF|DAF)\b/.test(destination) || /DEVOLU[CÇ][AÃ]O DE TAXAS/.test(processLabel)) return 'daf'
+    if (configuredModel === 'divmed' || procedureId === 'solicitacao-pericia-medica' || /\bDIVMED\b/.test(destination) || /PER[IÍ]CIA M[EÉ]DICA/.test(processLabel)) return 'divmed'
+    if (areaId === 'veiculos' || configuredModel === 'drv' || /SOLICITA[CÇ][OÕ]ES GERAIS - VE[IÍ]CULOS/.test(processLabel)) return 'drv'
+    return 'standard'
+  }
+
+  function generalServiceChannelsHtml () {
+    return `
+      <div style="margin:14px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-radius:4px;color:#1f1f1f;">
+        <p style="margin:0 0 8px 0;font-weight:700;">CANAIS GERAIS DO DETRAN-RJ</p>
+        <p style="margin:0 0 5px 0;"><strong>Teleatendimento:</strong> (21) 3460-4040 ou (21) 3460-4041</p>
+        <p style="margin:0 0 5px 0;"><strong>Ouvidoria:</strong> (21) 2332-0438 ou (21) 2321-0450</p>
+        <p style="margin:0;"><strong>WhatsApp:</strong> <a href="https://api.whatsapp.com/send/?phone=552134604040&amp;text&amp;type=phone_number&amp;app_absent=0">(21) 3460-4040</a></p>
+      </div>`
+  }
+
+  function processModelSpecificHtml (model) {
+    if (model === 'daf') {
+      return `
+        <p style="margin:18px 0 10px 0;font-weight:700;">CONTATO E EXIGÊNCIAS — DIVAF/DAF</p>
+        <div style="margin:0;padding:12px 14px;background:#fff8e6;border:1px solid #e2c36a;border-left:4px solid #c69214;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 9px 0;">O Serviço de Protocolo não fornece informações sobre processos que já estão em tramitação. Para consultas, exigências ou informações sobre o pagamento, entre em contato diretamente com o setor responsável:</p>
+          <p style="margin:0 0 5px 0;"><strong>Assuntos de pagamento:</strong> (21) 2332-0043</p>
+          <p style="margin:0 0 5px 0;"><strong>Consultas e exigências:</strong> (21) 2332-0078 ou (21) 2332-0070</p>
+          <p style="margin:0;"><strong>E-mail:</strong> <a href="mailto:DAF.ANL@DETRAN.RJ.GOV.BR">DAF.ANL@DETRAN.RJ.GOV.BR</a></p>
+        </div>
+        <div style="margin:12px 0 0 0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0;"><strong>Sobre a devolução:</strong> o crédito será realizado em conta bancária de titularidade do requerente. Acompanhe a entrada do valor pelo extrato bancário.</p>
+        </div>
+        ${generalServiceChannelsHtml()}`
+    }
+
+    if (model === 'drv') {
+      return `
+        <p style="margin:18px 0 10px 0;font-weight:700;">CONTATO E EXIGÊNCIAS — VEÍCULOS</p>
+        <div style="margin:0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 8px 0;">Para sanar eventuais exigências, compareça à unidade onde o processo se encontra ou entre em contato diretamente com o setor responsável.</p>
+          <p style="margin:0;"><strong>E-mail:</strong> <a href="mailto:atendimento.drv@detran.rj.gov.br">atendimento.drv@detran.rj.gov.br</a></p>
+        </div>
+        ${generalServiceChannelsHtml()}`
+    }
+
+    if (model === 'divmed') {
+      return `
+        <p style="margin:18px 0 10px 0;font-weight:700;">CONTATO E EXIGÊNCIAS — DIVMED</p>
+        <div style="margin:0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 8px 0;">A partir deste momento, eventuais exigências, instruções ou informações sobre o processo devem ser tratadas diretamente com o setor responsável.</p>
+          <p style="margin:0;"><strong>WhatsApp DIVMED:</strong> <a href="https://wa.me/552123320206">(21) 2332-0206</a></p>
+        </div>`
+    }
+
+    return `
+      <div style="margin:18px 0 0 0;padding:12px 14px;background:#eef5fb;border:1px solid #b7cbe0;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+        <p style="margin:0;">Seu atendimento pelo Serviço de Protocolo está encerrado. A partir deste momento, todas as tratativas, exigências e informações sobre o processo devem ser realizadas diretamente junto ao setor onde ele se encontra.</p>
+      </div>
+      ${generalServiceChannelsHtml()}`
+  }
 
   function buildProcessCompletedResponseHtml (payload) {
-    const name = escapeHtml(cleanValue(payload?.requerente) || 'requerente')
+    const name = escapeHtml(cleanValue(payload?.requerente))
+    const greeting = name ? `Olá, ${name}.` : 'Olá.'
     const processNumber = escapeHtml(cleanValue(payload?.numero))
+    const processDate = escapeHtml(cleanValue(payload?.data))
     const processType = escapeHtml(cleanValue(payload?.tipo))
     const destination = escapeHtml(cleanValue(payload?.destino))
+    const responseModel = processCompletedResponseModel(payload)
 
     return `
       <div data-sei-protocolistas="process-completed-response" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
-        <p style="margin:0 0 14px 0;">Olá, ${name}.</p>
-        <p style="margin:0 0 14px 0;">Informamos que sua solicitação foi protocolada e encaminhada para análise.</p>
-        <p style="margin:0 0 6px 0;"><strong>Número do processo:</strong> ${processNumber || 'Não identificado'}</p>
-        <p style="margin:0 0 6px 0;"><strong>Tipo de processo:</strong> ${processType || 'Não identificado'}</p>
-        <p style="margin:0 0 14px 0;"><strong>Unidade de destino:</strong> ${destination || 'Não identificada'}</p>
-        <p style="margin:0 0 14px 0;">O atendimento por e-mail foi concluído. Guarde o número do processo para futuras consultas.</p>
-        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Serviço de Protocolo<br>DETRAN-RJ</p>
+        <p style="margin:0 0 14px 0;">${greeting}</p>
+        <p style="margin:0 0 14px 0;">Seu processo foi aberto no Sistema Eletrônico de Informações do Estado do Rio de Janeiro — SEI-RJ e encaminhado à unidade responsável para análise.</p>
+
+        <p style="margin:18px 0 10px 0;font-weight:700;">DADOS DO PROCESSO</p>
+        <div style="margin:0 0 16px 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #174a7e;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 6px 0;"><strong>Número do processo:</strong> ${processNumber || 'Não identificado'}</p>
+          <p style="margin:0 0 6px 0;"><strong>Data de abertura:</strong> ${processDate || 'Não identificada'}</p>
+          <p style="margin:0 0 6px 0;"><strong>Tipo do processo:</strong> ${processType || 'Não identificado'}</p>
+          <p style="margin:0;"><strong>Unidade de destino:</strong> ${destination || 'Não identificada'}</p>
+        </div>
+
+        <p style="margin:18px 0 10px 0;font-weight:700;">COMO ACOMPANHAR</p>
+        <p style="margin:0 0 12px 0;">Guarde o número completo do processo para acompanhar o andamento da sua solicitação.</p>
+        <p style="margin:0 0 6px 0;">A consulta pode ser realizada pela <a href="https://portalsei.rj.gov.br/pesquisaprocessualmunicipios"><strong>Pesquisa Pública do SEI-RJ</strong></a>.</p>
+        <ol style="margin:0 0 16px 22px;padding:0;">
+          <li style="margin:0 0 5px 0;">Digite o número completo do processo, incluindo “SEI-”;</li>
+          <li style="margin:0 0 5px 0;">No campo “Municípios”, selecione “ERJ”;</li>
+          <li style="margin:0 0 5px 0;">Digite o código de verificação exibido;</li>
+          <li style="margin:0;">Clique em “Pesquisar processos” e, depois, no número azul do processo.</li>
+        </ol>
+
+        ${processModelSpecificHtml(responseModel)}
+
+        <div style="margin:18px 0 0 0;padding:12px 14px;background:#f6f7f9;border:1px solid #c9ced6;border-left:4px solid #7a8491;border-radius:4px;color:#1f1f1f;">
+          <p style="margin:0 0 7px 0;font-weight:700;">IMPORTANTE</p>
+          <p style="margin:0 0 9px 0;">O protocolo confirma o recebimento e o encaminhamento da solicitação, mas não representa a aprovação do pedido. A análise será realizada pela unidade de destino indicada acima.</p>
+          <p style="margin:0;">A Administração poderá solicitar a apresentação dos documentos originais enviados eletronicamente, conforme o art. 49 do Decreto SEI-RJ nº 48.209, de 19 de setembro de 2022.</p>
+        </div>
+
+        <div style="margin:18px 0 0 0;padding:11px 14px;background:#fff8e6;border:1px solid #e2c36a;border-radius:4px;text-align:center;font-weight:700;color:#5c4500;">POR FAVOR, NÃO RESPONDA ESTE E-MAIL.</div>
+
+        <p style="margin:18px 0 0 0;">Atenciosamente,<br><br>Atendimento do Serviço de Protocolo<br>DETRAN-RJ</p>
       </div>`
   }
 
   function insertProcessCompletedResponse (editor, responseHtml) {
-    if (editor.querySelector?.('[data-sei-protocolistas="process-completed-response"]')) {
+    if (messageBodyContainsResponse(
+      editor,
+      '[data-sei-protocolistas="process-completed-response"]',
+      responseHtml
+    )) {
       throw new Error('A resposta do processo já foi inserida neste e-mail.')
     }
 
-    const oldHtml = editor.innerHTML || ''
-    const separator = `<div data-sei-protocolistas="history-separator" style="margin:22px 0 14px 0;padding-top:10px;border-top:1px solid #a7a7a7;color:#666;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;">${HISTORY_SEPARATOR}</div>`
-
-    editor.focus()
-    editor.innerHTML = `${responseHtml}${separator}${oldHtml}`
-    editor.dispatchEvent(new Event('input', { bubbles: true }))
-    editor.dispatchEvent(new Event('change', { bubbles: true }))
+    insertResponseBeforeHistory(editor, responseHtml)
   }
 
   function shortDestinationForSubject (value) {
@@ -717,7 +1026,7 @@
   function compactDateForSubject (value) {
     const raw = cleanValue(value)
 
-    const direct = raw.match(/\b(\d{2})[\/.-](\d{2})[\/.-](\d{4})\b/)
+    const direct = raw.match(/\b(\d{2})[/.-](\d{2})[/.-](\d{4})\b/)
     if (direct) return `${direct[1]}${direct[2]}${direct[3]}`
 
     const now = new Date()
@@ -811,10 +1120,22 @@
     const destination = document.querySelector('#spfm-destination')
     const destinationField = document.querySelector('#spfm-destination-field')
     const missingBox = document.querySelector('#spfm-missing-box')
+    const priorityReply = document.querySelector('#spfm-priority-reply')
+    const priorityMissing = document.querySelector('#spfm-priority-missing')
+    const priorityOpen = document.querySelector('#spfm-priority-open')
+    const priorityStatus = document.querySelector('#spfm-priority-status')
 
     if (openButton) openButton.hidden = true
     if (triageButton) triageButton.hidden = true
     if (missingBox) missingBox.hidden = true
+    if (priorityReply) priorityReply.hidden = true
+    if (priorityMissing) priorityMissing.hidden = true
+    if (priorityOpen) priorityOpen.hidden = true
+    if (priorityStatus) {
+      priorityStatus.textContent = payload?.numero
+        ? `Processo ${cleanValue(payload.numero)} criado e resposta preparada.`
+        : 'Processo criado e resposta preparada.'
+    }
 
     if (destinationField) destinationField.hidden = false
     if (destination && payload?.destino) destination.value = cleanValue(payload.destino)
@@ -863,14 +1184,18 @@
         throw new Error('Não foi possível atualizar automaticamente o assunto do e-mail.')
       }
 
-      if (!editor.querySelector?.('[data-sei-protocolistas="process-completed-response"]')) {
-        insertProcessCompletedResponse(
-          editor,
-          buildProcessCompletedResponseHtml(payload)
-        )
+      const responseHtml = buildProcessCompletedResponseHtml(payload)
+      if (!messageBodyContainsResponse(
+        editor,
+        '[data-sei-protocolistas="process-completed-response"]',
+        responseHtml
+      )) {
+        insertProcessCompletedResponse(editor, responseHtml)
       }
 
       renderAttendanceCompletedState(payload)
+
+      await recordWorkdayMetric('emails')
 
       await storageRemove(EMAIL_RESULT_KEY)
 
@@ -899,7 +1224,6 @@
     await insertPendingProcessResponse(true)
   }
 
-
   function cleanValue (value) {
     return String(value || '').replace(/\s+/g, ' ').trim()
   }
@@ -918,16 +1242,681 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const payload = await response.json()
       catalogProcesses = Array.isArray(payload.processTypes) ? payload.processTypes : []
+      priorityTopics = Array.isArray(payload.fastMailPriorityTopics)
+        ? payload.fastMailPriorityTopics.slice().sort((a, b) =>
+          Number(a.corePriorityRank || Number.MAX_SAFE_INTEGER) - Number(b.corePriorityRank || Number.MAX_SAFE_INTEGER) ||
+          Number(b.recentUsageCount || 0) - Number(a.recentUsageCount || 0)
+        )
+        : []
       catalogNavigation = payload.fastMailNavigation && Array.isArray(payload.fastMailNavigation.areas)
         ? payload.fastMailNavigation
         : { areas: [] }
       renderProcedureOptions()
       renderAreaOptions()
+      renderPriorityAreas()
+      renderPriorityTopics()
     } catch (error) {
       console.error('[SEI Protocolistas] Falha ao carregar catálogo no FAST MAIL:', error)
       const select = document.querySelector('#spfm-procedure')
       if (select) select.innerHTML = '<option value="">Catálogo indisponível</option>'
     }
+  }
+
+  function normalizeSearchText (value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  }
+
+  function scriptSearchText (script) {
+    if (!script._searchText) {
+      script._searchText = normalizeSearchText([
+        script.title,
+        script.phaseLabel,
+        script.group,
+        script.body
+      ].join(' '))
+    }
+    return script._searchText
+  }
+
+  function normalizeOfficialLinks (body) {
+    return String(body || '')
+      .replace(/\\_/g, '_')
+      .replace(
+        /https:\/\/(?:www5\.)?detran\.rj\.gov\.br\/(?:_include\/on_line\/formularios\/|images\/formularios\/)DETRAN(?:\\|_)?0049(?:\\|_)?requerimento(?:\\|_)?geral\.pdf/gi,
+        'https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf'
+      )
+      .replace(
+        /https:\/\/www\.detran\.rj\.gov\.br\/(?:_include\/on_line\/formularios\/|images\/formularios\/)DETRAN0034(?:\\|_)?declararesid\.pdf/gi,
+        'https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf'
+      )
+      .replace(
+        /https:\/\/www\.detran\.rj\.gov\.br\/_monta_aplicacoes\.asp\?cod=16&tipo=lista_ciretrans/gi,
+        'https://www.detran.rj.gov.br/consultas/consultas-drv/lista-de-ciretrans-sats.html'
+      )
+  }
+
+  function filteredResponseScripts () {
+    const phase = document.querySelector('#spfm-script-phase')?.value || ''
+    const query = normalizeSearchText(document.querySelector('#spfm-script-search')?.value)
+    const terms = query.split(' ').filter(Boolean)
+
+    return responseScripts.filter((script) => {
+      if (!script.body) return false
+      if (priorityResponseScriptIds && !priorityResponseScriptIds.has(script.id)) return false
+      if (phase && script.phase !== phase) return false
+      const haystack = scriptSearchText(script)
+      return terms.every((term) => haystack.includes(term))
+    })
+  }
+
+  function selectedResponseScript () {
+    const scriptId = document.querySelector('#spfm-script-result')?.value || ''
+    return responseScripts.find((script) => script.id === scriptId) || null
+  }
+
+  function renderSelectedResponseScript () {
+    const script = selectedResponseScript()
+    const preview = document.querySelector('#spfm-script-preview')
+    const insertButton = document.querySelector('#spfm-insert-script')
+    if (!preview || !insertButton) return
+
+    preview.textContent = script
+      ? `${script.phaseLabel} › ${script.group}\n${script.title}`
+      : 'Selecione um resultado para conferir.'
+    insertButton.disabled = !script
+  }
+
+  function renderResponseScriptResults () {
+    const select = document.querySelector('#spfm-script-result')
+    const count = document.querySelector('#spfm-script-count')
+    if (!select) return
+
+    const currentValue = select.value
+    const matches = filteredResponseScripts()
+    const visibleMatches = matches.slice(0, 60)
+
+    select.innerHTML = '<option value="">Selecione o script</option>'
+    visibleMatches.forEach((script) => {
+      const option = document.createElement('option')
+      option.value = script.id
+      option.textContent = `${script.phaseLabel} — ${script.title}`
+      select.appendChild(option)
+    })
+
+    if (visibleMatches.some((script) => script.id === currentValue)) {
+      select.value = currentValue
+    }
+
+    if (count) {
+      count.textContent = matches.length > visibleMatches.length
+        ? `${matches.length} encontrados — refine a busca para ver todos`
+        : `${matches.length} script${matches.length === 1 ? '' : 's'} encontrado${matches.length === 1 ? '' : 's'}`
+    }
+    renderSelectedResponseScript()
+  }
+
+  function renderResponseScriptPhases () {
+    const select = document.querySelector('#spfm-script-phase')
+    if (!select) return
+
+    select.innerHTML = '<option value="">Todas as fases</option>'
+    responseScriptPhases.forEach((phase) => {
+      const option = document.createElement('option')
+      option.value = phase.id
+      option.textContent = phase.label
+      select.appendChild(option)
+    })
+    select.value = responseScriptPhases.some((phase) => phase.id === selectedWorkflowPhaseId)
+      ? selectedWorkflowPhaseId
+      : ''
+    renderWorkflowPhases()
+  }
+
+  async function loadResponseScriptCatalog () {
+    const status = document.querySelector('#spfm-script-status')
+    try {
+      const [response, curatedResponse] = await Promise.all([
+        fetch(api.runtime.getURL(SCRIPT_CATALOG_PATH)),
+        fetch(api.runtime.getURL(CURATED_RESPONSES_PATH))
+      ])
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      if (!curatedResponse.ok) throw new Error(`HTTP ${curatedResponse.status}`)
+      const payload = await response.json()
+      const curatedPayload = await curatedResponse.json()
+      const curatedScripts = new Map((curatedPayload.scripts || []).map((script) => [script.id, script]))
+      responseScripts = (Array.isArray(payload.scripts) ? payload.scripts : []).map((script) => {
+        const curated = curatedScripts.get(script.id)
+        if (!curated) return script
+        return {
+          ...script,
+          title: curated.title || script.title,
+          body: normalizeOfficialLinks(Array.isArray(curated.bodyLines) ? curated.bodyLines.join('\n') : curated.body),
+          curation: curated.validation || 'curated'
+        }
+      }).map((script) => ({ ...script, body: normalizeOfficialLinks(script.body) }))
+      responseScriptPhases = Array.isArray(payload.phases) ? payload.phases : []
+      renderResponseScriptPhases()
+      renderResponseScriptResults()
+      const available = responseScripts.filter((script) => script.body).length
+      const empty = responseScripts.length - available
+      if (status) {
+        status.textContent = empty
+          ? `${available} respostas disponíveis; ${empty} cartão sem conteúdo.`
+          : `${available} respostas disponíveis.`
+      }
+    } catch (error) {
+      console.error('[SEI Protocolistas] Falha ao carregar scripts:', error)
+      if (status) status.textContent = 'Catálogo de scripts indisponível.'
+    }
+  }
+
+  function formatScriptLine (line) {
+    const links = []
+    let tokenized = String(line || '').replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)|(https?:\/\/[^\s<>]+)/g,
+      (match, label, markdownUrl, bareUrl) => {
+        const url = markdownUrl || bareUrl
+        const text = label || bareUrl
+        const token = `SPFMLINKTOKEN${links.length}END`
+        links.push({ token, url, text })
+        return token
+      }
+    )
+
+    tokenized = tokenized.replace(/^\s*#{1,6}\s*/, '')
+    let html = escapeHtml(tokenized)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+
+    links.forEach((link) => {
+      html = html.replace(
+        link.token,
+        `<a href="${escapeHtml(link.url)}">${escapeHtml(link.text)}</a>`
+      )
+    })
+    return html
+  }
+
+  function buildCatalogScriptHtml (script) {
+    const body = String(script.body || '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/[ \t]+$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .split(/\r?\n/)
+      .map(formatScriptLine)
+      .join('<br>')
+
+    return `
+      <div data-sei-protocolistas="catalog-script" data-script-id="${escapeHtml(script.id)}" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#000;">
+        ${body}
+      </div>`
+  }
+
+  async function insertResponseScript (script, status = document.querySelector('#spfm-script-status')) {
+    try {
+      if (!script) throw new Error('Selecione um script.')
+
+      const editor = findMessageBodyEditor()
+      if (!editor) throw new Error('Não localizei o corpo editável do e-mail.')
+
+      const responseHtml = buildCatalogScriptHtml(script)
+      if (messageBodyContainsResponse(
+        editor,
+        '[data-sei-protocolistas="catalog-script"]',
+        responseHtml
+      )) {
+        throw new Error('Já existe um script inserido nesta resposta.')
+      }
+
+      insertResponseBeforeHistory(editor, responseHtml)
+      await recordWorkdayMetric('emails')
+      if (status) status.textContent = `Script inserido: ${script.title}`
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Não foi possível inserir o script.'
+    }
+  }
+
+  async function insertSelectedResponseScript () {
+    await insertResponseScript(selectedResponseScript())
+  }
+
+  function toggleResponseScriptCatalog () {
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const button = document.querySelector('#spfm-script-toggle')
+    if (!catalog || !button) return
+
+    const opening = catalog.hidden
+    if (opening && !selectedWorkflowPhaseId) {
+      const status = document.querySelector('#spfm-priority-status')
+      if (status) status.textContent = 'Selecione primeiro a fase do atendimento.'
+      return
+    }
+    catalog.hidden = !catalog.hidden
+    if (opening) {
+      priorityResponseScriptIds = null
+      activePriorityAction = 'catalog'
+      const processSetup = document.querySelector('#spfm-process-setup')
+      const identityFields = document.querySelector('#spfm-identity-fields')
+      const phaseField = document.querySelector('#spfm-script-phase-field')
+      const phaseSelect = document.querySelector('#spfm-script-phase')
+      if (selectedWorkflowPhaseId) {
+        if (processSetup) processSetup.hidden = true
+        if (identityFields) identityFields.hidden = true
+        if (phaseField) phaseField.hidden = true
+        if (phaseSelect) phaseSelect.value = selectedWorkflowPhaseId
+        setEmailPreparationVisible(false)
+        setManualRouteFieldsVisible(false)
+      } else {
+        if (processSetup) processSetup.hidden = false
+        if (identityFields) identityFields.hidden = false
+        if (phaseField) phaseField.hidden = false
+        setEmailPreparationVisible(true)
+        setManualRouteFieldsVisible(true)
+        syncRouteWithProcedure('')
+      }
+      const missingBox = document.querySelector('#spfm-missing-box')
+      if (missingBox) missingBox.hidden = true
+      renderResponseScriptResults()
+    } else {
+      activePriorityAction = ''
+      setEmailPreparationVisible(false)
+    }
+    button.textContent = catalog.hidden ? CATALOG_OPEN_LABEL : CATALOG_CLOSE_LABEL
+    if (!catalog.hidden) document.querySelector('#spfm-script-search')?.focus()
+  }
+
+  function priorityAreaLabel (areaId) {
+    return catalogNavigation.areas.find((area) => area.id === areaId)?.label || areaId
+  }
+
+  function setManualRouteFieldsVisible (visible) {
+    const areaField = document.querySelector('#spfm-area-field')
+    const objectiveField = document.querySelector('#spfm-objective-field')
+    const procedureField = document.querySelector('#spfm-procedure-field')
+    if (areaField) areaField.hidden = !visible
+    if (!visible) {
+      if (objectiveField) objectiveField.hidden = true
+      if (procedureField) procedureField.hidden = true
+    }
+  }
+
+  function setEmailPreparationVisible (visible) {
+    const emailPreparation = document.querySelector('#spfm-email-preparation')
+    if (emailPreparation) emailPreparation.hidden = !visible
+  }
+
+  function workflowPhaseBadge (phase, index) {
+    return phase.id === 'atendimento' ? 'EXTRAS' : `FASE ${index + 1}`
+  }
+
+  function renderWorkflowPhases () {
+    const container = document.querySelector('#spfm-priority-phases')
+    if (!container) return
+
+    container.innerHTML = ''
+    responseScriptPhases.forEach((phase, index) => {
+      const button = document.createElement('button')
+      const badge = document.createElement('span')
+      const label = document.createElement('span')
+      button.type = 'button'
+      button.className = 'spfm-phase-button'
+      button.dataset.phaseId = phase.id
+      button.setAttribute('aria-pressed', String(phase.id === selectedWorkflowPhaseId))
+      button.classList.toggle('is-active', phase.id === selectedWorkflowPhaseId)
+      badge.className = 'spfm-phase-code'
+      badge.textContent = workflowPhaseBadge(phase, index)
+      label.className = 'spfm-phase-name'
+      label.textContent = phase.label
+      button.append(badge, label)
+      button.addEventListener('click', () => selectWorkflowPhase(phase.id))
+      container.appendChild(button)
+    })
+  }
+
+  function hidePriorityDetails () {
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    const actionStep = document.querySelector('#spfm-action-step')
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = true
+    if (missingBox) missingBox.hidden = true
+    if (actionStep) actionStep.hidden = true
+    setEmailPreparationVisible(false)
+  }
+
+  function openWorkflowPhaseCatalog (phaseId) {
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    const phaseField = document.querySelector('#spfm-script-phase-field')
+    const phaseSelect = document.querySelector('#spfm-script-phase')
+    const search = document.querySelector('#spfm-script-search')
+    const result = document.querySelector('#spfm-script-result')
+    if (!catalog || !toggleButton || !phaseSelect) return
+
+    priorityResponseScriptIds = null
+    activePriorityAction = 'catalog'
+    hidePriorityDetails()
+    catalog.hidden = false
+    if (phaseField) phaseField.hidden = true
+    phaseSelect.value = phaseId
+    if (search) search.value = ''
+    if (result) result.value = ''
+    renderResponseScriptResults()
+    toggleButton.textContent = CATALOG_CLOSE_LABEL
+    document.querySelector('#spfm-script-search')?.focus()
+  }
+
+  function selectWorkflowPhase (phaseId) {
+    if (!responseScriptPhases.some((phase) => phase.id === phaseId)) return
+
+    selectedWorkflowPhaseId = phaseId
+    selectedPriorityAreaId = ''
+    priorityResponseScriptIds = null
+    activePriorityAction = ''
+    document.querySelectorAll('.spfm-phase-button').forEach((button) => {
+      const isActive = button.dataset.phaseId === phaseId
+      button.classList.toggle('is-active', isActive)
+      button.setAttribute('aria-pressed', String(isActive))
+    })
+    document.querySelectorAll('.spfm-area-button').forEach((button) => {
+      button.classList.remove('is-active')
+      button.setAttribute('aria-pressed', 'false')
+    })
+
+    const areaStep = document.querySelector('#spfm-area-step')
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const phaseSelect = document.querySelector('#spfm-script-phase')
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    const status = document.querySelector('#spfm-priority-status')
+    if (areaStep) areaStep.hidden = phaseId !== 'orientacao'
+    if (phaseSelect) phaseSelect.value = phaseId
+    hidePriorityDetails()
+    renderPriorityTopics()
+
+    if (phaseId === 'orientacao') {
+      if (catalog) catalog.hidden = true
+      const phaseField = document.querySelector('#spfm-script-phase-field')
+      if (phaseField) phaseField.hidden = true
+      if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+      if (status) status.textContent = 'Selecione uma área de orientação.'
+      return
+    }
+
+    const phase = responseScriptPhases.find((item) => item.id === phaseId)
+    if (status) status.textContent = `${phase?.label || 'Fase'} selecionada. Escolha o script abaixo.`
+    openWorkflowPhaseCatalog(phaseId)
+  }
+
+  function renderPriorityAreas () {
+    const container = document.querySelector('#spfm-priority-areas')
+    if (!container) return
+
+    container.innerHTML = ''
+    PRIORITY_AREA_ORDER.forEach((areaId) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'spfm-area-button'
+      button.dataset.areaId = areaId
+      button.setAttribute('aria-pressed', 'false')
+      button.textContent = priorityAreaLabel(areaId)
+      button.addEventListener('click', () => selectPriorityArea(areaId))
+      container.appendChild(button)
+    })
+  }
+
+  function selectedPriorityTopic () {
+    const topicId = document.querySelector('#spfm-priority-topic')?.value || ''
+    return priorityTopics.find((topic) => topic.id === topicId) || null
+  }
+
+  function selectedPriorityVariant (topic) {
+    const variantId = document.querySelector('#spfm-topic-variant')?.value || ''
+    return topic?.variants?.find((variant) => variant.id === variantId) || null
+  }
+
+  function selectedPriorityRoute () {
+    const topic = selectedPriorityTopic()
+    const variant = selectedPriorityVariant(topic)
+    if (!topic) return null
+
+    return {
+      ...topic,
+      ...(variant || {}),
+      topicId: topic.id,
+      topicLabel: topic.label,
+      variantLabel: variant?.label || ''
+    }
+  }
+
+  function renderPriorityRoute () {
+    const topic = selectedPriorityTopic()
+    const variantField = document.querySelector('#spfm-topic-variant-field')
+    const variantSelect = document.querySelector('#spfm-topic-variant')
+    const replyButton = document.querySelector('#spfm-priority-reply')
+    const missingButton = document.querySelector('#spfm-priority-missing')
+    const openButton = document.querySelector('#spfm-priority-open')
+    const status = document.querySelector('#spfm-priority-status')
+    const actionStep = document.querySelector('#spfm-action-step')
+    if (!variantField || !variantSelect || !replyButton || !missingButton || !openButton || !status || !actionStep) return
+
+    const currentVariant = variantSelect.value
+    const variants = Array.isArray(topic?.variants) ? topic.variants : []
+    variantSelect.innerHTML = ''
+    variants.forEach((variant) => {
+      const option = document.createElement('option')
+      option.value = variant.id
+      option.textContent = variant.label
+      variantSelect.appendChild(option)
+    })
+    if (variants.some((variant) => variant.id === currentVariant)) {
+      variantSelect.value = currentVariant
+    }
+    variantField.hidden = variants.length === 0
+
+    const route = selectedPriorityRoute()
+    const hasMissingDocuments = Boolean(route?.processId && missingDocumentsForProcedure(route.processId).length)
+    actionStep.hidden = !route
+    replyButton.disabled = !route?.scriptId
+    replyButton.classList.toggle('is-primary', Boolean(route && !route.canOpenProcess))
+    missingButton.disabled = !hasMissingDocuments
+    missingButton.hidden = !hasMissingDocuments
+    openButton.disabled = !route?.canOpenProcess || !route?.processId
+    openButton.classList.toggle('is-primary', Boolean(route?.canOpenProcess && route?.processId))
+    status.textContent = !route
+      ? 'Selecione o assunto.'
+      : route.canOpenProcess
+        ? 'Selecione uma ação.'
+        : route.blockedReason || 'Atendimento somente por resposta.'
+
+    if (route?.processId) syncRouteWithProcedure(route.processId)
+    else syncRouteWithProcedure('')
+  }
+
+  function selectPriorityTopic (topicId) {
+    activePriorityAction = ''
+    const topicSelect = document.querySelector('#spfm-priority-topic')
+    if (topicSelect) topicSelect.value = topicId
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    if (catalog) catalog.hidden = true
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = true
+    if (missingBox) missingBox.hidden = true
+    setEmailPreparationVisible(false)
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+    renderPriorityRoute()
+  }
+
+  function selectPriorityArea (areaId) {
+    if (selectedWorkflowPhaseId !== 'orientacao') return
+    selectedPriorityAreaId = areaId
+    activePriorityAction = ''
+    document.querySelectorAll('.spfm-area-button').forEach((button) => {
+      const isActive = button.dataset.areaId === areaId
+      button.classList.toggle('is-active', isActive)
+      button.setAttribute('aria-pressed', String(isActive))
+    })
+    const topicSelect = document.querySelector('#spfm-priority-topic')
+    if (topicSelect) topicSelect.value = ''
+
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    const actionStep = document.querySelector('#spfm-action-step')
+    if (catalog) catalog.hidden = true
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = true
+    if (missingBox) missingBox.hidden = true
+    if (actionStep) actionStep.hidden = true
+    setEmailPreparationVisible(false)
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+
+    renderPriorityTopics()
+
+    if (areaId === 'taxas') {
+      selectPriorityTopic('devolucao-taxas')
+    }
+  }
+
+  function renderPriorityTopics () {
+    const select = document.querySelector('#spfm-priority-topic')
+    const topicStep = document.querySelector('#spfm-topic-step')
+    const status = document.querySelector('#spfm-priority-status')
+    if (!select || !topicStep) return
+
+    select.innerHTML = '<option value="">Selecione o assunto</option>'
+    const visibleTopics = priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)
+    const coreTopics = visibleTopics.filter((topic) => topic.corePriority)
+    const otherTopics = visibleTopics.filter((topic) => !topic.corePriority)
+
+    const appendTopics = (topics, label = '') => {
+      const parent = label ? document.createElement('optgroup') : select
+      if (label) parent.label = label
+      topics.forEach((topic) => {
+        const option = document.createElement('option')
+        option.value = topic.id
+        option.textContent = topic.label
+        parent.appendChild(option)
+      })
+      if (label) select.appendChild(parent)
+    }
+
+    appendTopics(coreTopics, coreTopics.length && otherTopics.length ? 'PRINCIPAIS' : '')
+    appendTopics(otherTopics, coreTopics.length && otherTopics.length ? 'OUTROS' : '')
+    select.disabled = visibleTopics.length === 0
+    topicStep.hidden = selectedWorkflowPhaseId !== 'orientacao' || !selectedPriorityAreaId
+    renderPriorityRoute()
+    if (status) {
+      status.textContent = !selectedWorkflowPhaseId
+        ? 'Selecione a fase do atendimento.'
+        : !selectedPriorityAreaId
+          ? 'Selecione uma área de orientação.'
+          : visibleTopics.length
+            ? 'Selecione o assunto.'
+            : 'Use a busca completa abaixo.'
+    }
+  }
+
+  function openPriorityResponses () {
+    const route = selectedPriorityRoute()
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    const phase = document.querySelector('#spfm-script-phase')
+    const phaseField = document.querySelector('#spfm-script-phase-field')
+    const search = document.querySelector('#spfm-script-search')
+    const result = document.querySelector('#spfm-script-result')
+    const status = document.querySelector('#spfm-priority-status')
+    if (!route || !catalog || !toggleButton || !phase || !search || !result) {
+      if (status) status.textContent = 'Escolha primeiro o assunto do e-mail.'
+      return
+    }
+
+    activePriorityAction = 'reply'
+    const missingBox = document.querySelector('#spfm-missing-box')
+    if (missingBox) missingBox.hidden = true
+    catalog.hidden = false
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = false
+    if (phaseField) phaseField.hidden = true
+    setEmailPreparationVisible(true)
+    toggleButton.textContent = CATALOG_CLOSE_LABEL
+    priorityResponseScriptIds = new Set(route.responseScriptIds || [route.scriptId])
+    const mappedScript = responseScripts.find((script) => script.id === route.scriptId)
+    phase.value = mappedScript?.phase || ''
+    search.value = ''
+    renderResponseScriptResults()
+
+    const mappedScriptAvailable = Array.from(result.options).some((option) => option.value === route.scriptId)
+    if (mappedScriptAvailable) result.value = route.scriptId
+    renderSelectedResponseScript()
+    updateMissingDocumentsVisibility()
+    if (status) status.textContent = 'Resposta principal selecionada. Confira antes de inserir.'
+    catalog.scrollIntoView?.({ block: 'nearest' })
+  }
+
+  function openPriorityMissingDocuments () {
+    const route = selectedPriorityRoute()
+    const status = document.querySelector('#spfm-priority-status')
+    const documents = route?.processId ? missingDocumentsForProcedure(route.processId) : []
+    if (!route?.processId || !documents.length) {
+      if (status) status.textContent = 'Este assunto ainda não possui checklist documental configurado.'
+      return
+    }
+
+    activePriorityAction = 'missing'
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    if (catalog) catalog.hidden = true
+    if (processSetup) processSetup.hidden = true
+    if (identityFields) identityFields.hidden = false
+    setEmailPreparationVisible(true)
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+    syncRouteWithProcedure(route.processId)
+    setManualRouteFieldsVisible(false)
+    updateMissingDocumentsVisibility()
+    if (status) status.textContent = 'Marque os documentos faltantes e insira a exigência no e-mail.'
+    document.querySelector('#spfm-missing-box')?.scrollIntoView?.({ block: 'nearest' })
+  }
+
+  function openPriorityProcess () {
+    const route = selectedPriorityRoute()
+    const status = document.querySelector('#spfm-priority-status')
+    if (!route?.canOpenProcess || !route?.processId) {
+      if (status) status.textContent = route?.blockedReason || 'Este atendimento não admite abertura por e-mail.'
+      return
+    }
+
+    activePriorityAction = 'process'
+    const catalog = document.querySelector('#spfm-script-catalog')
+    const processSetup = document.querySelector('#spfm-process-setup')
+    const identityFields = document.querySelector('#spfm-identity-fields')
+    const missingBox = document.querySelector('#spfm-missing-box')
+    if (catalog) catalog.hidden = true
+    if (missingBox) missingBox.hidden = true
+    if (processSetup) processSetup.hidden = false
+    if (identityFields) identityFields.hidden = false
+    setEmailPreparationVisible(false)
+    const toggleButton = document.querySelector('#spfm-script-toggle')
+    if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+    syncRouteWithProcedure(route.processId)
+    setManualRouteFieldsVisible(false)
+    if (status) status.textContent = 'Confira os dados abaixo e abra o processo no FAST PROC.'
+    processSetup?.scrollIntoView?.({ block: 'nearest' })
   }
 
   function renderProcedureOptions (processIds = null) {
@@ -1009,7 +1998,10 @@
     const procedureId = document.querySelector('#spfm-procedure')?.value || ''
     const processType = processTypeById(procedureId)
     const manualDestination = cleanValue(document.querySelector('#spfm-destination')?.value)
-    return manualDestination || processType?.destinationUnit || ''
+    const scriptDestination = ['catalog', 'reply'].includes(activePriorityAction)
+      ? cleanValue(selectedResponseScript()?.routing?.destinationUnit)
+      : ''
+    return manualDestination || processType?.destinationUnit || scriptDestination
   }
 
   function updateDestinationField (useProcedureDefault = true) {
@@ -1170,6 +2162,179 @@
     return null
   }
 
+  function findRecipientField () {
+    const selectors = [
+      'input[name="to"]',
+      'textarea[name="to"]',
+      'input[id="to"]',
+      'textarea[id="to"]',
+      'input[name*="recipient" i]',
+      'textarea[name*="recipient" i]',
+      'input[id*="recipient" i]',
+      'textarea[id*="recipient" i]',
+      '[contenteditable="true"][aria-label*="para" i]',
+      '[contenteditable="true"][title*="para" i]'
+    ]
+
+    for (const doc of allDocuments()) {
+      for (const selector of selectors) {
+        const field = Array.from(doc.querySelectorAll(selector)).find(isVisible)
+        if (field) return field
+      }
+
+      const labels = Array.from(doc.querySelectorAll('label,td,span,div'))
+        .filter((element) => isVisible(element) && /^Para\.{0,3}:?$/i.test(elementText(element)))
+
+      for (const label of labels) {
+        const forId = label.getAttribute?.('for')
+        const linked = forId ? doc.getElementById(forId) : null
+        if (linked && isVisible(linked)) return linked
+
+        const row = label.closest('tr,div,td')
+        const field = row?.querySelector('input,textarea,[contenteditable="true"]')
+        if (field && isVisible(field)) return field
+      }
+    }
+
+    return null
+  }
+
+  function findSendButton () {
+    for (const doc of allDocuments()) {
+      const candidates = Array.from(doc.querySelectorAll(
+        'button,input[type="button"],input[type="submit"],a,span'
+      )).filter((element) => {
+        if (!isVisible(element)) return false
+        return /^(Enviar|Send)$/i.test(elementText(element))
+      })
+
+      if (candidates.length) return candidates[0]
+    }
+
+    return null
+  }
+
+  function setMessageBodyText (field, text) {
+    assertSafeMessageBodyEditor(field)
+
+    if (isPlainTextMessageBody(field)) {
+      setPlainTextBodyValue(field, text)
+      field.blur()
+      return
+    }
+
+    field.focus()
+    field.textContent = text
+    dispatchBodyEvent(field, 'input')
+    dispatchBodyEvent(field, 'change')
+    field.blur()
+  }
+
+  function feedbackReportText (feedback) {
+    const reportedAt = new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'medium'
+    }).format(new Date(feedback.reportedAt))
+
+    return [
+      'RELATÓRIO — SEI PROTOCOLISTAS',
+      '',
+      `Tipo: ${feedback.type}`,
+      `Título: ${feedback.title}`,
+      `Local: ${feedback.location}`,
+      `Protocolista: ${feedback.operatorNumber}`,
+      `E-mail institucional: ${feedback.operatorEmail}`,
+      `Versão da extensão: ${feedback.version}`,
+      `Data e hora: ${reportedAt}`,
+      '',
+      'DESCRIÇÃO',
+      feedback.description,
+      '',
+      'PASSOS PARA REPRODUZIR / DETALHES',
+      feedback.steps,
+      '',
+      'AMBIENTE TÉCNICO',
+      feedback.browser,
+      '',
+      'Relatório enviado pelo canal Sugestões e Bugs da Central do Protocolista.'
+    ].join('\n')
+  }
+
+  async function updatePendingFeedback (feedback, changes) {
+    await storageSet({
+      [FEEDBACK_KEY]: {
+        ...feedback,
+        ...changes
+      }
+    })
+  }
+
+  async function processPendingFeedback () {
+    const stored = await storageGet([FEEDBACK_KEY, OPERATOR_KEY])
+    const feedback = stored[FEEDBACK_KEY]
+    if (!feedback || ['sent', 'error'].includes(feedback.status)) return false
+
+    const currentTab = await runtimeMessage({ type: GET_CURRENT_TAB_MESSAGE })
+    if (!feedback.webmailTabId || currentTab.tabId !== feedback.webmailTabId) return false
+
+    if (!feedback.expiresAt || Date.now() > feedback.expiresAt) {
+      await updatePendingFeedback(feedback, {
+        status: 'error',
+        error: 'O tempo para envio pelo Webmail expirou.'
+      })
+      return true
+    }
+
+    if (await autoLoginWebmail()) return true
+
+    if (!IS_COMPOSE_WINDOW) {
+      location.replace(FEEDBACK_COMPOSE_URL)
+      return true
+    }
+
+    const operator = findOperator() || stored[OPERATOR_KEY]
+    if (!operator?.email || normalizeEmail(operator.email) !== normalizeEmail(feedback.operatorEmail)) {
+      await updatePendingFeedback(feedback, {
+        status: 'error',
+        error: 'A conta aberta no Webmail não corresponde ao protocolista configurado.'
+      })
+      return true
+    }
+
+    try {
+      const recipient = await waitFor(findRecipientField, 8000)
+      const subject = await waitFor(findSubjectField, 8000)
+      const body = await waitFor(findMessageBodyEditor, 8000)
+      const sendButton = await waitFor(findSendButton, 8000)
+      if (!recipient || !subject || !body || !sendButton) {
+        throw new Error('Não foi possível localizar todos os campos de envio do Webmail.')
+      }
+
+      setFieldValue(recipient, FEEDBACK_DESTINATION)
+      await sleep(500)
+      setFieldValue(subject, `[SEI Protocolistas] ${feedback.type}: ${feedback.title}`)
+      setMessageBodyText(body, feedbackReportText(feedback))
+      await sleep(300)
+
+      await updatePendingFeedback(feedback, {
+        status: 'submitting',
+        submittedAt: Date.now()
+      })
+      if (!clickElement(sendButton)) throw new Error('O botão Enviar do Webmail não respondeu.')
+      await updatePendingFeedback(feedback, {
+        status: 'sent',
+        sentAt: Date.now()
+      })
+      return true
+    } catch (error) {
+      await updatePendingFeedback(feedback, {
+        status: 'error',
+        error: error.message || String(error)
+      })
+      return true
+    }
+  }
+
   function getSubjectPrefix (subject) {
     const match = cleanValue(subject).match(/^((?:RE|ENC|FW|FWD)\s*:\s*)+/i)
     return match ? match[0].replace(/\s+/g, ' ').trim() + ' ' : ''
@@ -1177,7 +2342,6 @@
 
   function buildTriagemSubject () {
     const name = cleanValue(document.querySelector('#spfm-requester-name')?.value).toUpperCase()
-    const procedureId = document.querySelector('#spfm-procedure')?.value || ''
     const destination = selectedDestination() || 'UNDEFINED'
 
     if (!name) throw new Error('Digite o nome do requerente.')
@@ -1234,8 +2398,8 @@
     }
   }
 
-  async function openProcessInSei () {
-    const button = document.querySelector('#spfm-open-process')
+  async function openProcessInSei (buttonOverride = null) {
+    const button = buttonOverride || document.querySelector('#spfm-open-process')
     const originalText = button?.textContent || 'ABRIR PROCESSO'
 
     if (button) {
@@ -1334,7 +2498,7 @@
 
   async function prepareTriagem () {
     const button = document.querySelector('#spfm-triagem')
-    const originalText = button?.textContent || 'PREPARAR TRIAGEM'
+    const originalText = button?.textContent || 'PREPARAR E-MAIL'
 
     if (button) {
       button.disabled = true
@@ -1349,7 +2513,6 @@
       if (!field) throw new Error('Abra a tela de resposta para editar o assunto.')
 
       const currentSubject = cleanValue(field.value || field.textContent)
-      const procedureId = document.querySelector('#spfm-procedure')?.value || ''
       const destination = selectedDestination()
 
       if (/\bTRIAGEM\b/i.test(currentSubject)) {
@@ -1371,7 +2534,7 @@
       await sleep(350)
 
       if (button) {
-        button.textContent = procedureId
+        button.textContent = destination
           ? 'TRIAGEM PREPARADA'
           : 'TRIAGEM CRIADA COMO UNDEFINED'
       }
@@ -1465,77 +2628,154 @@
     panel.innerHTML = `
       <div id="spfm-drag-handle" class="spfm-header">
         <div>
-          <div class="spfm-title">SEI PROTOCOLISTAS</div>
-          <div class="spfm-subtitle">FAST MAIL</div>
+          <div class="spfm-brand-line">
+            <div class="spfm-title">SEI PROTOCOLISTAS</div>
+            <div class="spfm-subtitle">FAST MAIL</div>
+          </div>
         </div>
         <button id="spfm-collapse" class="spfm-icon-button" type="button" title="Recolher FAST MAIL">−</button>
       </div>
 
       <div id="spfm-panel-body" class="spfm-panel-body">
-        <div class="spfm-summary">
+        <div class="spfm-summary" title="Contexto do atendimento atual">
           <strong id="spfm-operator">Identificando...</strong>
+          <span class="spfm-summary-divider" aria-hidden="true">•</span>
           <span id="spfm-email">Abra uma mensagem</span>
         </div>
 
-        <div class="spfm-fields">
-          <label>
-            <span>Nome do requerente</span>
-            <input id="spfm-requester-name" type="text" autocomplete="off" placeholder="Nome completo">
-          </label>
-          <label>
-            <span>CPF <small>(opcional)</small></span>
-            <input id="spfm-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Somente se informado">
-          </label>
-          <label>
-            <span>Área</span>
-            <select id="spfm-area">
-              <option value="">Carregando caminhos...</option>
+        <section class="spfm-priority-workflow">
+          <div class="spfm-step-label">1. FASE DO ATENDIMENTO</div>
+          <div id="spfm-priority-phases" class="spfm-phase-grid"></div>
+          <div id="spfm-area-step" class="spfm-step" hidden>
+            <div class="spfm-step-label">2. ÁREA DE ORIENTAÇÃO</div>
+            <div id="spfm-priority-areas" class="spfm-area-grid"></div>
+          </div>
+          <div id="spfm-topic-step" class="spfm-step" hidden>
+            <div class="spfm-step-label">3. ASSUNTO</div>
+            <select id="spfm-priority-topic">
+              <option value="">Selecione o assunto</option>
+            </select>
+            <label id="spfm-topic-variant-field" hidden>
+              <span>Qual é o caso?</span>
+              <select id="spfm-topic-variant"></select>
+            </label>
+          </div>
+          <div id="spfm-action-step" class="spfm-step" hidden>
+            <div class="spfm-step-label">4. AÇÃO</div>
+            <div class="spfm-decision-grid">
+              <button id="spfm-priority-reply" type="button" disabled>RESPONDER</button>
+              <button id="spfm-priority-missing" type="button" disabled hidden>COBRAR DOCUMENTOS</button>
+              <button id="spfm-priority-open" type="button" disabled>ABRIR PROCESSO</button>
+            </div>
+          </div>
+
+          <section id="spfm-identity-fields" class="spfm-process-setup" hidden>
+            <div class="spfm-section-title">DADOS DO REQUERENTE</div>
+            <div class="spfm-fields">
+              <label>
+                <span>Nome do requerente</span>
+                <input id="spfm-requester-name" type="text" autocomplete="off" placeholder="Nome completo">
+              </label>
+              <label>
+                <span>CPF <small>(opcional)</small></span>
+                <input id="spfm-requester-cpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="Somente se informado">
+              </label>
+            </div>
+          </section>
+
+          <div id="spfm-missing-box" class="spfm-missing-box" hidden>
+            <div class="spfm-section-title">DOCUMENTOS FALTANTES</div>
+            <div id="spfm-missing-list" class="spfm-missing-list" hidden>
+              <div id="spfm-missing-options"></div>
+              <button id="spfm-insert-requirement" type="button">INSERIR EXIGÊNCIA</button>
+              <div id="spfm-body-status" class="spfm-mini-status"></div>
+            </div>
+          </div>
+          <section id="spfm-email-preparation" class="spfm-email-preparation" hidden>
+            <button id="spfm-triagem" class="spfm-secondary" type="button">PREPARAR E-MAIL</button>
+          </section>
+          <div id="spfm-priority-status" class="spfm-mini-status">Selecione a fase do atendimento.</div>
+        </section>
+
+        <button id="spfm-script-toggle" class="spfm-catalog-toggle" type="button">BUSCAR OUTRO ATENDIMENTO</button>
+        <div id="spfm-script-catalog" class="spfm-script-catalog" hidden>
+          <label id="spfm-script-phase-field">
+            <span>Fase do atendimento</span>
+            <select id="spfm-script-phase">
+              <option value="">Carregando fases...</option>
             </select>
           </label>
-          <label id="spfm-objective-field" hidden>
-            <span>Objetivo do cidadão</span>
-            <select id="spfm-objective">
-              <option value="">O que o cidadão deseja?</option>
+          <label>
+            <span>Buscar por assunto ou palavra</span>
+            <input id="spfm-script-search" type="search" autocomplete="off" placeholder="Ex.: motor, IPVA, processo aberto">
+          </label>
+          <div id="spfm-script-count" class="spfm-mini-status"></div>
+          <label>
+            <span>Resposta padrão</span>
+            <select id="spfm-script-result">
+              <option value="">Selecione o script</option>
             </select>
           </label>
-          <label id="spfm-procedure-field" hidden>
-            <span>Procedimento</span>
-            <select id="spfm-procedure">
-              <option value="">Carregando catálogo...</option>
-            </select>
-          </label>
-          <label id="spfm-destination-field" hidden>
-            <span>Destino <small>(editável)</small></span>
-            <input id="spfm-destination" type="text" autocomplete="off" placeholder="Unidade de destino">
-          </label>
-          <div id="spfm-route-status" class="spfm-mini-status">Escolha uma das áreas principais.</div>
+          <div id="spfm-script-preview" class="spfm-script-preview">Selecione um resultado para conferir.</div>
+          <button id="spfm-insert-script" type="button" disabled>INSERIR RESPOSTA</button>
+          <div id="spfm-script-status" class="spfm-mini-status"></div>
         </div>
 
-        <div id="spfm-missing-box" class="spfm-missing-box" hidden>
-          <button id="spfm-missing-toggle" class="spfm-secondary" type="button">FALTAM DOCUMENTOS</button>
-          <div id="spfm-missing-list" class="spfm-missing-list" hidden>
-            <div id="spfm-missing-options"></div>
-            <button id="spfm-insert-requirement" type="button">INSERIR EXIGÊNCIA</button>
-            <div id="spfm-body-status" class="spfm-mini-status"></div>
+        <section id="spfm-process-setup" class="spfm-process-setup" hidden>
+          <div class="spfm-section-title">DADOS PARA ABRIR O PROCESSO</div>
+          <div class="spfm-fields">
+            <label id="spfm-area-field">
+              <span>Área</span>
+              <select id="spfm-area">
+                <option value="">Carregando caminhos...</option>
+              </select>
+            </label>
+            <label id="spfm-objective-field" hidden>
+              <span>Objetivo do cidadão</span>
+              <select id="spfm-objective">
+                <option value="">O que o cidadão deseja?</option>
+              </select>
+            </label>
+            <label id="spfm-procedure-field" hidden>
+              <span>Procedimento</span>
+              <select id="spfm-procedure">
+                <option value="">Carregando catálogo...</option>
+              </select>
+            </label>
+            <label id="spfm-destination-field" hidden>
+              <span>Destino <small>(editável)</small></span>
+              <input id="spfm-destination" type="text" autocomplete="off" placeholder="Unidade de destino">
+            </label>
+            <div id="spfm-route-status" class="spfm-mini-status">Escolha uma das áreas principais.</div>
           </div>
-        </div>
+          <button id="spfm-open-process" type="button">ABRIR NO FAST PROC</button>
+        </section>
 
         <div id="spfm-process-response-box" class="spfm-missing-box" hidden>
           <button id="spfm-insert-process-response" type="button">INSERIR RESPOSTA DO PROCESSO</button>
           <div id="spfm-process-response-status" class="spfm-mini-status"></div>
         </div>
 
-        <button id="spfm-open-process" type="button">ABRIR PROCESSO</button>
-        <button id="spfm-triagem" type="button">PREPARAR TRIAGEM</button>
       </div>
     `
 
     document.documentElement.appendChild(panel)
 
     panel.querySelector('#spfm-collapse').addEventListener('click', () => togglePanel(panel))
-    panel.querySelector('#spfm-open-process').addEventListener('click', openProcessInSei)
+    panel.querySelector('#spfm-priority-topic').addEventListener('change', (event) => {
+      selectPriorityTopic(event.target.value)
+    })
+    panel.querySelector('#spfm-topic-variant').addEventListener('change', renderPriorityRoute)
+    panel.querySelector('#spfm-priority-reply').addEventListener('click', openPriorityResponses)
+    panel.querySelector('#spfm-priority-missing').addEventListener('click', openPriorityMissingDocuments)
+    panel.querySelector('#spfm-priority-open').addEventListener('click', openPriorityProcess)
+    panel.querySelector('#spfm-script-toggle').addEventListener('click', toggleResponseScriptCatalog)
+    panel.querySelector('#spfm-script-phase').addEventListener('change', renderResponseScriptResults)
+    panel.querySelector('#spfm-script-search').addEventListener('input', renderResponseScriptResults)
+    panel.querySelector('#spfm-script-result').addEventListener('change', renderSelectedResponseScript)
+    panel.querySelector('#spfm-insert-script').addEventListener('click', insertSelectedResponseScript)
+    panel.querySelector('#spfm-open-process').addEventListener('click', () => openProcessInSei())
     panel.querySelector('#spfm-triagem').addEventListener('click', prepareTriagem)
-    panel.querySelector('#spfm-missing-toggle').addEventListener('click', toggleMissingDocuments)
     panel.querySelector('#spfm-insert-requirement').addEventListener('click', insertMissingDocumentsRequirement)
     panel.querySelector('#spfm-insert-process-response').addEventListener('click', () => {
       insertPendingProcessResponse(false)
@@ -1568,8 +2808,12 @@
   }
 
   async function scan () {
-    const operator = findOperator()
-    const senderEmail = findSenderEmail()
+    const operator = await resolveOperator()
+    const detectedSenderEmail = findSenderEmail()
+    if (detectedSenderEmail && !attendanceSenderEmail) {
+      attendanceSenderEmail = detectedSenderEmail
+    }
+    const senderEmail = attendanceSenderEmail || detectedSenderEmail
     currentOperator = operator
 
     const operatorElement = document.querySelector('#spfm-operator')
@@ -1584,15 +2828,16 @@
     if (emailElement) {
       emailElement.textContent = senderEmail ||
         'Não identificado no cabeçalho atual'
+      emailElement.title = senderEmail
+        ? `Remetente: ${senderEmail}`
+        : 'Remetente não identificado no cabeçalho atual'
     }
-
-    if (operator) await storageSet({ [OPERATOR_KEY]: operator })
 
     if (IS_COMPOSE_WINDOW) {
       await autoInsertPendingProcessResponse()
     }
 
-    if (senderEmail) {
+    if (senderEmail && !attendanceInitialized) {
       const stored = await storageGet(ATTENDANCE_KEY)
       const current = stored[ATTENDANCE_KEY] || {}
 
@@ -1633,10 +2878,13 @@
         if (status) status.textContent = ''
         updateMissingDocumentsVisibility()
       }
+
+      attendanceInitialized = true
     }
   }
 
   async function initialize () {
+    if (await processPendingFeedback()) return
     if (await autoLoginWebmail()) return
 
     await scan()
@@ -1648,6 +2896,7 @@
 
     createPanel()
     await loadCatalog()
+    await loadResponseScriptCatalog()
     await loadPanelAttendance()
     updateMissingDocumentsVisibility()
     await scan()

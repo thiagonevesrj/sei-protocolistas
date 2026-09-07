@@ -11,6 +11,273 @@ const root = path.resolve(__dirname, '..')
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 const tick = () => new Promise((resolve) => setImmediate(resolve))
 
+function testInterestedConfirmation () {
+  const session = new Map()
+  const listeners = new Map()
+  const nativeMessages = []
+  const context = {
+    Date,
+    document: {
+      addEventListener: (eventName, callback) => {
+        listeners.set(eventName, callback)
+      }
+    },
+    sessionStorage: {
+      getItem: (key) => session.get(key) || null,
+      removeItem: (key) => session.delete(key)
+    },
+    confirm: (message) => {
+      nativeMessages.push(message)
+      return false
+    }
+  }
+  context.window = context
+
+  vm.runInNewContext(
+    read('cs_modules/clique_protocolista/confirmarInclusaoInteressado.js'),
+    context
+  )
+
+  session.set('spFastProcConfirmarInclusaoInteressado', String(Date.now()))
+  assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), true)
+  assert.strictEqual(session.has('spFastProcConfirmarInclusaoInteressado'), false)
+  assert.deepStrictEqual(nativeMessages, [])
+
+  listeners.get('sp-fast-proc-armar-inclusao-interessado')()
+  assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), true)
+  assert.deepStrictEqual(nativeMessages, [])
+
+  assert.strictEqual(context.confirm('Deseja excluir o processo?'), false)
+  assert.deepStrictEqual(nativeMessages, ['Deseja excluir o processo?'])
+
+  session.set(
+    'spFastProcConfirmarInclusaoInteressado',
+    String(Date.now() - (11 * 60 * 1000))
+  )
+  assert.strictEqual(context.confirm('Nome inexistente. Deseja incluir?'), false)
+
+  const fastProcSource = read('cs_modules/clique_protocolista/index.js')
+  const armIndex = fastProcSource.indexOf(
+    'sessionStorage.setItem(\n        INTERESTED_CONFIRM_KEY'
+  )
+  const selectIndex = fastProcSource.indexOf(
+    'selectInterestedSuggestion(',
+    armIndex
+  )
+  const clickIndex = fastProcSource.indexOf(
+    'clickAddInterested(interested)',
+    armIndex
+  )
+
+  assert.ok(armIndex >= 0)
+  assert.ok(selectIndex > armIndex)
+  assert.ok(clickIndex > armIndex)
+  assert.ok(fastProcSource.includes('new CustomEvent(\n          INTERESTED_CONFIRM_EVENT'))
+
+  const interceptorSource = read(
+    'cs_modules/clique_protocolista/confirmarInclusaoInteressado.js'
+  )
+  assert.ok(interceptorSource.includes("const ARM_EVENT = 'sp-fast-proc-armar-inclusao-interessado'"))
+  assert.ok(interceptorSource.includes('document.addEventListener(ARM_EVENT'))
+}
+
+function testFastMailOperatorFallback () {
+  const source = read('cs_modules/fast_mail/index.js')
+
+  assert.ok(source.includes('function validStoredOperator (value)'))
+  assert.ok(source.includes('async function resolveOperator ()'))
+  assert.ok(source.includes('const visibleOperator = findOperator()'))
+  assert.ok(source.includes('const stored = await storageGet(OPERATOR_KEY)'))
+  assert.ok(source.includes('const operator = await resolveOperator()'))
+  assert.ok(source.includes('email !== expectedEmail'))
+}
+
+function testNativeAuthenticationAutomation () {
+  const source = read('cs_modules/autenticacao_nativa/index.js')
+  const manifest = read('manifest.json')
+
+  assert.ok(source.includes("const SUCCESS_KEY = 'spAutenticacaoNativaConcluida'"))
+  assert.ok(source.includes("const TOOLBAR_SELECTOR = '#divArvoreAcoes.barraBotoesSEI'"))
+  assert.ok(source.includes('const handledPasswords = new WeakSet()'))
+  assert.ok(source.includes("waitFor('#sp-fast-proc-rq')"))
+  assert.ok(source.includes('function authenticationDialog ()'))
+  assert.ok(source.includes("includes('autenticacao de documento')"))
+  assert.ok(source.includes("buttonLabel(element) === 'assinar'"))
+  assert.ok(source.includes('fillPassword(dialog.password, credentials.password)'))
+  assert.ok(source.includes('dialog.sign.click()'))
+  assert.ok(source.indexOf('dialog.sign.click()') < source.lastIndexOf('[SUCCESS_KEY]: {'))
+  assert.ok(source.includes("toast.textContent = '✓ AUTENTICADO COM SUCESSO'"))
+  assert.ok(source.includes('window.setTimeout(() => toast.remove(), 2000)'))
+  assert.ok(source.includes('chrome.storage.onChanged.addListener'))
+  assert.ok(source.includes('new MutationObserver'))
+  assert.ok(source.includes('if (document.querySelector(TOOLBAR_SELECTOR))'))
+  assert.ok(!source.includes("document.addEventListener('click'"))
+  assert.ok(!source.includes("const PENDING_KEY = 'spAutenticacaoNativaPendente'"))
+  assert.ok(!source.includes('sp-autenticacao-rapida'))
+  assert.ok(!source.includes('createStampIcon'))
+  assert.ok(manifest.includes('cs_modules/autenticacao_nativa/index.js'))
+  assert.ok(!manifest.includes('cs_modules/autenticacao_rapida'))
+  assert.ok(!fs.existsSync(path.join(root, 'cs_modules/autenticacao_rapida/index.js')))
+  assert.ok(!fs.existsSync(path.join(root, 'cs_modules/autenticacao_rapida/styles.css')))
+}
+
+async function testNativeAuthenticationBehavior () {
+  const storage = {
+    centralProtocolistaSeiCredentials: {
+      user: 'protocolista31',
+      password: 'senha-teste',
+      remember: true
+    }
+  }
+  const storageListeners = []
+  const mutationObservers = []
+  let signClicks = 0
+  let toastText = ''
+  let dialogOpen = false
+
+  class FakeInput {}
+  Object.defineProperty(FakeInput.prototype, 'value', {
+    configurable: true,
+    get () { return this._value || '' },
+    set (value) { this._value = value }
+  })
+
+  const visibleElement = (extra = {}) => ({
+    ownerDocument: null,
+    getBoundingClientRect: () => ({ width: 180, height: 36 }),
+    getAttribute: () => '',
+    ...extra
+  })
+
+  const password = Object.assign(
+    Object.create(FakeInput.prototype),
+    visibleElement({
+      focus: () => {},
+      dispatchEvent: () => {}
+    })
+  )
+  const sign = visibleElement({
+    textContent: 'Assinar',
+    value: '',
+    focus: () => {},
+    click: () => { signClicks += 1 }
+  })
+  const quickRequest = {}
+  const toolbar = {}
+
+  const body = {
+    innerText: '',
+    appendChild: (element) => { toastText = element.textContent }
+  }
+  const documentMock = {
+    body,
+    defaultView: {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible' })
+    },
+    documentElement: {},
+    querySelector: (selector) => {
+      if (selector === '#divArvoreAcoes.barraBotoesSEI') return toolbar
+      if (selector === '#sp-fast-proc-rq') return quickRequest
+      return null
+    },
+    querySelectorAll: (selector) => {
+      if (!dialogOpen) return []
+      if (selector.includes('#pwdSenha')) return [password]
+      if (selector.startsWith('button,')) return [sign]
+      return []
+    },
+    getElementById: () => null,
+    createElement: () => ({
+      classList: { add: () => {} },
+      remove: () => {},
+      setAttribute: () => {},
+      style: { cssText: '' },
+      textContent: ''
+    })
+  }
+  password.ownerDocument = documentMock
+  sign.ownerDocument = documentMock
+
+  const notifyChanges = (changes) => {
+    storageListeners.forEach((listener) => listener(changes, 'local'))
+  }
+  const context = {
+    console,
+    Date,
+    Math,
+    Node: { ELEMENT_NODE: 1 },
+    Event: class Event {},
+    HTMLInputElement: FakeInput,
+    MutationObserver: class MutationObserver {
+      constructor (callback) {
+        this.callback = callback
+        mutationObservers.push(this)
+      }
+
+      observe () {}
+      disconnect () {}
+    },
+    document: documentMock,
+    setTimeout: (callback) => { callback(); return 1 },
+    clearTimeout: () => {},
+    alert: () => {},
+    chrome: {
+      runtime: { lastError: null },
+      storage: {
+        local: {
+          get: (keys, callback) => {
+            const list = Array.isArray(keys) ? keys : [keys]
+            callback(Object.fromEntries(list.map((key) => [key, storage[key]])))
+          },
+          set: (items, callback) => {
+            const changes = Object.fromEntries(
+              Object.entries(items).map(([key, value]) => [key, {
+                oldValue: storage[key],
+                newValue: value
+              }])
+            )
+            Object.assign(storage, items)
+            callback()
+            notifyChanges(changes)
+          },
+          remove: (keys, callback) => {
+            const list = Array.isArray(keys) ? keys : [keys]
+            const changes = {}
+            list.forEach((key) => {
+              changes[key] = { oldValue: storage[key], newValue: undefined }
+              delete storage[key]
+            })
+            callback()
+            notifyChanges(changes)
+          }
+        },
+        onChanged: {
+          addListener: (listener) => storageListeners.push(listener)
+        }
+      }
+    }
+  }
+  context.window = context
+
+  vm.runInNewContext(
+    read('cs_modules/autenticacao_nativa/index.js'),
+    context
+  )
+
+  await tick()
+  dialogOpen = true
+  body.innerText = 'Autenticação de Documento'
+  mutationObservers[0].callback()
+  mutationObservers[0].callback()
+  await tick()
+  await tick()
+  await tick()
+
+  assert.strictEqual(password.value, 'senha-teste')
+  assert.strictEqual(signClicks, 1)
+  assert.strictEqual(toastText, '✓ AUTENTICADO COM SUCESSO')
+}
+
 async function testSeiAutoLogin () {
   const values = { user: '', password: '' }
   let submitted = 0
@@ -201,6 +468,72 @@ function testCompactFastProcLayout () {
   assert.ok(styles.includes('position: sticky'))
 }
 
+function testFastMailHiddenFieldsStayHidden () {
+  const styles = read('cs_modules/fast_mail/styles.css')
+
+  assert.ok(styles.includes('#sei-protocolistas-fast-mail-status [hidden]'))
+  assert.ok(styles.includes('display: none !important;'))
+}
+
+function testFastMailProgressiveNavigation () {
+  const source = read('cs_modules/fast_mail/index.js')
+  const styles = read('cs_modules/fast_mail/styles.css')
+
+  assert.ok(source.includes('1. FASE DO ATENDIMENTO'))
+  assert.ok(source.includes('2. ÁREA DE ORIENTAÇÃO'))
+  assert.ok(source.includes('3. ASSUNTO'))
+  assert.ok(source.includes('4. AÇÃO'))
+  assert.ok(source.includes('id="spfm-priority-phases" class="spfm-phase-grid"'))
+  assert.ok(source.includes('id="spfm-area-step" class="spfm-step" hidden'))
+  assert.ok(source.includes('id="spfm-topic-step" class="spfm-step" hidden'))
+  assert.ok(source.includes('id="spfm-action-step" class="spfm-step" hidden'))
+  assert.ok(source.includes('id="spfm-priority-missing"'))
+  assert.ok(source.includes('DOCUMENTOS FALTANTES'))
+  assert.ok(source.includes('function openPriorityMissingDocuments'))
+  assert.ok(source.includes('id="spfm-process-setup" class="spfm-process-setup" hidden'))
+  assert.ok(source.includes('priorityTopics.filter((topic) => topic.area === selectedPriorityAreaId)'))
+  assert.ok(source.includes('function renderWorkflowPhases'))
+  assert.ok(source.includes('function selectWorkflowPhase'))
+  assert.ok(source.includes("phaseId === 'orientacao'"))
+  assert.ok(source.includes('openWorkflowPhaseCatalog(phaseId)'))
+  assert.ok(source.includes("if (areaId === 'taxas')"))
+  assert.ok(source.includes("selectPriorityTopic('devolucao-taxas')"))
+  assert.ok(read('data/catalogo-processos.json').includes('Genérico — Habilitação'))
+  assert.ok(read('data/catalogo-processos.json').includes('Genérico — Veículos'))
+  assert.ok(source.includes('box.hidden = !hasDocumentModel || activePriorityAction !== \'missing\''))
+  assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-priority-status"'))
+  assert.ok(source.indexOf('id="spfm-missing-box"') < source.indexOf('id="spfm-email-preparation"'))
+  assert.ok(source.indexOf('id="spfm-email-preparation"') < source.indexOf('id="spfm-priority-status"'))
+  assert.ok(source.includes("status.textContent = 'Exigência inserida. Agora prepare o e-mail.'"))
+  const missingDocumentsFlow = source.slice(
+    source.indexOf('function openPriorityMissingDocuments'),
+    source.indexOf('function openPriorityProcess')
+  )
+  assert.ok(missingDocumentsFlow.includes('setEmailPreparationVisible(true)'))
+  assert.ok(!missingDocumentsFlow.includes('setEmailPreparationVisible(false)'))
+  const insertMissingRequirement = source.slice(
+    source.indexOf('async function insertMissingDocumentsRequirement'),
+    source.indexOf('function buildProcessCompletedResponseHtml')
+  )
+  assert.ok(!insertMissingRequirement.includes("throw new Error('Digite o nome do requerente.')"))
+  assert.ok(source.includes('const greeting = safeName ? `Olá, ' + '$' + '{safeName}.` : \'Olá.\''))
+  assert.ok(styles.includes('.spfm-area-grid'))
+  assert.ok(styles.includes('.spfm-phase-grid'))
+  assert.ok(styles.includes('grid-template-columns: repeat(2, minmax(0, 1fr))'))
+  assert.ok(source.includes("const PRIORITY_AREA_ORDER = ['habilitacao', 'pericia-medica', 'veiculos', 'taxas', 'oficios']"))
+  assert.ok(read('data/catalogo-processos.json').includes('"label": "Perícia médica"'))
+  assert.ok(source.includes('BUSCAR OUTRO ATENDIMENTO'))
+  assert.ok(source.includes('class="spfm-catalog-toggle"'))
+  assert.ok(styles.includes('width: min(340px, calc(100vw - 20px))'))
+  assert.ok(styles.includes('grid-template-columns: repeat(3, minmax(0, 1fr))'))
+  assert.ok(styles.includes('.spfm-decision-grid button.is-primary'))
+  assert.ok(styles.includes('.spfm-priority-workflow .spfm-check'))
+  assert.ok(!source.includes('spfm-topic-button'))
+  assert.ok(source.includes("['catalog', 'reply'].includes(activePriorityAction)"))
+  assert.ok(source.includes('selectedResponseScript()?.routing?.destinationUnit'))
+  assert.ok(source.includes("button.textContent = destination\n          ? 'TRIAGEM PREPARADA'"))
+}
+
 function testUnusedSeiFieldsAreHidden () {
   const source = read('cs_modules/clique_protocolista/index.js')
   const hideFunction = source.indexOf('function hideUnusedProcessFields')
@@ -222,10 +555,39 @@ function testAutomaticEmailCompletion () {
   const bodyInsertion = source.indexOf('insertProcessCompletedResponse(', subjectUpdate)
 
   assert.ok(automaticFunction > -1)
+  const completedResponse = source.slice(
+    source.indexOf('function buildProcessCompletedResponseHtml'),
+    source.indexOf('function insertProcessCompletedResponse')
+  )
+  assert.ok(completedResponse.includes('DADOS DO PROCESSO'))
+  assert.ok(completedResponse.includes('Data de abertura:'))
+  assert.ok(completedResponse.includes('COMO ACOMPANHAR'))
+  assert.ok(completedResponse.includes('portalsei.rj.gov.br/pesquisaprocessualmunicipios'))
+  assert.ok(completedResponse.includes('não representa a aprovação do pedido'))
+  assert.ok(completedResponse.includes('art. 49 do Decreto SEI-RJ nº 48.209'))
+  assert.ok(completedResponse.includes('Atendimento do Serviço de Protocolo<br>DETRAN-RJ'))
+  assert.ok(completedResponse.includes('POR FAVOR, NÃO RESPONDA ESTE E-MAIL.'))
+  assert.ok(completedResponse.includes('processModelSpecificHtml(responseModel)'))
+  assert.ok(!completedResponse.includes('Protocolista nº'))
+  assert.ok(completedResponse.includes(
+    'const greeting = name ? `Olá, ' + '$' + "{name}.` : 'Olá.'"
+  ))
   assert.ok(runtimeListener > automaticFunction)
   assert.ok(source.includes('await insertPendingProcessResponse(true)'))
   assert.ok(subjectUpdate > -1 && bodyInsertion > subjectUpdate)
   assert.ok(source.includes('await autoInsertPendingProcessResponse()'))
+  assert.ok(source.includes("configuredModel === 'daf'"))
+  assert.ok(source.includes("configuredModel === 'divmed'"))
+  assert.ok(source.includes("areaId === 'veiculos'"))
+  assert.ok(source.includes("areaId === 'taxas'"))
+  assert.ok(source.includes("procedureId === 'devolucao-taxas'"))
+  assert.ok(source.includes("procedureId === 'solicitacao-pericia-medica'"))
+  assert.ok(source.includes('DAF.ANL@DETRAN.RJ.GOV.BR'))
+  assert.ok(source.includes('atendimento.drv@detran.rj.gov.br'))
+  assert.ok(source.includes('https://wa.me/552123320206'))
+  const protocolSource = read('cs_modules/protocolo_cliente/index.js')
+  assert.ok(protocolSource.includes("procedureId:context?.procedureId||''"))
+  assert.ok(protocolSource.includes("areaId:context?.areaId||''"))
 }
 
 function testHighlightedQuickRequestButton () {
@@ -240,6 +602,21 @@ function testHighlightedQuickRequestButton () {
   assert.ok(source.includes('function resetRqButton (button)'))
   assert.ok(source.includes('browserApi.storage?.onChanged'))
   assert.ok(source.includes('!changes[PENDING_KEY].newValue'))
+
+  const processLookup = source.indexOf(
+    'const currentProcessId =\n      extractProcessId()'
+  )
+  const toolbarLookup = source.indexOf(
+    'const target = await waitFor('
+  )
+  const contextGuard = source.indexOf(
+    "if (!context) {\n        console.log(\n          '[FAST PROC RQ] Processo não identificado como FAST PROC.'",
+    processLookup
+  )
+
+  assert.ok(processLookup > -1)
+  assert.ok(contextGuard > processLookup)
+  assert.ok(toolbarLookup > contextGuard)
 }
 
 function testExternalDocumentFieldsAreCollapsed () {
@@ -341,6 +718,10 @@ function testExternalDocumentHeaderIsCompact () {
   assert.ok(source.includes(
     "'0 0 0 auto'"
   ))
+  assert.ok(source.includes('const pinSaveToVisibleArea = () =>'))
+  assert.ok(source.includes("'position',\n        'fixed'"))
+  assert.ok(source.includes("'right',\n        '24px'"))
+  assert.ok(source.includes("'z-index',\n        '1000'"))
   assert.ok(source.includes('compactDocumentHeader()'))
 }
 
@@ -370,6 +751,18 @@ function testProcessTypeUsesOneSearchableField () {
   const source = read('cs_modules/clique_protocolista/index.js')
   const styles = read('cs_modules/clique_protocolista/styles.css')
 
+  assert.ok(source.includes('const QUICK_PROCESS_TYPES = ['))
+  assert.ok(source.includes("['DEV. TAXAS', 'Detran: Devolução de Taxas']"))
+  assert.ok(source.includes("'DESIST. 1ª HAB.',"))
+  assert.ok(source.includes("['PERÍCIA MÉDICA', 'Detran: Solicitação de Perícia Médica']"))
+  assert.ok(source.includes("'GERAL VEÍCULOS',"))
+  assert.ok(source.includes("'GERAL HABILITAÇÃO',"))
+  assert.ok(source.includes("className: 'sp-clique-type-shortcuts'"))
+  assert.ok(source.includes("className: 'sp-clique-type-shortcut'"))
+  assert.ok(source.includes('selectTypeOption(option)'))
+  assert.ok(source.includes('updateQuickTypeButtons(option)'))
+  assert.ok(styles.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'))
+  assert.ok(styles.includes('.sp-clique-type-shortcut--active'))
   assert.ok(source.includes('function matchesProcessTypeQuery'))
   assert.ok(source.includes('optionTerm.includes(queryTerm)'))
   assert.ok(source.includes("className: 'sp-clique-type-options'"))
@@ -466,10 +859,16 @@ function testInterestedAutocompleteIsReleased () {
 }
 
 async function run () {
+  testInterestedConfirmation()
+  testFastMailOperatorFallback()
+  testNativeAuthenticationAutomation()
+  await testNativeAuthenticationBehavior()
   await testSeiAutoLogin()
   await testStartProcessNavigation()
   await testReturnToOriginalEmail()
   testCompactFastProcLayout()
+  testFastMailHiddenFieldsStayHidden()
+  testFastMailProgressiveNavigation()
   testUnusedSeiFieldsAreHidden()
   testAutomaticEmailCompletion()
   testHighlightedQuickRequestButton()
