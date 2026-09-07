@@ -3,7 +3,6 @@
  * Camada visual isolada. Reaproveita o menu de tema da V3 sem tocar no FAST MAIL.
  */
 
-/* O rótulo nativo é ocultado somente quando identificado pelo JS visual. */
 html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 .sp-owa-v4-native-outlook-brand {
   display: none !important;
@@ -16,63 +15,60 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 }
 
 /*
- * A caixa de branding ocupa a faixa, mas não recorta a imagem.
- * A imagem usa sua proporção nativa (height:auto) para impedir o corte vertical
- * provocado por regras legadas do OWA sobre elementos IMG.
+ * Branding no topo absoluto da pilha visual.
+ * O logo não é mais um <img>: é background de um span dedicado,
+ * evitando qualquer regra legada do OWA que recorte imagens.
  */
 #sp-owa-v4-branding {
-  position: fixed;
-  z-index: 2147483646;
-  top: 0;
-  left: 20px;
-  width: 280px;
-  height: 48px;
-  margin: 0;
-  padding: 0;
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  top: 0 !important;
+  left: 20px !important;
+  width: 280px !important;
+  height: 48px !important;
+  margin: 0 !important;
+  padding: 0 !important;
   overflow: visible !important;
-  pointer-events: none;
+  clip: auto !important;
+  clip-path: none !important;
+  pointer-events: none !important;
+  isolation: isolate;
 }
 
 #sp-owa-v4-branding .sp-owa-v4-logo {
   position: absolute !important;
+  z-index: 1 !important;
   top: 50% !important;
   left: 0 !important;
   display: block !important;
   width: 280px !important;
-  height: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-  min-height: 0 !important;
+  height: 37px !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: 0 !important;
   overflow: visible !important;
-  clip: auto !important;
-  clip-path: none !important;
-  object-fit: initial !important;
-  object-position: initial !important;
+  background-repeat: no-repeat !important;
+  background-position: left center !important;
+  background-size: contain !important;
   transform: translateY(-50%) !important;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
+  pointer-events: none !important;
 }
 
 /* Easter egg: somente o floco dentro de PR❄TOCOL!STA recebe clique. */
 #sp-owa-v4-snow-hotspot {
-  position: absolute;
-  z-index: 2;
-  top: 5px;
-  left: 111px;
-  width: 22px;
-  height: 38px;
-  margin: 0;
-  padding: 0;
-  cursor: pointer;
-  pointer-events: auto;
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  outline: none;
+  position: absolute !important;
+  z-index: 2 !important;
+  top: 5px !important;
+  left: 111px !important;
+  width: 22px !important;
+  height: 38px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  outline: none !important;
 }
 
 #sp-owa-v4-snow-hotspot::after {
@@ -91,10 +87,6 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
   transform: scale(1.08);
 }
 
-/*
- * O trigger antigo continua existindo apenas como motor do menu.
- * O próprio menu também deixa de depender da geometria do header interno.
- */
 #sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
   position: fixed !important;
   z-index: 2147483647 !important;
@@ -139,17 +131,18 @@ html[data-sp-owa-protocolista-theme-v2="off"] #sp-owa-v4-branding {
 
 @media (max-width: 1180px) {
   #sp-owa-v4-branding {
-    left: 16px;
-    width: 258px;
+    left: 16px !important;
+    width: 258px !important;
   }
 
   #sp-owa-v4-branding .sp-owa-v4-logo {
     width: 258px !important;
+    height: 34px !important;
   }
 
   #sp-owa-v4-snow-hotspot {
-    left: 102px;
-    width: 21px;
+    left: 102px !important;
+    width: 21px !important;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
@@ -164,17 +157,18 @@ html[data-sp-owa-protocolista-theme-v2="off"] #sp-owa-v4-branding {
 
 @media (max-width: 880px) {
   #sp-owa-v4-branding {
-    left: 12px;
-    width: 225px;
+    left: 12px !important;
+    width: 225px !important;
   }
 
   #sp-owa-v4-branding .sp-owa-v4-logo {
     width: 225px !important;
+    height: 30px !important;
   }
 
   #sp-owa-v4-snow-hotspot {
-    left: 89px;
-    width: 18px;
+    left: 89px !important;
+    width: 18px !important;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
