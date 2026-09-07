@@ -154,6 +154,13 @@
       "all_frames": false,
       "css": ["cs_modules/owa_protocolista_theme_v2/theme.css", "cs_modules/owa_protocolista_theme_v2/branding-v4.css"],
       "js": ["cs_modules/owa_protocolista_theme_v2/theme.js", "cs_modules/owa_protocolista_theme_v2/branding-v4.js"]
+    },
+    {
+      "matches": ["https://venus2.detran.rj.gov.br/owa/*"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "css": ["cs_modules/fast_mail/onboarding-v1.css"],
+      "js": ["cs_modules/fast_mail/onboarding-v1.js"]
     }
   ],
   "web_accessible_resources": [
