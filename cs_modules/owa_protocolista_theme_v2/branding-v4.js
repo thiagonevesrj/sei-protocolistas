@@ -49,19 +49,20 @@
       branding = document.createElement('div')
       branding.id = BRAND_ID
       branding.className = 'sp-owa-v4-branding'
+      branding.setAttribute('role', 'img')
+      branding.setAttribute('aria-label', 'Webmail Protocolistas — Fast Mail')
       branding.innerHTML = `
-        <img class="sp-owa-v4-logo" alt="Webmail Protocolistas — Fast Mail">
+        <span class="sp-owa-v4-logo" aria-hidden="true"></span>
         <button id="${HOTSPOT_ID}" type="button" aria-label="Opções do Webmail Protocolistas" aria-haspopup="menu"></button>`
 
-      const image = branding.querySelector('.sp-owa-v4-logo')
-      if (image) image.src = api.runtime.getURL(LOGO_PATH)
+      const logo = branding.querySelector('.sp-owa-v4-logo')
+      if (logo) logo.style.backgroundImage = `url("${api.runtime.getURL(LOGO_PATH)}")`
 
       branding.querySelector(`#${HOTSPOT_ID}`)?.addEventListener('click', toggleExistingMenu)
 
       /*
-       * Branding propositalmente fora do header detectado da V3.
-       * O OWA legado usa um nó interno muito baixo para sessão/usuário,
-       * que recortava o logo mesmo quando a faixa visual era maior.
+       * Branding fora do header detectado da V3 e renderizado como background.
+       * Isso evita regras legadas do OWA que recortam elementos <img>.
        */
       document.body.appendChild(branding)
     }
