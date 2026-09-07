@@ -4,6 +4,13 @@
   if (window.top !== window) return
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
+  // BLINDAGEM DO COMPOSITOR OWA:
+  // Branding/tema não entram nas janelas Responder/Encaminhar para não disputar
+  // os controles nativos usados pelo FAST MAIL para alternar Texto simples -> HTML.
+  const IS_COMPOSE_WINDOW = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(location.search) &&
+    /[?&]a=(?:Reply|ReplyAll|Forward|New)(?:&|$)/i.test(location.search)
+  if (IS_COMPOSE_WINDOW) return
+
   const api = typeof browser === 'undefined' ? chrome : browser
   const ROOT_ID = 'sp-owa-protocolista-theme-v2-root'
   const BRAND_ID = 'sp-owa-v4-branding'
