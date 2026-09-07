@@ -16,29 +16,42 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 }
 
 /*
- * O logo fica preso diretamente à faixa superior do viewport.
- * Escala mais discreta para dar respiro à barra institucional.
+ * A caixa de branding ocupa a faixa, mas não recorta a imagem.
+ * A imagem usa sua proporção nativa (height:auto) para impedir o corte vertical
+ * provocado por regras legadas do OWA sobre elementos IMG.
  */
 #sp-owa-v4-branding {
   position: fixed;
   z-index: 2147483646;
-  top: 5px;
+  top: 0;
   left: 20px;
   width: 280px;
-  height: 37px;
+  height: 48px;
   margin: 0;
   padding: 0;
+  overflow: visible !important;
   pointer-events: none;
 }
 
 #sp-owa-v4-branding .sp-owa-v4-logo {
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  object-fit: contain;
-  object-position: left center;
+  position: absolute !important;
+  top: 50% !important;
+  left: 0 !important;
+  display: block !important;
+  width: 280px !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  clip-path: none !important;
+  object-fit: initial !important;
+  object-position: initial !important;
+  transform: translateY(-50%) !important;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
@@ -48,10 +61,10 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 #sp-owa-v4-snow-hotspot {
   position: absolute;
   z-index: 2;
-  top: 7%;
-  left: 39.6%;
-  width: 7.6%;
-  height: 86%;
+  top: 5px;
+  left: 111px;
+  width: 22px;
+  height: 38px;
   margin: 0;
   padding: 0;
   cursor: pointer;
@@ -108,7 +121,7 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 
 #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
   position: fixed !important;
-  top: 49px !important;
+  top: 50px !important;
   left: 24px !important;
   right: auto !important;
   pointer-events: auto !important;
@@ -126,14 +139,21 @@ html[data-sp-owa-protocolista-theme-v2="off"] #sp-owa-v4-branding {
 
 @media (max-width: 1180px) {
   #sp-owa-v4-branding {
-    top: 6px;
     left: 16px;
     width: 258px;
-    height: 34px;
+  }
+
+  #sp-owa-v4-branding .sp-owa-v4-logo {
+    width: 258px !important;
+  }
+
+  #sp-owa-v4-snow-hotspot {
+    left: 102px;
+    width: 21px;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
-    top: 47px !important;
+    top: 49px !important;
     left: 18px !important;
   }
 
@@ -144,14 +164,21 @@ html[data-sp-owa-protocolista-theme-v2="off"] #sp-owa-v4-branding {
 
 @media (max-width: 880px) {
   #sp-owa-v4-branding {
-    top: 7px;
     left: 12px;
     width: 225px;
-    height: 30px;
+  }
+
+  #sp-owa-v4-branding .sp-owa-v4-logo {
+    width: 225px !important;
+  }
+
+  #sp-owa-v4-snow-hotspot {
+    left: 89px;
+    width: 18px;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
-    top: 43px !important;
+    top: 47px !important;
     left: 12px !important;
   }
 
