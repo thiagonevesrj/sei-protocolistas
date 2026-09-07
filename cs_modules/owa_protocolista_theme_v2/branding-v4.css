@@ -1,0 +1,130 @@
+/*
+ * Branding V4 — WEBMAIL PR❄TOCOL!STA ⚡ FAST MAIL
+ * Camada visual isolada. Reaproveita o menu de tema da V3 sem tocar no FAST MAIL.
+ */
+
+html.sp-owa-protocolista-v2 .sp-owa-v2-header-zone {
+  min-height: 50px !important;
+}
+
+html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+#sp-owa-protocolista-theme-v2-root .sp-owa-v3-branding.sp-owa-v4-superseded {
+  display: none !important;
+}
+
+#sp-owa-v4-branding {
+  position: absolute;
+  z-index: 2147483645;
+  top: 50%;
+  left: 12px;
+  width: min(340px, 38vw);
+  height: 46px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+#sp-owa-v4-branding .sp-owa-v4-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Easter egg: somente o floco dentro de PR❄TOCOL!STA recebe clique. */
+#sp-owa-v4-snow-hotspot {
+  position: absolute;
+  z-index: 2;
+  top: 7%;
+  left: 39.6%;
+  width: 7.6%;
+  height: 86%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+}
+
+#sp-owa-v4-snow-hotspot::after {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow: 0 0 0 1px rgba(243, 198, 79, 0.12), 0 0 16px rgba(243, 198, 79, 0.28);
+  transition: opacity .14s ease, transform .14s ease;
+}
+
+#sp-owa-v4-snow-hotspot:hover::after,
+#sp-owa-v4-snow-hotspot:focus-visible::after {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* O antigo trigger continua existindo apenas como motor do menu. */
+#sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
+  top: 50% !important;
+  left: 130px !important;
+  right: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  transform: translateY(-50%) !important;
+  pointer-events: none !important;
+}
+
+#sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-trigger {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+#sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
+  top: 34px !important;
+  left: -104px !important;
+  right: auto !important;
+  pointer-events: auto !important;
+}
+
+#sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
+  left: 112px !important;
+  right: auto !important;
+}
+
+#sp-owa-protocolista-theme-v2-root[data-theme-enabled="false"] #sp-owa-v4-branding {
+  opacity: .88;
+}
+
+@media (max-width: 1180px) {
+  #sp-owa-v4-branding {
+    width: 300px;
+  }
+
+  #sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
+    left: 114px !important;
+  }
+}
+
+@media (max-width: 880px) {
+  #sp-owa-v4-branding {
+    width: 255px;
+  }
+
+  #sp-owa-protocolista-theme-v2-root .sp-owa-v3-settings.sp-owa-v4-menu-anchor {
+    left: 97px !important;
+  }
+}
