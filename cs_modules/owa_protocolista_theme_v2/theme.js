@@ -4,6 +4,14 @@
   if (window.top !== window) return
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
+  // BLINDAGEM DO COMPOSITOR OWA:
+  // A janela Responder/Encaminhar usa controles nativos legados para alternar
+  // Texto simples -> HTML. O FAST MAIL possui um mecanismo validado que reproduz
+  // esse clique nativo; nenhuma camada visual pode disputar essa interface.
+  const IS_COMPOSE_WINDOW = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(location.search) &&
+    /[?&]a=(?:Reply|ReplyAll|Forward|New)(?:&|$)/i.test(location.search)
+  if (IS_COMPOSE_WINDOW) return
+
   const api = typeof browser === 'undefined' ? chrome : browser
   const STORAGE_KEY = 'spOwaProtocolistaThemeV2Enabled'
   const THEME_CLASS = 'sp-owa-protocolista-v2'
