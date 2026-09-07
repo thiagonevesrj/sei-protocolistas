@@ -75,6 +75,25 @@ Com isso, considerar **VALIDADO / CONGELADO** o padrão central compartilhado po
 
 Não continuar testando todos os serviços botão por botão quando eles usam a mesma infraestrutura central. Reabrir apenas diante de falha concreta.
 
+## Certidão de Identificação Civil — validação parcial concluída
+
+Em 06/09/2026, após integrar a Certidão ao fluxo nativo do FAST MAIL e transcrever o checklist documental do card oficial, Thiago confirmou em ambiente real:
+
+- `ORIENTAR` = **OK**;
+- `COBRAR DOCUMENTOS` = **OK**.
+
+Commit funcional de referência:
+
+`bdb6d041c994f7dd01449e7041120a3a1a9eb486` — `fix: integrar certidão civil sem alterar o manifest`.
+
+A validação automática desse commit passou com `SUCCESS`.
+
+Pendência única para fechar a Certidão de ponta a ponta:
+
+- validar `ABRIR PROCESSO` e confirmar tipo SEI / destino `DIRIC` no handoff para o FAST PROC.
+
+Até regressão concreta, não reabrir a lógica de `ORIENTAR` nem o checklist de `COBRAR DOCUMENTOS` da Certidão.
+
 ## Estado operacional relacionado
 
 - inserção segura no corpo do OWA: validada;
@@ -86,17 +105,19 @@ Não continuar testando todos os serviços botão por botão quando eles usam a 
 - `Desistência de Categoria`: validada e permanece referência de padrão;
 - `Transferência de Prontuário`: validada no FAST MAIL;
 - `Devolução de Taxas`: fluxo de cobrança documental validado;
+- `Certidão de Identificação Civil`: ORIENTAR e COBRAR DOCUMENTOS validados; ABRIR PROCESSO pendente;
 - Bcc não deve ser reaberto sem regressão concreta.
 
 ## Próxima fila de trabalho
 
 Não reabrir os itens acima. A próxima rodada deve priorizar fluxos ainda não congelados ou pendências fora desse mecanismo central, especialmente:
 
-1. `Troca de Clínica` — validar fluxo e manter a resposta curada; não inventar URL de formulário ausente;
-2. `Leilão` — validar o fluxo e eventuais pendências específicas;
-3. `Genérico Habilitação` e `Genérico Veículos` — validar roteamento/conteúdo sem alterar scripts do Trello/Trellinho;
-4. `Ofícios` — validar os cenários de triagem já mapeados;
-5. FAST PROC / `Transferência de Prontuário` — permanece separada a pendência de validação real da automação de destino `NUCRA` na tela Enviar Processo.
+1. `Certidão de Identificação Civil` — validar apenas `ABRIR PROCESSO`, conferindo tipo SEI e destino `DIRIC`;
+2. `Troca de Clínica` — validar fluxo e manter a resposta curada; não inventar URL de formulário ausente;
+3. `Leilão` — validar o fluxo e eventuais pendências específicas;
+4. `Genérico Habilitação` e `Genérico Veículos` — validar roteamento/conteúdo sem alterar scripts do Trello/Trellinho;
+5. `Ofícios` — validar os cenários de triagem já mapeados;
+6. FAST PROC / `Transferência de Prontuário` — permanece separada a pendência de validação real da automação de destino `NUCRA` na tela Enviar Processo.
 
 ## Modo de trabalho
 
