@@ -138,16 +138,59 @@
 
   function sanitizeOperationalSubject (value) {
     const current = clean(value)
-    if (!current || !isOperationalSubject(current) || !INTERNAL_RQ_LABEL.test(current)) {
-      INTERNAL_RQ_LABEL.lastIndex = 0
-      return current
-    }
+    if (!current || !isOperationalSubject(current)) return current
 
     INTERNAL_RQ_LABEL.lastIndex = 0
-    return clean(current
+    let sanitized = clean(current
       .replace(INTERNAL_RQ_LABEL, ' ')
       .replace(/\s+-\s+-\s+/g, ' - ')
       .replace(/\s{2,}/g, ' '))
+    INTERNAL_RQ_LABEL.lastIndex = 0
+
+    // FECHADO nunca substitui a fase operacional. O assunto final preserva
+    // explicitamente TRIAGEM e acrescenta FECHADO como estado de conclusão.
+    if (/\bFECHADO\b/i.test(sanitized) && !/\bTRIAGEM\b/i.test(sanitized)) {
+      if (/\s-\sFECHADO\b/i.test(sanitized)) {
+        sanitized = sanitized.replace(/\s-\sFECHADO\b/i, ' - TRIAGEM - FECHADO')
+      } else {
+        sanitized = sanitized.replace(/\bFECHADO\b/i, 'TRIAGEM - FECHADO')
+      }
+    }
+
+    return clean(sanitized)
+  }
+
+  function sanitizeProcessCompletedResponses () {
+    let changed = false
+
+    for (const doc of allDocuments()) {
+      const responses = Array.from(doc.querySelectorAll('[data-sei-protocolistas="process-completed-response"]'))
+
+      responses.forEach((response) => {
+        const greeting = response.querySelector('p')
+        if (!greeting) return
+
+        const current = clean(greeting.textContent)
+        INTERNAL_RQ_LABEL.lastIndex = 0
+        if (!INTERNAL_RQ_LABEL.test(current)) {
+          INTERNAL_RQ_LABEL.lastIndex = 0
+          return
+        }
+
+        INTERNAL_RQ_LABEL.lastIndex = 0
+        const sanitized = clean(current
+          .replace(INTERNAL_RQ_LABEL, '')
+          .replace(/\s+([.,;:!?])/g, '$1'))
+        INTERNAL_RQ_LABEL.lastIndex = 0
+
+        if (sanitized && sanitized !== current) {
+          greeting.textContent = sanitized
+          changed = true
+        }
+      })
+    }
+
+    return changed
   }
 
   function setNativeValue (field, value) {
@@ -217,23 +260,40 @@
   }
 
   function sanitizeNow () {
-    scheduled = false
     const field = findSubjectField()
-    if (!field) return false
+    let subjectChanged = false
 
-    const current = clean(field.value || field.textContent)
-    const sanitized = sanitizeOperationalSubject(current)
-    if (!sanitized || sanitized === current) return false
+    if (field) {
+      const current = clean(field.value || field.textContent)
+      const sanitized = sanitizeOperationalSubject(current)
+      if (sanitized && sanitized !== current) {
+        subjectChanged = setNativeValue(field, sanitized)
+        if (subjectChanged) {
+          console.info('[SEI Protocolistas] Assunto operacional sanitizado/preservado com TRIAGEM.')
+        }
+      }
+    }
 
-    setNativeValue(field, sanitized)
-    console.info('[SEI Protocolistas] Rótulo interno removido do assunto operacional.')
-    return true
+    const bodyChanged = sanitizeProcessCompletedResponses()
+    if (bodyChanged) {
+      console.info('[SEI Protocolistas] Rótulo interno removido da devolutiva ao cidadão.')
+    }
+
+    return subjectChanged || bodyChanged
   }
 
   function scheduleSanitize () {
     if (scheduled) return
     scheduled = true
-    window.setTimeout(sanitizeNow, 0)
+
+    window.setTimeout(() => {
+      scheduled = false
+      sanitizeNow()
+      // A devolutiva do processo pode ser inserida logo após a atualização do
+      // assunto. Repetimos apenas duas vezes para cobrir essa janela assíncrona.
+      window.setTimeout(sanitizeNow, 120)
+      window.setTimeout(sanitizeNow, 420)
+    }, 0)
   }
 
   document.addEventListener('click', (event) => {
@@ -256,6 +316,11 @@
     // Qualquer resposta/exigência inserida já prepara o assunto. Nome + CPF
     // geram o padrão completo; sem eles, preserva o assunto e apenas acrescenta TRIAGEM.
     window.setTimeout(prepareSubjectOnly, 260)
+  }, true)
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest?.('#spfm-insert-process-response')) return
+    ;[80, 220, 520].forEach((delay) => window.setTimeout(sanitizeNow, delay))
   }, true)
 
   document.addEventListener('input', (event) => {
