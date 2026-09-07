@@ -8,6 +8,8 @@
   const GUIDE_VERSION = '2'
   const STORAGE_KEY = `spProtocolistaGuideDismissedV${GUIDE_VERSION}`
   const TRELLO_BOARDS_URL = 'https://trello.com/u/protocolistadetran1/boards'
+  const IS_COMPOSE_WINDOW = /[?&]ae=(?:Item|PreFormAction)(?:&|$)/i.test(location.search) &&
+    /[?&]a=(?:Reply|ReplyAll|Forward|New)(?:&|$)/i.test(location.search)
 
   const steps = [
     {
@@ -289,7 +291,10 @@
     observer.observe(document.documentElement, { childList: true, subtree: true })
     installExperienceControls()
 
-    if (!guideDismissed) {
+    // Em uma instalação nova, o Guia pode abrir automaticamente no Webmail principal.
+    // Na janela de Responder/Encaminhar ele permanece disponível pelo botão REVER GUIA,
+    // mas não toma foco automaticamente enquanto o OWA termina de montar o compositor.
+    if (!guideDismissed && !IS_COMPOSE_WINDOW) {
       window.setTimeout(() => openGuide(), 650)
     }
   }
