@@ -28,7 +28,7 @@
       lead: 'No FAST MAIL, siga o caminho visual. Cada etapa selecionada fica marcada para você saber exatamente por onde passou.',
       cards: [
         ['1. Escolha a fase', 'IDENTIFICAÇÃO, ORIENTAÇÃO ou EXIGÊNCIAS.'],
-        ['2. Escolha o serviço', 'Use os atendimentos principais e a pesquisa do FAST MAIL. Se não localizar o caso, use o atendimento tradicional pelo Trello.'],
+        ['2. Escolha o serviço', 'Use os atendimentos principais e a pesquisa do FAST MAIL. Se não localizar o caso, use o Trello apenas para consultar/copiar o script. A abertura de processo continua pelo FAST MAIL.'],
         ['3. Escolha a ação', 'ORIENTAR, COBRAR DOCUMENTOS ou ABRIR PROCESSO, conforme o atendimento permitir.'],
         ['4. Confira os dados', 'Nome, CPF, destino e procedimento aparecem antes das ações que dependem deles.']
       ],
@@ -64,7 +64,7 @@
       lead: 'Algumas funções existem para ganhar tempo sem esconder o que está acontecendo.',
       cards: [
         ['REQUERIMENTO RÁPIDO', 'Atalho do FAST PROC para acelerar a inclusão do requerimento quando o fluxo permitir.'],
-        ['ATENDIMENTO TRADICIONAL — TRELLO', 'Se não encontrar a solução no FAST MAIL, abra o Trello em uma nova aba, localize o script e prossiga pelo método tradicional.'],
+        ['CONSULTAR SCRIPT NO TRELLO', 'Use o Trello somente para localizar/copiar o script. Para abrir processo, retorne ao FAST MAIL e siga normalmente para o FAST PROC.'],
         ['REVER GUIA', 'O botão fica no FAST MAIL e abre este tutorial novamente a qualquer momento.'],
         ['OWA ORIGINAL', 'O botão USAR OWA ORIGINAL desliga somente o Tema Protocolista. FAST MAIL e FAST PROC continuam funcionando normalmente.']
       ],
@@ -256,9 +256,9 @@
       button.id = 'spfm-trello-fallback'
       button.type = 'button'
       button.className = nativeToggle.className || 'spfm-catalog-toggle'
-      button.textContent = 'ATENDIMENTO TRADICIONAL — TRELLO'
-      button.title = 'Abrir o Trello para localizar o atendimento manualmente'
-      button.setAttribute('aria-label', 'Abrir atendimento tradicional no Trello em nova aba')
+      button.textContent = 'CONSULTAR SCRIPT NO TRELLO'
+      button.title = 'Abrir o Trello em nova aba apenas para localizar/copiar o script'
+      button.setAttribute('aria-label', 'Consultar script no Trello em nova aba')
       button.addEventListener('click', () => {
         window.open(TRELLO_BOARDS_URL, '_blank', 'noopener,noreferrer')
       })
