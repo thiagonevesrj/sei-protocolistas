@@ -32,7 +32,7 @@
       "run_at": "document_start",
       "css": ["cs_modules/core.css"],
       "all_frames": true,
-      "js": ["cs_modules/core/start/lib.js", "cs_modules/core/start/limparContextoTemporario.js", "vendor/jquery/jquery.min.js", "vendor/jquery-ui/jquery-ui.min.js"]
+      "js": ["cs_modules/core/start/lib.js", "cs_modules/core/start/limparContextoTemporario.js", "vendor/jquery/jquery.min.js", "vendor/jquery-ui/jquery.min.js"]
     },
     {
       "matches": ["*://sei.rj.gov.br/*"],
@@ -79,7 +79,7 @@
     },
     {
       "matches": ["*://sei.rj.gov.br/*controlador.php?acao=procedimento_controlar*"],
-      "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_controlar/mostrarEspecificacao.js", "cs_modules/procedimento_controlar/corrigirTabelas.js", "cs_modules/procedimento_controlar/confirmarAntesConcluir.js", "cs_modules/procedimento_controlar/incluirCalculoPrazos.js", "cs_modules/procedimento_controlar/marcarCorProcesso.js", "cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/procedimento_controlar/filtra_processos/filtraPorAtribuicao.js", "cs_modules/procedimento_controlar/filtra_processos/carregaInformacaoBlocos.js", "cs_modules/lib/selecionarMultiplosProcessos.js", "cs_modules/procedimento_controlar/listaPorEspecificacao.js", "cs_modules/procedimento_controlar/index.js"]
+      "js": ["cs_modules/lib/pontoControleCores.js", "cs_modules/procedimento_controlar/mostrarEspecificacao.js", "cs_modules/procedimento_controlar/corrigirTabelas.js", "cs_modules/procedimento_controlar/confirmarAntesConcluir.js", "cs_modules/procedimento_controlar/incluirCalculoPrazos.js", "cs_modules/procedimento_controlar/marcarCorProcesso.js", "cs_modules/lib/filtra_processos/index.js", "cs_modules/lib/filtra_processos/pesquisarInformacoes.js", "cs_modules/procedimento_controlar/filtra_processos/filtraPorAtribuicao.js", "cs_modules/procedimento_controlar/filtra_processos/carregaInformacaoBlocos.js", "cs_modules/procedimento_controlar/listaPorEspecificacao.js", "cs_modules/procedimento_controlar/index.js"]
     },
     {
       "matches": ["*://sei.rj.gov.br/*controlador.php?acao=rel_bloco_protocolo_listar*"],
@@ -152,8 +152,8 @@
       "matches": ["https://venus2.detran.rj.gov.br/owa/*"],
       "run_at": "document_idle",
       "all_frames": false,
-      "css": ["cs_modules/owa_protocolista_theme_v2/theme.css"],
-      "js": ["cs_modules/owa_protocolista_theme_v2/theme.js"]
+      "css": ["cs_modules/owa_protocolista_theme_v2/theme.css", "cs_modules/owa_protocolista_theme_v2/branding-v4.css"],
+      "js": ["cs_modules/owa_protocolista_theme_v2/theme.js", "cs_modules/owa_protocolista_theme_v2/branding-v4.js"]
     }
   ],
   "web_accessible_resources": [
@@ -162,7 +162,7 @@
       "matches": ["*://sei.rj.gov.br/*"]
     },
     {
-      "resources": ["data/catalogo-processos.json", "data/catalogo-scripts.json", "data/respostas-curadas.json", "data/trellinho-operacional-2808.json", "data/trello-fase02-estado-atual.json"],
+      "resources": ["data/catalogo-processos.json", "data/catalogo-scripts.json", "data/respostas-curadas.json", "data/trellinho-operacional-2808.json", "data/trello-fase02-estado-atual.json", "icons/webmail-protocolistas-fast-mail.png"],
       "matches": ["https://venus2.detran.rj.gov.br/*"]
     }
   ]
