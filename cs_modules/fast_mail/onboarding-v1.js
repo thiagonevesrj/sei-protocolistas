@@ -5,8 +5,9 @@
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
   const api = typeof browser === 'undefined' ? chrome : browser
-  const GUIDE_VERSION = '1'
+  const GUIDE_VERSION = '2'
   const STORAGE_KEY = `spProtocolistaGuideDismissedV${GUIDE_VERSION}`
+  const TRELLO_BOARDS_URL = 'https://trello.com/u/protocolistadetran1/boards'
 
   const steps = [
     {
@@ -27,7 +28,7 @@
       lead: 'No FAST MAIL, siga o caminho visual. Cada etapa selecionada fica marcada para você saber exatamente por onde passou.',
       cards: [
         ['1. Escolha a fase', 'IDENTIFICAÇÃO, ORIENTAÇÃO ou EXIGÊNCIAS.'],
-        ['2. Escolha o serviço', 'Use os atendimentos principais ou pesquise em OUTRO SERVIÇO.'],
+        ['2. Escolha o serviço', 'Use os atendimentos principais e a pesquisa do FAST MAIL. Se não localizar o caso, use o atendimento tradicional pelo Trello.'],
         ['3. Escolha a ação', 'ORIENTAR, COBRAR DOCUMENTOS ou ABRIR PROCESSO, conforme o atendimento permitir.'],
         ['4. Confira os dados', 'Nome, CPF, destino e procedimento aparecem antes das ações que dependem deles.']
       ],
@@ -63,7 +64,7 @@
       lead: 'Algumas funções existem para ganhar tempo sem esconder o que está acontecendo.',
       cards: [
         ['REQUERIMENTO RÁPIDO', 'Atalho do FAST PROC para acelerar a inclusão do requerimento quando o fluxo permitir.'],
-        ['Buscar outro atendimento', 'Se o serviço não estiver entre os principais, use a busca completa do FAST MAIL.'],
+        ['ATENDIMENTO TRADICIONAL — TRELLO', 'Se não encontrar a solução no FAST MAIL, abra o Trello em uma nova aba, localize o script e prossiga pelo método tradicional.'],
         ['REVER GUIA', 'O botão fica no FAST MAIL e abre este tutorial novamente a qualquer momento.'],
         ['OWA ORIGINAL', 'O botão USAR OWA ORIGINAL desliga somente o Tema Protocolista. FAST MAIL e FAST PROC continuam funcionando normalmente.']
       ],
@@ -245,15 +246,48 @@
     return true
   }
 
+  function installTrelloFallbackButton () {
+    const nativeToggle = document.querySelector('#spfm-script-toggle')
+    if (!nativeToggle || !nativeToggle.parentElement) return false
+
+    let button = document.querySelector('#spfm-trello-fallback')
+    if (!button) {
+      button = document.createElement('button')
+      button.id = 'spfm-trello-fallback'
+      button.type = 'button'
+      button.className = nativeToggle.className || 'spfm-catalog-toggle'
+      button.textContent = 'ATENDIMENTO TRADICIONAL — TRELLO'
+      button.title = 'Abrir o Trello para localizar o atendimento manualmente'
+      button.setAttribute('aria-label', 'Abrir atendimento tradicional no Trello em nova aba')
+      button.addEventListener('click', () => {
+        window.open(TRELLO_BOARDS_URL, '_blank', 'noopener,noreferrer')
+      })
+    }
+
+    if (button.parentElement !== nativeToggle.parentElement || button.nextElementSibling !== nativeToggle) {
+      nativeToggle.parentElement.insertBefore(button, nativeToggle)
+    }
+
+    nativeToggle.style.display = 'none'
+    nativeToggle.setAttribute('aria-hidden', 'true')
+    nativeToggle.tabIndex = -1
+    return true
+  }
+
+  function installExperienceControls () {
+    installTrelloFallbackButton()
+    installReviewButton()
+  }
+
   async function init () {
     const stored = await storageGet(STORAGE_KEY)
     guideDismissed = Boolean(stored[STORAGE_KEY])
 
     bindGuide()
 
-    const observer = new MutationObserver(() => installReviewButton())
+    const observer = new MutationObserver(() => installExperienceControls())
     observer.observe(document.documentElement, { childList: true, subtree: true })
-    installReviewButton()
+    installExperienceControls()
 
     if (!guideDismissed) {
       window.setTimeout(() => openGuide(), 650)
