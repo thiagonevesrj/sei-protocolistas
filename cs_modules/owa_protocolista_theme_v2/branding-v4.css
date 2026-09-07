@@ -17,15 +17,15 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 
 /*
  * O logo fica preso diretamente à faixa superior do viewport.
- * Escala conservadora para preservar toda a assinatura BY THIAGO NEVES DESIGN.
+ * Escala mais discreta para dar respiro à barra institucional.
  */
 #sp-owa-v4-branding {
   position: fixed;
   z-index: 2147483646;
-  top: 3px;
+  top: 5px;
   left: 20px;
-  width: 320px;
-  height: 42px;
+  width: 280px;
+  height: 37px;
   margin: 0;
   padding: 0;
   pointer-events: none;
@@ -108,14 +108,14 @@ html.sp-owa-protocolista-v2 .sp-owa-v4-native-outlook-brand,
 
 #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
   position: fixed !important;
-  top: 51px !important;
+  top: 49px !important;
   left: 24px !important;
   right: auto !important;
   pointer-events: auto !important;
 }
 
 #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
-  left: 124px !important;
+  left: 107px !important;
   right: auto !important;
 }
 
@@ -126,36 +126,36 @@ html[data-sp-owa-protocolista-theme-v2="off"] #sp-owa-v4-branding {
 
 @media (max-width: 1180px) {
   #sp-owa-v4-branding {
-    top: 4px;
+    top: 6px;
     left: 16px;
-    width: 290px;
-    height: 38px;
+    width: 258px;
+    height: 34px;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
-    top: 48px !important;
+    top: 47px !important;
     left: 18px !important;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
-    left: 112px !important;
+    left: 100px !important;
   }
 }
 
 @media (max-width: 880px) {
   #sp-owa-v4-branding {
-    top: 6px;
+    top: 7px;
     left: 12px;
-    width: 250px;
-    height: 33px;
+    width: 225px;
+    height: 30px;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu {
-    top: 44px !important;
+    top: 43px !important;
     left: 12px !important;
   }
 
   #sp-owa-protocolista-theme-v2-root .sp-owa-v4-menu-anchor > #sp-owa-v3-settings-menu::before {
-    left: 96px !important;
+    left: 89px !important;
   }
 }
