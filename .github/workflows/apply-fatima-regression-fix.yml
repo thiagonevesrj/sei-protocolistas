@@ -1,0 +1,53 @@
+name: Aplicar correção Fátima Félix
+
+on:
+  push:
+    branches:
+      - agent/fatima-regression-2026-09-07
+    paths:
+      - '.github/workflows/apply-fatima-regression-fix.yml'
+      - 'scripts/apply-fatima-regression-fix.js'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          ref: agent/fatima-regression-2026-09-07
+          fetch-depth: 0
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Aplicar correção determinística
+        run: node scripts/apply-fatima-regression-fix.js
+
+      - name: Validar regressões
+        run: npm run validate
+
+      - name: Validar lint
+        run: npm run lint
+
+      - name: Commitar somente a correção validada
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária."
+            exit 0
+          fi
+          git commit -m "fix: resolver regressao Fatima Felix no FAST MAIL"
+          git push origin HEAD:agent/fatima-regression-2026-09-07
