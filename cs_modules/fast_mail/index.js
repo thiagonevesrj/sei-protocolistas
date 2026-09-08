@@ -719,6 +719,12 @@
       .trim()
   }
 
+  function currentPlainTextReply (value) {
+    const text = String(value || '').replace(/\r\n/g, '\n')
+    const historyIndex = text.indexOf(HISTORY_SEPARATOR)
+    return historyIndex >= 0 ? text.slice(0, historyIndex) : text
+  }
+
   function messageBodyContainsResponse (editor, selector, responseHtml) {
     assertSafeMessageBodyEditor(editor)
 
@@ -731,8 +737,9 @@
       .split(/\n+/)
       .map(cleanValue)
       .find((line) => line.length >= 24) || cleanValue(responseText).slice(0, 80)
+    const currentReply = currentPlainTextReply(editor.value)
 
-    return Boolean(probe && String(editor.value || '').includes(probe))
+    return Boolean(probe && currentReply.includes(probe))
   }
 
   function selectedMissingDocuments () {
