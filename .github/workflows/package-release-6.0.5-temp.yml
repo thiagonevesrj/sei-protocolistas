@@ -1,0 +1,75 @@
+name: Empacotar release 6.0.5 Bcc Cco
+
+on:
+  push:
+    branches:
+      - release/6.0.5-bcc-cco
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar release
+        uses: actions/checkout@v4
+        with:
+          ref: release/6.0.5-bcc-cco
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validar candidata
+        run: npm run validate
+
+      - name: Confirmar versão 6.0.5
+        shell: bash
+        run: |
+          test "$(node -p "require('./manifest.json').version")" = "6.0.5"
+          test "$(node -p "require('./package.json').version")" = "6.0.5"
+
+      - name: Montar pacote da Chrome Web Store
+        shell: bash
+        run: |
+          mkdir -p dist
+          ZIP="dist/sei-protocolistas-chrome-web-store-6.0.5.zip"
+          zip -r "$ZIP" . \
+            -x '.git/*' \
+               '.github/*' \
+               '.githooks/*' \
+               '.vscode/*' \
+               'docs/*' \
+               'scripts/*' \
+               'node_modules/*' \
+               'dist/*' \
+               '.gitignore' \
+               'AGENTS.md' \
+               'README.md' \
+               'package.json' \
+               'package-lock.json' \
+               'bun.lock'
+          test "$(unzip -Z1 "$ZIP" | grep -c '^manifest.json$')" -eq 1
+          unzip -p "$ZIP" manifest.json | grep '"version": "6.0.5"'
+          sha256sum "$ZIP"
+
+      - name: Disponibilizar pacote
+        uses: actions/upload-artifact@v4
+        with:
+          name: sei-protocolistas-chrome-web-store-6.0.5
+          path: dist/sei-protocolistas-chrome-web-store-6.0.5.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remover workflow temporário
+        if: success()
+        shell: bash
+        run: |
+          rm .github/workflows/package-release-6.0.5-temp.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/package-release-6.0.5-temp.yml
+          git commit -m "chore: remover empacotador temporário 6.0.5"
+          git push origin HEAD:release/6.0.5-bcc-cco
