@@ -381,7 +381,7 @@
       const labels = Array.from(doc.querySelectorAll('label,span,div,td'))
         .filter((element) =>
           isVisible(element) &&
-          /^Mostrar\s+Bcc$/i.test(elementText(element))
+          /^Mostrar\s+(?:Bcc|Cco)$/i.test(elementText(element))
         )
 
       for (const label of labels) {
@@ -407,7 +407,7 @@
 
       for (const checkbox of checkboxes) {
         const rowText = elementText(checkbox.closest('tr,div,td'))
-        if (/Mostrar\s+Bcc/i.test(rowText)) return checkbox
+        if (/Mostrar\s+(?:Bcc|Cco)/i.test(rowText)) return checkbox
       }
     }
 
@@ -449,6 +449,41 @@
     return null
   }
 
+  function findOptionsDismissButton () {
+    for (const doc of allDocuments()) {
+      const dialogCandidates = Array.from(doc.querySelectorAll('div,table,form'))
+        .filter((element) =>
+          isVisible(element) &&
+          /Opções de Mensagens/i.test(elementText(element))
+        )
+
+      const scopes = dialogCandidates.length ? dialogCandidates : [doc]
+
+      for (const scope of scopes) {
+        const candidates = Array.from(scope.querySelectorAll(
+          'button,input[type=\"button\"],input[type=\"submit\"],a,span,div'
+        )).filter((element) => {
+          if (!isVisible(element)) return false
+          const text = elementText(element)
+          const value = String(element.value || '').trim()
+          return /^(?:Cancelar|Fechar|Cancel|Close)$/i.test(text) ||
+            /^(?:Cancelar|Fechar|Cancel|Close)$/i.test(value)
+        })
+
+        if (candidates.length) return candidates[0]
+      }
+    }
+
+    return null
+  }
+
+  function dismissOptionsDialogSafely () {
+    const control = findOptionsOkButton() || findOptionsDismissButton()
+    if (!control) return false
+    clickElement(control)
+    return true
+  }
+
   function findBccField () {
     const selectors = [
       'input[name*="bcc" i]',
@@ -458,7 +493,15 @@
       'input[aria-label*="bcc" i]',
       'textarea[aria-label*="bcc" i]',
       '[contenteditable="true"][aria-label*="bcc" i]',
-      '[contenteditable="true"][title*="bcc" i]'
+      '[contenteditable="true"][title*="bcc" i]',
+      'input[name*="cco" i]',
+      'textarea[name*="cco" i]',
+      'input[id*="cco" i]',
+      'textarea[id*="cco" i]',
+      'input[aria-label*="cco" i]',
+      'textarea[aria-label*="cco" i]',
+      '[contenteditable="true"][aria-label*="cco" i]',
+      '[contenteditable="true"][title*="cco" i]'
     ]
 
     for (const doc of allDocuments()) {
@@ -470,7 +513,7 @@
       const labels = Array.from(doc.querySelectorAll('label,td,span,div'))
         .filter((element) =>
           isVisible(element) &&
-          /^Bcc\.{0,3}:?$/i.test(elementText(element))
+          /^(?:Bcc|Cco)\.{0,3}:?$/i.test(elementText(element))
         )
 
       for (const label of labels) {
@@ -547,7 +590,10 @@
     clickElement(options)
 
     const checkbox = await waitFor(findShowBccCheckbox, 3000)
-    if (!checkbox) return null
+    if (!checkbox) {
+      dismissOptionsDialogSafely()
+      return null
+    }
 
     if (!checkbox.checked) {
       clickElement(checkbox)
@@ -555,7 +601,10 @@
     }
 
     const ok = await waitFor(findOptionsOkButton, 2500)
-    if (!ok) return null
+    if (!ok) {
+      dismissOptionsDialogSafely()
+      return null
+    }
 
     clickElement(ok)
 
