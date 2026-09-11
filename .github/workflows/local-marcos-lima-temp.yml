@@ -1,0 +1,209 @@
+name: Patch local Marcos Lima
+
+on:
+  push:
+    branches:
+      - agent/local-marcos-lima-2026-09-11
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar excecao nominal
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          p = Path('central_protocolista/main.js')
+          s = p.read_text(encoding='utf-8')
+          a = "  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'\n  const CATALOG_PATH = '../data/catalogo-processos.json'"
+          b = """  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+  const SPECIAL_PROTOCOLISTA_EMAILS = {
+    'marcos.lima@detran.rj.gov.br': {
+      number: 'MARCOS',
+      email: 'marcos.lima@detran.rj.gov.br',
+      displayName: 'Marcos Lima'
+    }
+  }
+  const CATALOG_PATH = '../data/catalogo-processos.json'"""
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+
+          a = """  function extractProtocolista (email) {
+    const normalized = clean(email).toLowerCase()
+    const match = normalized.match(/^protocolista\\s*(\\d{1,4})@detran\\.rj\\.gov\\.br$/i)
+    if (!match) return null
+
+    return {
+      number: match[1],
+      email: `protocolista${match[1]}@detran.rj.gov.br`
+    }
+  }"""
+          b = """  function extractProtocolista (email) {
+    const normalized = clean(email).toLowerCase()
+    const special = SPECIAL_PROTOCOLISTA_EMAILS[normalized]
+    if (special) return { ...special }
+
+    const match = normalized.match(/^protocolista\\s*(\\d{1,4})@detran\\.rj\\.gov\\.br$/i)
+    if (!match) return null
+
+    return {
+      number: match[1],
+      email: `protocolista${match[1]}@detran.rj.gov.br`
+    }
+  }"""
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+
+          a = "<strong>Protocolista ${operator.number} ${isValidated ? 'validado' : 'configurado'}</strong>"
+          b = "<strong>Protocolista ${operator.displayName || operator.number} ${isValidated ? 'validado' : 'configurado'}</strong>"
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+
+          a = 'Use o e-mail institucional no padrão protocolistaN@detran.rj.gov.br.'
+          b = 'Use uma conta institucional autorizada para o SEI Protocolistas.'
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('cs_modules/fast_mail/index.js')
+          s = p.read_text(encoding='utf-8')
+          a = "  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'\n  const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'"
+          b = """  const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+  const SPECIAL_PROTOCOLISTA_EMAILS = {
+    'marcos.lima@detran.rj.gov.br': {
+      number: 'MARCOS',
+      email: 'marcos.lima@detran.rj.gov.br',
+      displayName: 'Marcos Lima'
+    }
+  }
+  const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'"""
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+
+          a = """  function findOperator () {
+    const text = textFromDocuments()
+    const accountMatch = text.match(/protocolista\\s*(\\d{1,4})@detran\\.rj\\.gov\\.br/i)
+    const labelMatch = text.match(/\\bProtocolista\\s+(\\d{1,4})\\b/i)
+    const number = accountMatch?.[1] || labelMatch?.[1] || ''
+
+    if (!number) return null
+
+    return {
+      number,
+      email: `protocolista${number}@detran.rj.gov.br`,
+      source: accountMatch ? 'conta-webmail' : 'rotulo-webmail',
+      validatedAt: Date.now()
+    }
+  }"""
+          b = """  function findOperator () {
+    const text = textFromDocuments()
+    const normalizedText = text.toLowerCase()
+    const specialEmail = Object.keys(SPECIAL_PROTOCOLISTA_EMAILS)
+      .find((email) => normalizedText.includes(email))
+
+    if (specialEmail) {
+      return {
+        ...SPECIAL_PROTOCOLISTA_EMAILS[specialEmail],
+        source: 'conta-webmail',
+        validatedAt: Date.now()
+      }
+    }
+
+    const accountMatch = text.match(/protocolista\\s*(\\d{1,4})@detran\\.rj\\.gov\\.br/i)
+    const labelMatch = text.match(/\\bProtocolista\\s+(\\d{1,4})\\b/i)
+    const number = accountMatch?.[1] || labelMatch?.[1] || ''
+
+    if (!number) return null
+
+    return {
+      number,
+      email: `protocolista${number}@detran.rj.gov.br`,
+      source: accountMatch ? 'conta-webmail' : 'rotulo-webmail',
+      validatedAt: Date.now()
+    }
+  }"""
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+
+          a = """  function validStoredOperator (value) {
+    const number = cleanValue(value?.number)
+    const email = normalizeEmail(value?.email)
+    const expectedEmail = number
+      ? `protocolista${number}@detran.rj.gov.br`
+      : ''
+
+    if (
+      !/^\\d{1,4}$/.test(number) ||
+      email !== expectedEmail
+    ) {
+      return null
+    }
+
+    return {
+      ...value,
+      number,
+      email: expectedEmail,
+      source: value.source || 'central-config'
+    }
+  }"""
+          b = """  function validStoredOperator (value) {
+    const number = cleanValue(value?.number)
+    const email = normalizeEmail(value?.email)
+    const special = SPECIAL_PROTOCOLISTA_EMAILS[email]
+
+    if (special) {
+      return {
+        ...value,
+        ...special,
+        source: value.source || 'central-config'
+      }
+    }
+
+    const expectedEmail = number
+      ? `protocolista${number}@detran.rj.gov.br`
+      : ''
+
+    if (
+      !/^\\d{1,4}$/.test(number) ||
+      email !== expectedEmail
+    ) {
+      return null
+    }
+
+    return {
+      ...value,
+      number,
+      email: expectedEmail,
+      source: value.source || 'central-config'
+    }
+  }"""
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+
+          a = "      if (/^protocolista\\d+@detran\\.rj\\.gov\\.br$/i.test(email)) return\n      if (email === normalizeEmail(BCC_EMAIL)) return"
+          b = "      if (/^protocolista\\d+@detran\\.rj\\.gov\\.br$/i.test(email)) return\n      if (SPECIAL_PROTOCOLISTA_EMAILS[email]) return\n      if (email === normalizeEmail(BCC_EMAIL)) return"
+          assert s.count(a) == 1
+          s = s.replace(a, b, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validar
+        run: |
+          npm run validate
+          git diff --check
+
+      - name: Commitar patch de teste
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add central_protocolista/main.js cs_modules/fast_mail/index.js
+          git commit -m "feat: autorizar Marcos Lima como protocolista"
+          git push origin HEAD:agent/local-marcos-lima-2026-09-11
