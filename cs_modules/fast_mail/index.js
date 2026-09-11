@@ -14,6 +14,13 @@
   const WEBMAIL_CREDENTIALS_KEY = 'centralProtocolistaWebmailCredentials'
   const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
   const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+  const SPECIAL_PROTOCOLISTA_EMAILS = {
+    'marcos.lima@detran.rj.gov.br': {
+      number: 'MARCOS',
+      email: 'marcos.lima@detran.rj.gov.br',
+      displayName: 'Marcos Lima'
+    }
+  }
   const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
   const FEEDBACK_DESTINATION = atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')
   const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
@@ -218,6 +225,18 @@
 
   function findOperator () {
     const text = textFromDocuments()
+    const normalizedText = text.toLowerCase()
+    const specialEmail = Object.keys(SPECIAL_PROTOCOLISTA_EMAILS)
+      .find((email) => normalizedText.includes(email))
+
+    if (specialEmail) {
+      return {
+        ...SPECIAL_PROTOCOLISTA_EMAILS[specialEmail],
+        source: 'conta-webmail',
+        validatedAt: Date.now()
+      }
+    }
+
     const accountMatch = text.match(/protocolista\s*(\d{1,4})@detran\.rj\.gov\.br/i)
     const labelMatch = text.match(/\bProtocolista\s+(\d{1,4})\b/i)
     const number = accountMatch?.[1] || labelMatch?.[1] || ''
@@ -235,6 +254,16 @@
   function validStoredOperator (value) {
     const number = cleanValue(value?.number)
     const email = normalizeEmail(value?.email)
+    const special = SPECIAL_PROTOCOLISTA_EMAILS[email]
+
+    if (special) {
+      return {
+        ...value,
+        ...special,
+        source: value.source || 'central-config'
+      }
+    }
+
     const expectedEmail = number
       ? `protocolista${number}@detran.rj.gov.br`
       : ''
@@ -303,6 +332,7 @@
       const email = extractEmailFromCurrentHeaderText(text)
       if (!email) return
       if (/^protocolista\d+@detran\.rj\.gov\.br$/i.test(email)) return
+      if (SPECIAL_PROTOCOLISTA_EMAILS[email]) return
       if (email === normalizeEmail(BCC_EMAIL)) return
 
       const paraIndex = text.search(/(?:^|\n)\s*Para:\s*/i)

@@ -7,6 +7,13 @@
   const SEI_CREDENTIALS_KEY = 'centralProtocolistaSeiCredentials'
   const METRICS_KEY = 'centralProtocolistaMetricsByOperator'
   const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
+  const SPECIAL_PROTOCOLISTA_EMAILS = {
+    'marcos.lima@detran.rj.gov.br': {
+      number: 'MARCOS',
+      email: 'marcos.lima@detran.rj.gov.br',
+      displayName: 'Marcos Lima'
+    }
+  }
   const CATALOG_PATH = '../data/catalogo-processos.json'
   const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
   const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
@@ -99,6 +106,9 @@
 
   function extractProtocolista (email) {
     const normalized = clean(email).toLowerCase()
+    const special = SPECIAL_PROTOCOLISTA_EMAILS[normalized]
+    if (special) return { ...special }
+
     const match = normalized.match(/^protocolista\s*(\d{1,4})@detran\.rj\.gov\.br$/i)
     if (!match) return null
 
@@ -147,7 +157,7 @@
     box.innerHTML = `
       <span class="status-dot" aria-hidden="true"></span>
       <div>
-        <strong>Protocolista ${operator.number} ${isValidated ? 'validado' : 'configurado'}</strong>
+        <strong>Protocolista ${operator.displayName || operator.number} ${isValidated ? 'validado' : 'configurado'}</strong>
         <span>${operator.email}</span>
       </div>`
   }
@@ -222,7 +232,7 @@
     if (!operator) {
       return message(
         '#webmail-credentials-message',
-        'Use o e-mail institucional no padrão protocolistaN@detran.rj.gov.br.',
+        'Use uma conta institucional autorizada para o SEI Protocolistas.',
         'error'
       )
     }
