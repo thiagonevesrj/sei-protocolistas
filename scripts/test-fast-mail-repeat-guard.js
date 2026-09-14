@@ -171,20 +171,60 @@ async function testBoundedHtmlPreparation () {
     deterministicHtmlEditor: () => false,
     deterministicPlainTextEditor: () => editor,
     ensureHtmlComposer: async () => { attempts++; return false },
-    candidateIsSafeToolbarControl: () => true
+    candidateIsSafeToolbarControl: () => true,
+    formatControl: () => null,
+    elementText: (element) => element.text || ''
   }
   vm.createContext(context)
   vm.runInContext(extract(composeSource, 'normalizeWhenPanelAppears'), context)
+  vm.runInContext(extract(composeSource, 'labeledFormatTarget'), context)
   vm.runInContext(extract(composeSource, 'nativeControlClickTargets'), context)
-  const control = { nextElementSibling: { click () { throw new Error('fechar resposta') } } }
+  const control = { text: 'Texto simp', nextElementSibling: { click () { throw new Error('fechar resposta') } } }
   const targets = context.nativeControlClickTargets(control)
   assert.strictEqual(targets.length, 1)
   assert.strictEqual(targets[0], control)
+  await context.normalizeWhenPanelAppears()
+  assert.strictEqual(attempts, 0, 'barra ainda não carregada não consome tentativa')
+  context.formatControl = () => control
   for (let i = 0; i < 20; i++) await context.normalizeWhenPanelAppears()
   assert.strictEqual(attempts, 1)
   editor = {}
   await context.normalizeWhenPanelAppears()
   assert.strictEqual(attempts, 2, 'novo compositor tem sua própria tentativa automática')
+}
+
+async function testOwaLabelInsideControl () {
+  let opened = false
+  let html = false
+  const clicks = []
+  const toolbar = { text: 'Enviar Opções Texto simp', tagName: 'TD' }
+  const format = { text: 'Texto simp', tagName: 'TD', parentElement: toolbar }
+  const label = { text: 'Texto simp', tagName: 'SPAN', parentElement: format }
+  const option = { text: 'HTML', tagName: 'TD' }
+  const optionLabel = { text: 'HTML', tagName: 'SPAN', parentElement: option }
+  const context = {
+    candidateIsSafeToolbarControl: () => true,
+    elementText: (element) => element.text || '',
+    nativeClick: (target) => {
+      clicks.push(target)
+      if (target === format) opened = true
+      if (target === option && opened) html = true
+    },
+    visibleHtmlMenuOption: () => opened ? optionLabel : null,
+    deterministicHtmlEditor: () => html ? { editable: true } : null,
+    waitFor: async (getter) => getter()
+  }
+  vm.createContext(context)
+  for (const name of ['labeledFormatTarget', 'nativeControlClickTargets', 'triggerFormatByNativeUi']) {
+    vm.runInContext(extract(composeSource, name), context)
+  }
+  const result = await context.triggerFormatByNativeUi(label)
+  assert.ok(result?.editable, 'clique chega à célula de formato e à opção HTML')
+  assert.deepStrictEqual(clicks, [format, option])
+  assert.strictEqual(clicks.includes(toolbar), false)
+  const orphan = { text: 'Texto simp', tagName: 'SPAN', parentElement: toolbar }
+  assert.strictEqual(context.labeledFormatTarget(orphan), orphan, 'não subir até a barra')
+  assert.strictEqual(context.labeledFormatTarget({ text: 'Fechar', tagName: 'BUTTON' }), null)
 }
 
 async function run () {
@@ -194,6 +234,7 @@ async function run () {
   testPresentationSkipsHistory()
   await testHtmlReplay()
   await testBoundedHtmlPreparation()
+  await testOwaLabelInsideControl()
   console.log('FAST MAIL: novas respostas, histórico preservado, anti-duplo clique e replay HTML validados.')
 }
 

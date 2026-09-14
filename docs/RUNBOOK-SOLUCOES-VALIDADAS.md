@@ -251,6 +251,25 @@ Não declarar VALIDADO / CONGELADO em produção antes da confirmação operacio
 - **Validação automatizada:** histórico HTML e Texto simples não bloqueia; exigência/devolutiva/presencial inserem novamente; anti-duplo clique, edição/desfazer e novo editor; remoção somente de atributos técnicos; apresentação ignora histórico; replay único com sucesso ou falha de HTML; tentativas automáticas limitadas; nenhuma seleção de botão vizinho. Executar `npm run validate` e `npm run lint` e conferir CI do commit.
 - **Resultado local:** `npm run validate` passou integralmente, incluindo o novo teste. Lint comparado com o conteúdo do commit-base nos mesmos arquivos: 37 erros preexistentes, 37 após a alteração, sem diagnósticos novos; teste novo e guard de repetição sem erros. Não corrigir esses problemas herdados nos fluxos congelados como parte desta tarefa. A CI existente executa a validação, não o lint.
 
+### Retorno operacional de 14/09 — HTML ainda em Texto simp
+
+Thiago confirmou que `3ee90d8` liberou respostas repetidas, mas a resposta antiga
+continuou abrindo em Texto simp. Portanto, **HTML deste cenário NÃO está validado**.
+A captura mostra o seletor em Texto simp; não prova qual evento interno falhou.
+O registro anterior confirma que o seletor visual não era um `select` comum.
+
+Correção complementar em `compose-html-guard-v1.js`: restaurar o alvo ancestral
+acionável do rótulo (inclusive célula TD, como no caminho anteriormente funcional),
+somente enquanto o texto exato continuar sendo Texto simp/Plain text/HTML, dentro
+das dimensões de um controle e fora do corpo e FAST MAIL. Nunca subir à barra inteira
+nem testar irmãos. Priorizar o texto visível sobre o tooltip. Não consumir a tentativa
+automática enquanto o OWA ainda não tiver construído o controle de formato.
+
+Teste novo simula rótulo SPAN dentro de célula TD para abrir menu e selecionar HTML,
+e recusa a barra e botão Fechar como alvos. Também testa a barra carregando depois do
+editor. A validação automatizada passa; confirmação no OWA real continua pendente.
+O anti-duplo clique e a liberação de respostas históricas não foram alterados.
+
 ### Teste operacional mínimo após Fetch / Pull / recarregar extensão
 
 1. Abrir Responder em conversa antiga com resposta do Protocolista, incluindo uma orientação e uma exigência históricas.

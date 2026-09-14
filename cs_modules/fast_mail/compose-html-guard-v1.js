@@ -46,10 +46,10 @@
   function elementText (element) {
     return clean(
       element?.value ||
-      element?.getAttribute?.('aria-label') ||
-      element?.getAttribute?.('title') ||
       element?.innerText ||
-      element?.textContent
+      element?.textContent ||
+      element?.getAttribute?.('aria-label') ||
+      element?.getAttribute?.('title')
     )
   }
 
@@ -205,9 +205,24 @@
     return true
   }
 
+  function labeledFormatTarget (label) {
+    const text = elementText(label)
+    if (!/^texto\s*simp(?:les)?\.?$|^plain\s*text$|^html$/i.test(text)) return null
+    let candidate = label
+    for (let depth = 0; candidate && depth < 4; depth++, candidate = candidate.parentElement) {
+      // Só subir dentro do MESMO controle: texto exato, dimensões de controle e
+      // fora do corpo/FAST MAIL. Nunca alcançar a barra inteira ou seus irmãos.
+      if (!candidateIsSafeToolbarControl(candidate) || elementText(candidate) !== text) break
+      if (/^(A|BUTTON|INPUT|TD)$/i.test(candidate.tagName) ||
+        /^(button|combobox|menuitem|option)$/.test(candidate.getAttribute?.('role') || '') ||
+        candidate.hasAttribute?.('onclick') || candidate.hasAttribute?.('_e_onclick')) return candidate
+    }
+    return candidateIsSafeToolbarControl(label) ? label : null
+  }
+
   function nativeControlClickTargets (control) {
-    // O clique no rótulo já propaga ao controle. Nunca testar botões vizinhos.
-    return candidateIsSafeToolbarControl(control) ? [control] : []
+    const target = labeledFormatTarget(control)
+    return target ? [target] : []
   }
 
   function visibleHtmlMenuOption (origin) {
@@ -254,7 +269,7 @@
       const htmlOption = await waitFor(() => visibleHtmlMenuOption(control), 850, 50)
       if (!htmlOption) continue
 
-      nativeClick(htmlOption)
+      nativeClick(labeledFormatTarget(htmlOption) || htmlOption)
 
       const editor = await waitFor(deterministicHtmlEditor, 5200, 90)
       if (editor) return editor
@@ -507,6 +522,9 @@
     if (deterministicHtmlEditor()) return true
     const plainEditor = deterministicPlainTextEditor()
     if (!plainEditor || attemptedPlainEditors.has(plainEditor)) return false
+    // O OWA pode mostrar o corpo antes de terminar de construir a barra.
+    // Ausência de controle ainda não é uma tentativa de conversão.
+    if (!formatControl()) return false
     attemptedPlainEditors.add(plainEditor)
     return ensureHtmlComposer()
   }
