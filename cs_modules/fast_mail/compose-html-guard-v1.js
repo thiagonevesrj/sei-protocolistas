@@ -5,6 +5,8 @@
   if (/\/owa\/auth\/logon\.aspx/i.test(window.location.pathname)) return
 
   const bypass = new WeakSet()
+  const pendingInsertions = new WeakSet()
+  const attemptedPlainEditors = new WeakSet()
   let preparing = null
   let scheduled = false
   let lastPrepareAttempt = 0
@@ -189,7 +191,7 @@
 
   function nativeClick (element) {
     if (!element) return false
-    const target = element.closest?.('a,button,input,[role="button"],td') || element
+    const target = element
     const view = target.ownerDocument?.defaultView || window
 
     try { target.focus?.() } catch (_) {}
@@ -204,26 +206,8 @@
   }
 
   function nativeControlClickTargets (control) {
-    const targets = []
-    const add = (element) => {
-      if (!element || targets.includes(element) || !candidateIsSafeToolbarControl(element)) return
-      targets.push(element)
-    }
-
-    add(control)
-    add(control.closest?.('a,button,input,[role="button"],td'))
-    add(control.parentElement)
-    add(control.nextElementSibling)
-    add(control.parentElement?.nextElementSibling)
-
-    const parent = control.parentElement
-    if (parent) {
-      Array.from(parent.children || []).forEach((child) => {
-        if (child !== control && /^(IMG|A|BUTTON|INPUT|SPAN|DIV|TD)$/i.test(child.tagName)) add(child)
-      })
-    }
-
-    return targets
+    // O clique no rótulo já propaga ao controle. Nunca testar botões vizinhos.
+    return candidateIsSafeToolbarControl(control) ? [control] : []
   }
 
   function visibleHtmlMenuOption (origin) {
@@ -361,7 +345,7 @@
   function isInsertionControl (target) {
     if (!(target instanceof Element)) return null
     return target.closest(
-      '#spfm-insert-script, #spfm-insert-requirement, #spfm-insert-process-response, #spfm-baixa-direct-insert, #spfm-workflow-v3-identification-insert'
+      '#spfm-insert-script, #spfm-insert-requirement, #spfm-insert-process-response, #spfm-baixa-direct-insert, #spfm-workflow-v3-identification-insert, #spfm-p0-insert-presential'
     )
   }
 
@@ -505,18 +489,25 @@
   }
 
   function formatPendingResponses () {
+    const editor = deterministicHtmlEditor()
+    const previousContent = editor?.innerHTML
     for (const doc of allDocuments()) {
-      doc.querySelectorAll('[data-sei-protocolistas="catalog-script"]').forEach(presentCatalogScript)
-      doc.querySelectorAll(
+      const current = (node) => window.spFastMailRepeatGuard?.isCurrentResponse(node)
+      Array.from(doc.querySelectorAll('[data-sei-protocolistas="catalog-script"]'))
+        .filter(current).forEach(presentCatalogScript)
+      Array.from(doc.querySelectorAll(
         '[data-sei-protocolistas="missing-documents-requirement"], [data-sei-protocolistas="process-completed-response"], [data-sei-protocolistas="presential-missing-documents"]'
-      ).forEach(presentStructuredResponse)
+      )).filter(current).forEach(presentStructuredResponse)
     }
+    if (editor) window.spFastMailRepeatGuard?.recordPresentation(editor, previousContent)
   }
 
   async function normalizeWhenPanelAppears () {
     if (!fastMailPanelExists()) return false
     if (deterministicHtmlEditor()) return true
-    if (!deterministicPlainTextEditor()) return false
+    const plainEditor = deterministicPlainTextEditor()
+    if (!plainEditor || attemptedPlainEditors.has(plainEditor)) return false
+    attemptedPlainEditors.add(plainEditor)
     return ensureHtmlComposer()
   }
 
@@ -536,13 +527,20 @@
     event.stopPropagation()
     event.stopImmediatePropagation()
 
-    const ready = await ensureHtmlComposer()
-    if (!ready) {
-      setStatus('HTML não foi ativado pelo OWA. Inserindo em Texto simples para não bloquear o atendimento.')
-    }
+    if (pendingInsertions.has(control)) return
+    pendingInsertions.add(control)
+    try {
+      const ready = await ensureHtmlComposer()
+      if (!ready) {
+        setStatus('HTML não foi ativado pelo OWA. Inserindo em Texto simples para não bloquear o atendimento.')
+      }
 
-    bypass.add(control)
-    control.click()
+      bypass.add(control)
+      control.click()
+    } finally {
+      bypass.delete(control)
+      pendingInsertions.delete(control)
+    }
   }, true)
 
   document.addEventListener('click', (event) => {
@@ -550,7 +548,7 @@
       '#spfm-priority-missing, #spfm-priority-reply, .spfm-workflow-v3-service-button, [data-spfm-workflow-stage], #spfm-v2-orientation-open, #spfm-v2-identification-open'
     )
     if (!control) return
-    window.setTimeout(() => ensureHtmlComposer().catch(() => {}), 80)
+    window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 80)
   }, true)
 
   const observer = new MutationObserver(() => {
@@ -570,7 +568,7 @@
     if (deterministicHtmlEditor()) return
     if (!deterministicPlainTextEditor()) return
     if (preparing || Date.now() - lastPrepareAttempt < 2200) return
-    ensureHtmlComposer().catch(() => {})
+    normalizeWhenPanelAppears().catch(() => {})
   }, 900)
 
   window.setTimeout(() => normalizeWhenPanelAppears().catch(() => {}), 250)

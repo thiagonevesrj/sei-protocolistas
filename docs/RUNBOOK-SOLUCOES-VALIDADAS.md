@@ -234,6 +234,31 @@ Estado final: **VALIDADO / CONGELADO**.
 
 # Política geral para futuras soluções
 
+## 003 — Novo atendimento em conversa já respondida e preparação HTML — 14/09/2026
+
+**Estado: correção coberta por testes automatizados; confirmação no OWA real pendente.**
+Não declarar VALIDADO / CONGELADO em produção antes da confirmação operacional.
+
+- **Sintoma:** responder novamente uma conversa antiga podia ser bloqueado como duplicata; relato de FAST MAIL abrir e fechar e de retorno a Texto simples.
+- **Impacto:** impossibilidade de nova orientação, exigência ou devolutiva na mesma conversa.
+- **Linha de base:** `879b1059ef41f8a02749c30c803ffb1fa92296c4`, branch `agent/catalogo-fast-mail-amanha`. Validação anterior à alteração passou. No Windows, os testes existentes exigem checkout com LF; CRLF causou falso negativo em uma busca literal no teste FAST PROC, sem defeito no runtime.
+- **Causas identificadas no código:** a inserção consultava marcadores em todo o histórico HTML ou trechos de texto no histórico simples; o guard antigo limpava somente `catalog-script` e contava cliques antes de confirmar inserção. A troca de formato tentava irmãos/vizinhos do controle, expondo botões alheios ao formato a cliques. O temporizador repetia tentativas indefinidamente. A apresentação e a limpeza de devolutivas também percorriam mensagens históricas. O fechamento relatado ainda precisa ser confirmado no OWA; não foi reproduzido em sessão real nesta tarefa.
+- **Tentativas a não repetir:** apagar o conteúdo anterior, remover HTML automático, usar histórico como trava permanente ou explorar botões vizinhos para achar o menu HTML.
+- **Solução:** estado temporário em memória por editor, conteúdo da resposta e inserção efetivamente concluída. Somente a repetição idêntica, no mesmo corpo inalterado, em menos de 1.500 ms é duplicata. Outro editor, edição/desfazer, outra resposta ou fim do intervalo libera nova inserção. Antes de inserir, retirar apenas `data-sei-protocolistas` e `data-script-id` dos elementos anteriormente marcados; preservar texto, links e estilos. Formatar e limpar somente os nós registrados pela inserção atual.
+- **HTML:** preservar clique nativo Texto simp → HTML e confirmação pelo iframe editável real. Clicar somente no próprio controle, com propagação normal; nunca em irmãos. Consolidar duplo clique durante a preparação em um único replay. Uma tentativa automática por editor; clique explícito de inserção pode tentar novamente. Preservar fallback seguro se o OWA não ativar HTML, sem tornar falha de formato um bloqueio de atendimento.
+- **Escopo preservado:** regras de assunto, Bcc, checklists, textos/modelos, FAST PROC, tema e manifesto. Em `subject-sanitizer-v1.js`, somente restringir a limpeza do corpo à devolutiva atual; nenhuma regra de assunto foi alterada.
+- **Referências:** `script-repeat-guard-v1.js`, pontos de inserção em `index.js` e `operational-p0-v3.js`, `compose-html-guard-v1.js`, filtro de histórico em `subject-sanitizer-v1.js`, todos em `cs_modules/fast_mail/`. Teste: `scripts/test-fast-mail-repeat-guard.js`, incluído em `npm run validate` e no lint.
+- **Validação automatizada:** histórico HTML e Texto simples não bloqueia; exigência/devolutiva/presencial inserem novamente; anti-duplo clique, edição/desfazer e novo editor; remoção somente de atributos técnicos; apresentação ignora histórico; replay único com sucesso ou falha de HTML; tentativas automáticas limitadas; nenhuma seleção de botão vizinho. Executar `npm run validate` e `npm run lint` e conferir CI do commit.
+- **Resultado local:** `npm run validate` passou integralmente, incluindo o novo teste. Lint comparado com o conteúdo do commit-base nos mesmos arquivos: 37 erros preexistentes, 37 após a alteração, sem diagnósticos novos; teste novo e guard de repetição sem erros. Não corrigir esses problemas herdados nos fluxos congelados como parte desta tarefa. A CI existente executa a validação, não o lint.
+
+### Teste operacional mínimo após Fetch / Pull / recarregar extensão
+
+1. Abrir Responder em conversa antiga com resposta do Protocolista, incluindo uma orientação e uma exigência históricas.
+2. Confirmar que FAST MAIL/compositor permanece aberto e é preparado em HTML; inserir nova orientação e conferir a formatação.
+3. Dar duplo clique imediato: somente uma inserção. Após 1,5 segundo, nova inserção explícita é permitida. Reabrir Responder permite novo atendimento.
+4. Testar COBRAR DOCUMENTOS em um serviço já validado: checklist e exigência preservados. Conferir que o histórico mantém texto, links e aparência.
+5. Se o OWA não oferecer HTML, verificar fallback sem loop; esse cenário não confirma HTML automático no ambiente real.
+
 Quando surgir uma regressão parecida:
 
 - começar por este runbook;

@@ -722,17 +722,7 @@
   function messageBodyContainsResponse (editor, selector, responseHtml) {
     assertSafeMessageBodyEditor(editor)
 
-    if (!isPlainTextMessageBody(editor)) {
-      return Boolean(editor.querySelector?.(selector))
-    }
-
-    const responseText = htmlToPlainText(responseHtml, editor.ownerDocument)
-    const probe = responseText
-      .split(/\n+/)
-      .map(cleanValue)
-      .find((line) => line.length >= 24) || cleanValue(responseText).slice(0, 80)
-
-    return Boolean(probe && String(editor.value || '').includes(probe))
+    return Boolean(window.spFastMailRepeatGuard?.isDuplicate(editor, responseHtml))
   }
 
   function selectedMissingDocuments () {
@@ -800,14 +790,17 @@
       const oldText = String(editor.value || '').replace(/\r\n/g, '\n')
       const separator = `\n\n${HISTORY_SEPARATOR}\n\n`
       setPlainTextBodyValue(editor, `${responseText}${separator}${oldText}`)
+      window.spFastMailRepeatGuard?.recordInsertion(editor, responseHtml)
       return
     }
 
+    window.spFastMailRepeatGuard?.releaseHistoricalMarkers(editor)
     const oldHtml = editor.innerHTML || ''
     const separator = `<div data-sei-protocolistas="history-separator" style="margin:22px 0 14px 0;padding-top:10px;border-top:1px solid #a7a7a7;color:#666;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;">${HISTORY_SEPARATOR}</div>`
 
     editor.focus()
     editor.innerHTML = `${responseHtml}${separator}${oldHtml}`
+    window.spFastMailRepeatGuard?.recordInsertion(editor, responseHtml)
     dispatchBodyEvent(editor, 'input')
     dispatchBodyEvent(editor, 'change')
   }

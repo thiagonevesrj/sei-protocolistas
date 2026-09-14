@@ -167,6 +167,8 @@
       const responses = Array.from(doc.querySelectorAll('[data-sei-protocolistas="process-completed-response"]'))
 
       responses.forEach((response) => {
+        // A limpeza da devolutiva atual não pode reescrever mensagens históricas.
+        if (!window.spFastMailRepeatGuard?.isCurrentResponse(response)) return
         const greeting = response.querySelector('p')
         if (!greeting) return
 

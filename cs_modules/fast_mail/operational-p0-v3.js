@@ -245,14 +245,16 @@
 
   function insertResponseBeforeHistory (editor, responseHtml) {
     if (!editor) return false
-    if (editor.querySelector?.('[data-sei-protocolistas="presential-missing-documents"]')) {
+    if (window.spFastMailRepeatGuard?.isDuplicate(editor, responseHtml)) {
       throw new Error('A orientação de documentos presenciais já foi inserida nesta resposta.')
     }
 
+    window.spFastMailRepeatGuard?.releaseHistoricalMarkers(editor)
     const oldHtml = editor.innerHTML || ''
     const separator = `<div data-sei-protocolistas="history-separator" style="margin:22px 0 14px 0;padding-top:10px;border-top:1px solid #a7a7a7;color:#666;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;">${HISTORY_SEPARATOR}</div>`
     editor.focus()
     editor.innerHTML = `${responseHtml}${separator}${oldHtml}`
+    window.spFastMailRepeatGuard?.recordInsertion(editor, responseHtml)
     dispatchFieldEvent(editor, 'input')
     dispatchFieldEvent(editor, 'change')
     return true
