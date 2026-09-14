@@ -16,6 +16,15 @@ function extract (source, name) {
   return source.slice(start, source.indexOf('\n  }', start) + 4)
 }
 
+function toolbarElement (props = {}) {
+  return {
+    getBoundingClientRect: () => ({ left: 100, right: 200, top: 10, bottom: 34, width: 100, height: 24 }),
+    querySelectorAll: () => [],
+    contains: () => false,
+    ...props
+  }
+}
+
 function setup () {
   let now = 10000
   const context = { Date: { now: () => now } }
@@ -179,7 +188,7 @@ async function testBoundedHtmlPreparation () {
   vm.runInContext(extract(composeSource, 'normalizeWhenPanelAppears'), context)
   vm.runInContext(extract(composeSource, 'labeledFormatTarget'), context)
   vm.runInContext(extract(composeSource, 'nativeControlClickTargets'), context)
-  const control = { text: 'Texto simp', nextElementSibling: { click () { throw new Error('fechar resposta') } } }
+  const control = toolbarElement({ text: 'Texto simp', nextElementSibling: { click () { throw new Error('fechar resposta') } } })
   const targets = context.nativeControlClickTargets(control)
   assert.strictEqual(targets.length, 1)
   assert.strictEqual(targets[0], control)
@@ -193,21 +202,32 @@ async function testBoundedHtmlPreparation () {
   assert.strictEqual(attempts, 2, 'novo compositor tem sua própria tentativa automática')
 }
 
-async function testOwaLabelInsideControl () {
+async function testOwaLabelInsideControl (arrowOnly = false) {
   let opened = false
   let html = false
   const clicks = []
   const toolbar = { text: 'Enviar Opções Texto simp', tagName: 'TD' }
-  const format = { text: 'Texto simp', tagName: 'TD', parentElement: toolbar }
-  const label = { text: 'Texto simp', tagName: 'SPAN', parentElement: format }
+  const format = toolbarElement({ text: 'Texto simp', tagName: 'TD', parentElement: toolbar })
+  const label = toolbarElement({ text: 'Texto simp', tagName: 'SPAN', parentElement: format })
+  const arrow = toolbarElement({
+    tagName: 'IMG',
+    getBoundingClientRect: () => ({ left: 184, right: 200, top: 14, bottom: 30, width: 16, height: 16 })
+  })
+  const outside = toolbarElement({
+    tagName: 'BUTTON',
+    getBoundingClientRect: () => ({ left: 205, right: 221, top: 14, bottom: 30, width: 16, height: 16 })
+  })
+  format.querySelectorAll = () => [arrow, outside]
   const option = { text: 'HTML', tagName: 'TD' }
   const optionLabel = { text: 'HTML', tagName: 'SPAN', parentElement: option }
   const context = {
     candidateIsSafeToolbarControl: () => true,
+    visible: () => true,
+    clean: (value) => String(value || '').trim(),
     elementText: (element) => element.text || '',
     nativeClick: (target) => {
       clicks.push(target)
-      if (target === format) opened = true
+      if (target === (arrowOnly ? arrow : format)) opened = true
       if (target === option && opened) html = true
     },
     visibleHtmlMenuOption: () => opened ? optionLabel : null,
@@ -220,7 +240,8 @@ async function testOwaLabelInsideControl () {
   }
   const result = await context.triggerFormatByNativeUi(label)
   assert.ok(result?.editable, 'clique chega à célula de formato e à opção HTML')
-  assert.deepStrictEqual(clicks, [format, option])
+  assert.deepStrictEqual(clicks, arrowOnly ? [format, arrow, option] : [format, option])
+  assert.strictEqual(clicks.includes(outside), false, 'nenhum botão externo ao seletor')
   assert.strictEqual(clicks.includes(toolbar), false)
   const orphan = { text: 'Texto simp', tagName: 'SPAN', parentElement: toolbar }
   assert.strictEqual(context.labeledFormatTarget(orphan), orphan, 'não subir até a barra')
@@ -235,6 +256,7 @@ async function run () {
   await testHtmlReplay()
   await testBoundedHtmlPreparation()
   await testOwaLabelInsideControl()
+  await testOwaLabelInsideControl(true)
   console.log('FAST MAIL: novas respostas, histórico preservado, anti-duplo clique e replay HTML validados.')
 }
 

@@ -222,7 +222,27 @@
 
   function nativeControlClickTargets (control) {
     const target = labeledFormatTarget(control)
-    return target ? [target] : []
+    if (!target) return []
+    const targets = [target]
+    const labelRect = control.getBoundingClientRect()
+    let container = control
+    for (let depth = 0; container && depth < 4; depth++, container = container.parentElement) {
+      if (!candidateIsSafeToolbarControl(container) || elementText(container) !== elementText(control)) break
+      const rect = container.getBoundingClientRect()
+      // Recuperar a seta interna do combo legado, não os irmãos da barra.
+      // O contêiner precisa começar no rótulo e terminar no máximo uma seta depois.
+      if (Math.abs(rect.left - labelRect.left) > 4 || rect.right > labelRect.right + 36) break
+      for (const arrow of container.querySelectorAll('a,button,input,span,div,td,img')) {
+        if (targets.includes(arrow) || arrow.contains(control) || !visible(arrow)) continue
+        if (clean(arrow.innerText || arrow.textContent || arrow.value)) continue
+        const arrowRect = arrow.getBoundingClientRect()
+        if (arrowRect.width < 4 || arrowRect.width > 32 || arrowRect.height < 4 || arrowRect.height > 40) continue
+        if (Math.abs(arrowRect.right - rect.right) > 5 || arrowRect.left < rect.left + rect.width / 2) continue
+        if (Math.abs((arrowRect.top + arrowRect.bottom) / 2 - (labelRect.top + labelRect.bottom) / 2) > 8) continue
+        targets.push(arrow)
+      }
+    }
+    return targets
   }
 
   function visibleHtmlMenuOption (origin) {

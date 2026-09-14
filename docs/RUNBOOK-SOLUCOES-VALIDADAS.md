@@ -272,6 +272,16 @@ O anti-duplo clique e a liberação de respostas históricas não foram alterado
 
 ### Teste operacional mínimo após Fetch / Pull / recarregar extensão
 
+Retorno subsequente: `7efc03c` também permaneceu em Texto simp ao inserir exigência.
+Comparação direta com `90a5cf5` identificou outra diferença: a versão validada
+tentava a seta vizinha ao rótulo; a correção por ancestral não cobria seletor cuja
+seta recebe seu próprio clique. Recuperado esse caminho somente para descendentes
+vazios na extremidade direita do mesmo controle compacto, com alinhamento e tamanho
+de seta. Não recuperar a exploração irrestrita de irmãos da barra. Teste executável
+cobre menu que abre apenas pela seta e exclusão de botão externo. Trata-se de
+correção baseada na diferença com o código validado; sem acesso ao DOM da sessão real,
+a causa específica dessa captura e o resultado operacional permanecem pendentes.
+
 1. Abrir Responder em conversa antiga com resposta do Protocolista, incluindo uma orientação e uma exigência históricas.
 2. Confirmar que FAST MAIL/compositor permanece aberto e é preparado em HTML; inserir nova orientação e conferir a formatação.
 3. Dar duplo clique imediato: somente uma inserção. Após 1,5 segundo, nova inserção explícita é permitida. Reabrir Responder permite novo atendimento.
