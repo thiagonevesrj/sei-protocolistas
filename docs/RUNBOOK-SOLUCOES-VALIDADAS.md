@@ -234,6 +234,18 @@ Estado final: **VALIDADO / CONGELADO**.
 
 # Política geral para futuras soluções
 
+## 004 — EXIGÊNCIAS seleciona resposta sem mostrar inserção — 16/09/2026
+
+**Estado: correção automatizada; confirmação operacional pendente.**
+
+- Sintoma: fase EXIGÊNCIAS marcada, resposta encontrada, mensagem “Selecione primeiro a fase do atendimento” e ausência da prévia/botão de inserção.
+- Causa: `chooseRequirementResult` selecionava o script pelo seletor de fase, mas esse seletor apenas filtra resultados. O estado privado `selectedWorkflowPhaseId` continuava vazio ou na fase anterior, bloqueando a abertura do catálogo pelo toggle.
+- Solução: acionar o botão nativo da fase `atendimento` antes de selecionar a exigência. Esse caminho atualiza o estado e abre o catálogo existente com prévia e INSERIR RESPOSTA. Selecionar o resultado não insere automaticamente. Ao entrar/sair de EXIGÊNCIAS, recolher o catálogo anterior para não exibir uma resposta de outra etapa.
+- Escopo: `cs_modules/fast_mail/workflow-v3.js`; nenhum ajuste em HTML, Bcc, assunto, corpo histórico, checklists ou FAST PROC.
+- Teste: `scripts/test-fast-mail-requirements-v3.js`, incluído na validação e lint. Executa as funções do núcleo e da navegação para abertura direta, transição desde Orientação, retorno à etapa e catálogo ainda indisponível. Confere prévia, botão habilitado e ausência de inserção automática.
+- Teste real mínimo: EXIGÊNCIAS → pesquisar → selecionar resposta → conferir prévia → clicar INSERIR RESPOSTA. Verificar inserção acima do histórico. A confirmação de HTML em conversa antiga permanece independente e pendente.
+- Próxima melhoria solicitada: seis atalhos de exigências frequentes, em duas colunas por três linhas, mantendo a pesquisa. Aguardando a seleção e a ordem dos seis itens pelo usuário; não inventar prioridades ou alterar textos do catálogo.
+
 ## 003 — Novo atendimento em conversa já respondida e preparação HTML — 14/09/2026
 
 **Estado: correção coberta por testes automatizados; confirmação no OWA real pendente.**

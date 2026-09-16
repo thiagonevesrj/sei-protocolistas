@@ -360,6 +360,14 @@
 
   function chooseRequirementResult (item) {
     if (item.type !== 'script') return
+    // A etapa visual V3 não atualiza o estado privado do catálogo nativo.
+    // Acionar a fase existente abre a prévia e o botão, sem inserir o texto.
+    const phaseButton = document.querySelector('.spfm-phase-button[data-phase-id="atendimento"]')
+    if (!phaseButton) {
+      setStatus('Catálogo de exigências ainda não ficou pronto. Selecione a resposta novamente.')
+      return
+    }
+    phaseButton.click()
     if (selectNativeScript(item.script)) {
       setSelected(item.script.title, item.script.group || 'EXIGÊNCIA')
       setStatus('Exigência localizada. Confira o texto e insira a resposta.')
@@ -405,6 +413,10 @@
   }
 
   function setStage (stage) {
+    if (activeStage === 'exigencias' || stage === 'exigencias') {
+      const catalog = document.querySelector('#spfm-script-catalog')
+      if (catalog) catalog.hidden = true
+    }
     activeStage = stage
     const root = document.getElementById(ROOT_ID)
     if (!root) return
