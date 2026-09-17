@@ -618,6 +618,10 @@
       return
     }
 
+    // O resgate pode ter inserido o botão enquanto aguardávamos o SEI/storage.
+    // Revalidar depois de todos os awaits, antes de registrar e inserir outro.
+    if (document.querySelector('#sp-fast-proc-rq')) return
+
     const button =
       createRqButton()
 

@@ -655,6 +655,7 @@
         cleanValue(form.elements.telefone.value),
       email:
         cleanValue(form.elements.email.value),
+      acessoExterno: Boolean(form.elements.acessoExterno?.checked),
       destino:
         cleanValue(form.elements.destino.value),
       attendanceId: cleanValue(initialData.attendanceId),
@@ -1170,6 +1171,25 @@
       }
     ].forEach((field) => addField(grid, field))
 
+    const accessBox = createElement('div', { className: 'sp-clique-field sp-clique-field--wide' })
+    const accessLabel = createElement('label', { htmlFor: 'sp-acesso-externo' })
+    const accessCheck = createElement('input', {
+      id: 'sp-acesso-externo', name: 'acessoExterno', type: 'checkbox'
+    })
+    accessLabel.append(accessCheck, document.createTextNode(' Conceder acesso externo'))
+    const accessHelp = createElement('p', { className: 'sp-clique-access-help' },
+      'Será preparado acompanhamento integral por 365 dias, com motivo “Vistas ao processo”, usando a senha do SEI salva na Central. Confira e clique em Disponibilizar.')
+    accessHelp.hidden = true
+    accessCheck.addEventListener('change', () => {
+      const emailInput = grid.querySelector('#sp-email')
+      if (emailInput) emailInput.required = accessCheck.checked
+      const emailLabel = grid.querySelector('label[for="sp-email"]')
+      if (emailLabel) emailLabel.textContent = accessCheck.checked ? 'E-mail * (acesso externo)' : 'E-mail'
+      accessHelp.hidden = !accessCheck.checked
+    })
+    accessBox.append(accessLabel, accessHelp)
+    grid.appendChild(accessBox)
+
     const optionalDetails = createElement('details', {
       className: 'sp-clique-optional'
     })
@@ -1329,6 +1349,10 @@
 
       try {
         const draft = readDraftFromForm(form, initialData)
+
+        if (draft.acessoExterno && (!draft.email || !form.elements.email.checkValidity())) {
+          throw new Error('Informe um e-mail válido para preparar o acesso externo.')
+        }
 
         if (!draft.tipoProcesso) {
           throw new Error(
@@ -2313,6 +2337,27 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    // Armar somente quando o operador salvar este processo, nunca no preenchimento.
+    const armExternalAccess = () => {
+      const key = 'spFastProcExternalAccess'
+      if (!draft.acessoExterno) {
+        sessionStorage.removeItem(key)
+        return
+      }
+      sessionStorage.setItem(key, JSON.stringify({
+        name: draft.nome, email: draft.email,
+        createdAt: Date.now(), processId: '', opened: false, filled: false
+      }))
+    }
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest?.('button,input,a')
+      const label = normalize(button?.textContent || button?.value || '').replace(/[^a-z]/g, '')
+      if (label === 'salvar') armExternalAccess()
+    }, true)
+    document.addEventListener('submit', (event) => {
+      if (event.target.contains?.(specification)) armExternalAccess()
+    }, true)
 
     closeInterestedSuggestions(interested)
 

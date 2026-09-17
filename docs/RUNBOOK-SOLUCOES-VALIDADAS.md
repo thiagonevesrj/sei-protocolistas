@@ -308,3 +308,30 @@ Quando surgir uma regressão parecida:
 - procurar regressão antes de criar uma nova camada ou workaround;
 - preferir correção estrutural em ponto central, aplicável em lote;
 - registrar aqui qualquer novo problema relevante que tenha solução confirmada em teste real.
+# FAST PROC — preparação do acesso externo — 17/09/2026
+
+Implementação com testes automatizados; **validação operacional no SEI ainda pendente**.
+
+- No FAST PROC, marcar **Conceder acesso externo** torna o e-mail obrigatório. Desmarcado mantém o fluxo anterior.
+- Depois do Salvar nativo, o contexto é vinculado ao processo recém-criado, na mesma aba, com validade de 15 minutos. O módulo usa o link real de gerenciamento de acesso externo; não constrói rotas ou identificadores de processos.
+- Preenche destinatário e e-mail do cadastro, primeira opção válida de e-mail da unidade, motivo **Vistas ao processo**, **Acompanhamento integral do processo** e **365 dias**.
+- Conforme autorização de Thiago, reutiliza a senha do SEI já salva e habilitada na Central (`centralProtocolistaSeiCredentials`). Não cria outra cópia da senha no contexto, histórico, mensagens ou registros. Preserva uma senha já digitada pelo operador.
+- Quadro recolhível: amarelo enquanto prepara; verde **Dados e senha preenchidos — confira e clique em Disponibilizar** quando todos os campos estão preenchidos. Sem senha salva, pede preenchimento manual e permanece amarelo.
+- O verde indica preparação concluída, não concessão efetivada. **Disponibilizar continua sendo o clique final do protocolista.** O módulo não envia o formulário.
+- Se faltar campo ou já existir outro destinatário, não informa sucesso. Não reaplica valores depois do preenchimento concluído.
+
+Validação automatizada: vínculo ao processo e expiração, recusa de outro processo/destinatário, campos incompletos, primeira unidade, valores e eventos nativos, senha habilitada/ausente/erro de armazenamento e preservação de senha digitada, quadro recolhível e cores. Integrado a `npm run validate`. Lint dos arquivos novos passa; o lint geral mantém pendências herdadas fora deste escopo.
+
+Teste operacional após Fetch/Pull e recarregar a extensão:
+1. Sem marcar acesso externo, conferir abertura normal. Marcado e sem e-mail, conferir impedimento de continuar.
+2. Com e-mail válido e senha do SEI salva na Central, salvar um processo autorizado para este teste. Conferir abertura da tela de acesso e os seis valores, incluindo senha mascarada.
+3. Conferir quadro amarelo/verde, recolhimento e ausência de concessão antes do clique manual em Disponibilizar.
+4. Conferir fluxo sem senha salva e depois navegar a outro processo: não deve transportar o preenchimento.
+
+Os seletores usam os rótulos vistos no vídeo. A captura do inspetor confirmou `#divArvoreAcoes`, a legenda do ícone e `acao=acesso_externo_gerenciar`; a navegação usa esse link existente com seus parâmetros. Sem acesso ao DOM completo da sessão real, o reconhecimento de todos os controles ainda exige teste operacional. O aviso define cores próprias no texto e no botão para manter contraste no tema escuro observado. FAST MAIL, HTML, Bcc, assunto e checklists não foram alterados nesta implementação.
+
+## Requerimento Rápido duplicado — 17/09/2026
+
+Relato: dois botões na barra após salvar processo. Identificada corrida entre o fluxo principal e o resgate: o principal verificava existência somente antes de aguardar dados e barra do SEI; o resgate podia inserir durante essa espera. O principal agora verifica novamente após todos os `await`, antes de criar o botão e seus eventos. Preservado o mecanismo de recuperação e sua ação nativa.
+
+Teste executável cobre duas chamadas principais concorrentes e resgate inserido durante a espera do principal: somente um botão. Validação visual no SEI após atualizar permanece pendente.

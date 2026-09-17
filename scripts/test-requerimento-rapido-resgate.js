@@ -59,4 +59,35 @@ if (errors.length) {
   process.exit(1)
 }
 
-console.log('Requerimento rápido resgate: OK')
+async function testLateOriginalButton () {
+  const assert = require('assert')
+  const vm = require('vm')
+  const original = fs.readFileSync(path.join(root, 'cs_modules/requerimento_rapido/index.js'), 'utf8')
+  const start = original.indexOf('  async function insertRqButton()')
+  const end = original.indexOf('  function findExternalOption()', start)
+  let existing = null
+  let inserted = 0
+  let rescueDuringWait = false
+  const context = {
+    document: { querySelector: () => existing },
+    extractProcessId: () => '123',
+    getFastProcContext: async () => ({ context: { nome: 'TESTE' }, registry: {} }),
+    waitFor: async () => {
+      if (rescueDuringWait) existing = { rescue: true }
+      return { includeLink: {}, parent: { insertBefore (button) { inserted++; existing = button } } }
+    },
+    createRqButton: () => ({ addEventListener () {} }),
+    browserApi: { storage: {} }
+  }
+  vm.runInNewContext(original.slice(start, end), context)
+  await Promise.all([context.insertRqButton(), context.insertRqButton()])
+  assert.strictEqual(inserted, 1, 'Chamadas concorrentes devem inserir apenas um botão')
+  existing = null
+  inserted = 0
+  rescueDuringWait = true
+  await context.insertRqButton()
+  assert.strictEqual(inserted, 0, 'Original tardio deve preservar o botão de resgate existente')
+  assert.strictEqual(existing.rescue, true)
+  console.log('Requerimento rápido resgate e prevenção de duplicação: OK')
+}
+testLateOriginalButton().catch(error => { console.error(error); process.exitCode = 1 })

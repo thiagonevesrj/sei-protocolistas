@@ -512,3 +512,15 @@
   font-weight: 800 !important;
   padding-left: 16px !important;
 }
+.sp-clique-field input#sp-acesso-externo {
+  width: auto;
+  min-height: auto;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.sp-clique-access-help {
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.5;
+}

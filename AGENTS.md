@@ -26,6 +26,7 @@ retrabalho e erros na rotina de protocolistas.
 - Thiago pediu explicitamente: não ficar pedindo confirmação; deixar para ele apenas **Fetch origin** e **Pull** no fluxo de atualização do código.
 - Para demandas já solicitadas, conduzir diagnóstico, implementação, testes, documentação, commit, envio à branch e conferência de CI até concluir. Não parar para perguntar se pode continuar, corrigir, criar commit ou enviar a correção.
 - As mensagens de progresso são informativas, não pedidos de aprovação.
+- Autorização reiterada em 17/09/2026: ler anexos fornecidos pelo usuário, copiar para a área de trabalho, extrair quadros e analisar localmente, incluindo obter ferramentas de análise de fontes reconhecidas, sem pedir nova confirmação rotineira. Não enviar anexos a serviços externos. Respeitar permissões e confirmações obrigatórias da plataforma; não contorná-las.
 - Usar a conexão GitHub já disponível quando ela permitir concluir o trabalho sem exigir autenticação local ou comandos do usuário.
 - Solicitar informação somente quando ela estiver realmente faltando para definir o resultado, como a lista e a ordem de atalhos. Não transformar decisões rotineiras de implementação em perguntas.
 - Ao entregar, informar o resultado e o commit disponível para Fetch/Pull. Quando um comportamento depender do OWA real, registrar a validação pendente com honestidade, sem apresentar CI como confirmação operacional.
