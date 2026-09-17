@@ -354,3 +354,16 @@ Solução:
 Isso evita duplicar o **cadastro do interessado**. A lista não comprova, por si, que já exista outro processo para o mesmo pedido; detecção de processo duplicado é uma verificação separada.
 
 Teste automatizado reproduz os formatos vistos na captura, correspondência por nome, desempate por e-mail, nomes idênticos, lista inconclusiva e pessoa nova. Após Fetch/Pull, validar com um interessado conhecido e outro novo no SEI real.
+
+## FAST MAIL — atalhos frequentes em EXIGÊNCIAS — 17/09/2026
+
+**Estado: implementação e testes automatizados concluídos; validação no OWA real pendente.**
+
+Na fase 3, foram adicionados dois botões acima da pesquisa:
+
+- **JÁ EXISTE PROCESSO ABERTO** → script Trellinho `trello-65aa7153e4f4827271549671`, título `CRITICA - JÁ EXISTE PROCESSO ABERTO`;
+- **SOBRE ANDAMENTO** → script Trellinho `trello-651313630a420501b4752ebb`, título `CRITICA - GERAL - Saber sobre andamento - prazo - questionamento prazo - V1`.
+
+Cada botão sincroniza a fase nativa `atendimento`, seleciona o script do catálogo e aciona **INSERIR RESPOSTA** em um único clique. O conteúdo continua vindo de `data/catalogo-scripts.json`, sem duplicar o texto no código da interface. O campo **PESQUISAR ASSUNTO** permanece para todos os demais scripts e continua abrindo a prévia para inserção manual.
+
+Teste executável confirma os dois IDs na interface, seleção da fase, carregamento da prévia e um clique no botão real de inserção. Após Fetch/Pull, conferir no OWA que cada atalho insere uma única resposta acima do histórico, em HTML, e que a pesquisa continua funcional.

@@ -58,7 +58,8 @@
 }
 
 .spfm-workflow-v3-actions,
-.spfm-workflow-v3-service-grid {
+.spfm-workflow-v3-service-grid,
+.spfm-workflow-v3-requirement-shortcuts {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
@@ -66,13 +67,15 @@
 
 .spfm-workflow-v3-action,
 .spfm-workflow-v3-service-button,
+.spfm-workflow-v3-requirement-shortcuts button,
 .spfm-workflow-v3-simple,
 .spfm-workflow-v3-result {
   font: inherit;
 }
 
 .spfm-workflow-v3-action,
-.spfm-workflow-v3-service-button {
+.spfm-workflow-v3-service-button,
+.spfm-workflow-v3-requirement-shortcuts button {
   min-height: 42px;
   border: 1px solid rgba(243, 200, 79, .38);
   border-radius: 9px;
@@ -115,6 +118,8 @@
 .spfm-workflow-v3-action:focus-visible,
 .spfm-workflow-v3-service-button:hover,
 .spfm-workflow-v3-service-button:focus-visible,
+.spfm-workflow-v3-requirement-shortcuts button:hover,
+.spfm-workflow-v3-requirement-shortcuts button:focus-visible,
 .spfm-workflow-v3-result:hover,
 .spfm-workflow-v3-result:focus-visible {
   outline: 2px solid rgba(244, 200, 77, .65);

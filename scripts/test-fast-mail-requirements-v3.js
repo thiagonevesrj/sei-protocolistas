@@ -16,7 +16,7 @@ function extract (source, name) {
 }
 
 function scenario (previousPhase = '') {
-  const script = { id: 'exigencia-teste', phase: 'atendimento', title: 'Resposta de teste', body: 'Conteúdo de teste' }
+  const script = { id: 'trello-65aa7153e4f4827271549671', phase: 'atendimento', title: 'Resposta de teste', body: 'Conteúdo de teste' }
   const catalog = { hidden: true }
   const phase = { options: [{ value: 'atendimento' }], value: previousPhase }
   const search = { value: '', focus () {} }
@@ -39,6 +39,7 @@ function scenario (previousPhase = '') {
     selectedPriorityAreaId: '',
     priorityResponseScriptIds: ['filtro-de-outro-servico'],
     activePriorityAction: '',
+    scripts: [script],
     responseScriptPhases: [{ id: 'atendimento', label: 'Exigências' }, { id: 'orientacao', label: 'Orientação' }],
     CATALOG_CLOSE_LABEL: 'Fechar catálogo',
     CATALOG_OPEN_LABEL: 'Abrir catálogo',
@@ -73,7 +74,7 @@ function scenario (previousPhase = '') {
   }
   vm.createContext(context)
   for (const name of ['openWorkflowPhaseCatalog', 'selectWorkflowPhase']) vm.runInContext(extract(core, name), context)
-  for (const name of ['selectNativeScript', 'chooseRequirementResult', 'setStage']) vm.runInContext(extract(workflow, name), context)
+  for (const name of ['scriptByTitle', 'scriptById', 'selectNativeScript', 'chooseRequirementResult', 'runRequirementShortcut', 'setStage']) vm.runInContext(extract(workflow, name), context)
   elements['.spfm-phase-button[data-phase-id="atendimento"]'] = { click: () => context.selectWorkflowPhase('atendimento') }
 
   context.setStage('exigencias')
@@ -86,12 +87,16 @@ function scenario (previousPhase = '') {
   assert.strictEqual(insert.clicks, 0, 'selecionar nunca insere automaticamente')
   assert.ok(!status.textContent.includes('Selecione primeiro a fase'))
 
+  context.runRequirementShortcut({ id: script.id, title: script.title, label: 'JÁ EXISTE PROCESSO ABERTO' })
+  assert.strictEqual(insert.clicks, 1, 'atalho frequente deve inserir no corpo com um clique')
+  assert.ok(status.textContent.includes('Inserindo'))
+
   context.setStage('orientacao')
   assert.strictEqual(catalog.hidden, true, 'exigência anterior não vaza para outra etapa')
   context.setStage('exigencias')
   context.chooseRequirementResult({ type: 'script', script })
   assert.strictEqual(catalog.hidden, false, 'retorno permite escolher e abrir novamente')
-  assert.strictEqual(insert.clicks, 0)
+  assert.strictEqual(insert.clicks, 1, 'pesquisa continua apenas selecionando, sem nova inserção')
 
   delete elements['.spfm-phase-button[data-phase-id="atendimento"]']
   context.setStage('exigencias')
@@ -102,4 +107,8 @@ function scenario (previousPhase = '') {
 
 scenario()
 scenario('orientacao')
-console.log('FAST MAIL EXIGÊNCIAS: fase sincronizada, prévia e inserção manual disponíveis.')
+assert.ok(workflow.includes('data-spfm-requirement-shortcut="trello-65aa7153e4f4827271549671"'))
+assert.ok(workflow.includes('data-spfm-requirement-shortcut="trello-651313630a420501b4752ebb"'))
+assert.ok(workflow.includes('JÁ EXISTE PROCESSO ABERTO'))
+assert.ok(workflow.includes('SOBRE ANDAMENTO'))
+console.log('FAST MAIL EXIGÊNCIAS: pesquisa manual e atalhos de inserção direta disponíveis.')

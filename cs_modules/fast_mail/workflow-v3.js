@@ -29,6 +29,19 @@
     { id: 'oficios', label: 'Ofícios' }
   ]
 
+  const REQUIREMENT_SHORTCUTS = [
+    {
+      id: 'trello-65aa7153e4f4827271549671',
+      title: 'CRITICA - JÁ EXISTE PROCESSO ABERTO',
+      label: 'JÁ EXISTE PROCESSO ABERTO'
+    },
+    {
+      id: 'trello-651313630a420501b4752ebb',
+      title: 'CRITICA - GERAL - Saber sobre andamento - prazo - questionamento prazo - V1',
+      label: 'SOBRE ANDAMENTO'
+    }
+  ]
+
   const SIMPLE_IDENTIFICATION_TITLE = 'SCRIPT DE SIMPLES IDENTIFICAÇÃO'
   const GENERIC_TRIAGE_TITLES = new Set([
     ...QUICK_TRIAGE.map((item) => item.title),
@@ -68,6 +81,10 @@
   function scriptByTitle (title) {
     const wanted = normalize(title)
     return scripts.find((script) => normalize(script.title) === wanted && clean(script.body)) || null
+  }
+
+  function scriptById (id) {
+    return scripts.find((script) => script.id === id && clean(script.body)) || null
   }
 
   function setStatus (message) {
@@ -374,6 +391,27 @@
     }
   }
 
+  function runRequirementShortcut (shortcut) {
+    const phaseButton = document.querySelector('.spfm-phase-button[data-phase-id="atendimento"]')
+    if (!phaseButton) {
+      setStatus('Catálogo de exigências ainda não ficou pronto. Tente novamente.')
+      return false
+    }
+
+    const script = scriptById(shortcut.id) || scriptByTitle(shortcut.title)
+    if (!script) {
+      setStatus(`Resposta “${shortcut.label}” não foi localizada no catálogo atual.`)
+      return false
+    }
+
+    phaseButton.click()
+    if (!selectNativeScript(script, { insert: true })) return false
+
+    setSelected(script.title, script.group || 'EXIGÊNCIA')
+    setStatus(`Inserindo: ${shortcut.label}.`)
+    return true
+  }
+
   function renderResultList (inputId, containerId, resolver, chooser) {
     const input = document.querySelector(`#${inputId}`)
     const container = document.querySelector(`#${containerId}`)
@@ -538,6 +576,10 @@
 
       <section class="spfm-workflow-v3-stage-section" data-spfm-workflow-section="exigencias" hidden>
         <div class="spfm-workflow-v3-kicker">EXIGÊNCIAS</div>
+        <div class="spfm-workflow-v3-requirement-shortcuts" aria-label="Respostas frequentes">
+          <button type="button" data-spfm-requirement-shortcut="trello-65aa7153e4f4827271549671">JÁ EXISTE PROCESSO ABERTO</button>
+          <button type="button" data-spfm-requirement-shortcut="trello-651313630a420501b4752ebb">SOBRE ANDAMENTO</button>
+        </div>
         <div class="spfm-workflow-v3-search-block">
           <label for="spfm-workflow-v3-requirement-search">PESQUISAR ASSUNTO</label>
           <input id="spfm-workflow-v3-requirement-search" type="search" autocomplete="off" placeholder="Ex.: documento, ofício, multa, habilitação">
@@ -555,6 +597,13 @@
 
     root.querySelectorAll('[data-spfm-workflow-stage]').forEach((button) => {
       button.addEventListener('click', () => setStage(button.dataset.spfmWorkflowStage))
+    })
+
+    root.querySelectorAll('[data-spfm-requirement-shortcut]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const shortcut = REQUIREMENT_SHORTCUTS.find((item) => item.id === button.dataset.spfmRequirementShortcut)
+        if (shortcut) runRequirementShortcut(shortcut)
+      })
     })
 
     renderQuickTriage(root)
