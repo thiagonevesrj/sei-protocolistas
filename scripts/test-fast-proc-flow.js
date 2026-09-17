@@ -856,6 +856,8 @@ function testInterestedAutocompleteIsReleased () {
   assert.ok(source.includes("autocomplete('close')"))
   assert.ok(source.includes('interestedField.blur()'))
   assert.ok(source.includes('saveButton.focus({ preventScroll: true })'))
+  assert.ok(source.includes('O FAST PROC continuará preenchendo os demais dados'))
+  assert.ok(source.includes('return continueWithManualInterested('))
 }
 
 async function run () {

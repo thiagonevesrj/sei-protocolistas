@@ -2020,6 +2020,15 @@
     }
   }
 
+  function continueWithManualInterested(message, interestedField) {
+    window.alert(
+      `CLICK PROTOCOLISTA: ${message}\n\n` +
+      'Selecione o interessado correto. O FAST PROC continuará preenchendo os demais dados e liberará o botão SALVAR.'
+    )
+    interestedField.focus()
+    return false
+  }
+
   async function selectInterestedSuggestion(name, email, interestedField) {
     const expectedName = normalize(name)
     const expectedEmail = cleanValue(email).toLowerCase()
@@ -2063,8 +2072,9 @@
       )
     } catch (error) {
       if (visibleInterestedSuggestions().length) {
-        throw new Error(
-          'O SEI encontrou possíveis cadastros para este nome, mas não foi possível identificar um único registro com segurança. Selecione o interessado correto na lista antes de salvar.'
+        return continueWithManualInterested(
+          'O SEI encontrou possíveis cadastros para este nome, mas não foi possível identificar um único registro com segurança.',
+          interestedField
         )
       }
 
@@ -2112,8 +2122,9 @@
     }
 
     if (result.ambiguous) {
-      throw new Error(
-        'Há mais de um cadastro do SEI com este nome. Selecione manualmente o interessado correto antes de salvar.'
+      return continueWithManualInterested(
+        'Há mais de um cadastro do SEI com este nome.',
+        interestedField
       )
     }
 

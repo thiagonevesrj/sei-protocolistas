@@ -18,6 +18,7 @@ assert.ok(start > -1 && end > start)
 
 let visible = []
 let armed = 0
+const alerts = []
 const context = {
   cleanValue: value => String(value || '').replace(/\s+/g, ' ').trim(),
   normalize: value => String(value || '').normalize('NFD')
@@ -31,7 +32,7 @@ const context = {
   CustomEvent: class {},
   MouseEvent: class {},
   KeyboardEvent: class {},
-  window: {},
+  window: { alert: message => alerts.push(message) },
   dispatchFieldEvents: () => {},
   wait: async () => {},
   waitUntil: async test => {
@@ -87,16 +88,19 @@ async function run () {
   )
   assert.strictEqual(second.clicked, true, 'E-mail deve desempatar nomes idênticos')
 
-  await assert.rejects(
-    context.api.selectInterestedSuggestion('Nome Igual', '', {}),
-    /mais de um cadastro/
+  const manualField = { focus () { this.focused = true } }
+  assert.strictEqual(
+    await context.api.selectInterestedSuggestion('Nome Igual', '', manualField),
+    false
   )
+  assert.strictEqual(manualField.focused, true)
+  assert.ok(alerts.at(-1).includes('continuará preenchendo'))
   assert.strictEqual(armed, 0)
 
   visible = [suggestion('THIAGO PARECIDO')]
-  await assert.rejects(
-    context.api.selectInterestedSuggestion('Thiago Procurado', '', {}),
-    /possíveis cadastros/
+  assert.strictEqual(
+    await context.api.selectInterestedSuggestion('Thiago Procurado', '', manualField),
+    false
   )
   assert.strictEqual(armed, 0, 'Lista inconclusiva não deve criar interessado automaticamente')
 

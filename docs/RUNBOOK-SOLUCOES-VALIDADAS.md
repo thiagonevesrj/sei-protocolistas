@@ -355,6 +355,10 @@ Isso evita duplicar o **cadastro do interessado**. A lista não comprova, por si
 
 Teste automatizado reproduz os formatos vistos na captura, correspondência por nome, desempate por e-mail, nomes idênticos, lista inconclusiva e pessoa nova. Após Fetch/Pull, validar com um interessado conhecido e outro novo no SEI real.
 
+Quando há múltiplos cadastros do mesmo nome, o FAST PROC agora mostra o aviso, mantém o campo para seleção manual, mas continua preenchendo restrição e hipótese legal, grava o contexto e libera **SALVAR**. Antes, o aviso interrompia a função antes da remoção do rascunho; o Guia de Próximo Clique mantinha o estado “PREENCHENDO DADOS” e bloqueava o salvamento mesmo após a correção manual.
+
+Não confundir a lista de interessados com pesquisa de processos duplicados. A lista só permite selecionar a identidade correta. Um alerta de duplicidade entre todos os protocolistas deve consultar a base compartilhada do SEI por **CPF + tipo processual**. O registro local do FAST PROC não é suficiente e não será apresentado como proteção global.
+
 ## FAST MAIL — atalhos frequentes em EXIGÊNCIAS — 17/09/2026
 
 **Estado: implementação e testes automatizados concluídos; validação no OWA real pendente.**
