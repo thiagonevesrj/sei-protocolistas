@@ -5,6 +5,10 @@
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
+  const INTERESTED_CONFIRM_KEY =
+    'spFastProcConfirmarInclusaoInteressado'
+  const INTERESTED_CONFIRM_EVENT =
+    'sp-fast-proc-armar-inclusao-interessado'
 
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const STORAGE_TIMEOUT = 5000
@@ -48,6 +52,23 @@
     [
       'Elaboração de Ofício de Mero Expediente',
       'Administrativo: Elaboração de Ofício de Mero Expediente'
+    ]
+  ]
+
+  const QUICK_PROCESS_TYPES = [
+    ['DEV. TAXAS', 'Detran: Devolução de Taxas'],
+    [
+      'DESIST. 1ª HAB.',
+      'DETRAN: Desistência de categoria na 1ª habilitação'
+    ],
+    ['PERÍCIA MÉDICA', 'Detran: Solicitação de Perícia Médica'],
+    [
+      'GERAL VEÍCULOS',
+      'Detran: Solicitações Gerais - Veículos'
+    ],
+    [
+      'GERAL HABILITAÇÃO',
+      'Detran: Solicitação Geral - Habilitação'
     ]
   ]
 
@@ -634,6 +655,7 @@
         cleanValue(form.elements.telefone.value),
       email:
         cleanValue(form.elements.email.value),
+      acessoExterno: Boolean(form.elements.acessoExterno?.checked),
       destino:
         cleanValue(form.elements.destino.value),
       attendanceId: cleanValue(initialData.attendanceId),
@@ -827,6 +849,58 @@
       (option) => option.value
     )
 
+    const typeShortcuts = createElement('div', {
+      className: 'sp-clique-type-shortcuts',
+      'aria-label': 'Tipos de processo mais usados'
+    })
+
+    const quickTypeButtons = QUICK_PROCESS_TYPES.map(
+      ([label, seiName]) => {
+        const option = typeOptions.find((candidate) =>
+          processName(
+            candidate.dataset.processLabel ||
+            candidate.textContent
+          ) === processName(seiName)
+        )
+        const button = createElement(
+          'button',
+          {
+            className: 'sp-clique-type-shortcut',
+            type: 'button',
+            'aria-pressed': 'false'
+          },
+          label
+        )
+
+        button.dataset.processType = seiName
+        button.addEventListener('click', () => {
+          selectTypeOption(option)
+          hideTypeSuggestions()
+          typeSearch.focus()
+        })
+        typeShortcuts.appendChild(button)
+
+        return button
+      }
+    )
+
+    const updateQuickTypeButtons = (selectedOption) => {
+      const selectedName = processName(
+        selectedOption?.dataset.processLabel ||
+        selectedOption?.textContent
+      )
+
+      quickTypeButtons.forEach((button) => {
+        const active = Boolean(selectedName) &&
+          processName(button.dataset.processType) === selectedName
+        button.classList.toggle(
+          'sp-clique-type-shortcut--active',
+          active
+        )
+        button.setAttribute('aria-pressed', String(active))
+      })
+    }
+
     const matchingTypeOptions = () => {
       const query = typeSearch.value
 
@@ -842,6 +916,7 @@
     const selectTypeOption = (option) => {
       if (!option) {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
         return false
       }
 
@@ -852,6 +927,7 @@
           bubbles: true
         })
       )
+      updateQuickTypeButtons(option)
 
       return true
     }
@@ -945,6 +1021,7 @@
         selectTypeOption(exactOption)
       } else {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
       }
     }
 
@@ -980,6 +1057,7 @@
       ) {
         typeSearch.value =
           selectedOption.textContent
+        updateQuickTypeButtons(selectedOption)
       }
     })
 
@@ -1049,6 +1127,7 @@
 
     typeWrapper.append(
       typeLabel,
+      typeShortcuts,
       typeSearchBox,
       typeSelect
     )
@@ -1091,6 +1170,25 @@
         placeholder: 'Telefone com DDD'
       }
     ].forEach((field) => addField(grid, field))
+
+    const accessBox = createElement('div', { className: 'sp-clique-field sp-clique-field--wide' })
+    const accessLabel = createElement('label', { htmlFor: 'sp-acesso-externo' })
+    const accessCheck = createElement('input', {
+      id: 'sp-acesso-externo', name: 'acessoExterno', type: 'checkbox'
+    })
+    accessLabel.append(accessCheck, document.createTextNode(' Conceder acesso externo'))
+    const accessHelp = createElement('p', { className: 'sp-clique-access-help' },
+      'Será preparado acompanhamento integral por 365 dias, com motivo “Vistas ao processo”, usando a senha do SEI salva na Central. Confira e clique em Disponibilizar.')
+    accessHelp.hidden = true
+    accessCheck.addEventListener('change', () => {
+      const emailInput = grid.querySelector('#sp-email')
+      if (emailInput) emailInput.required = accessCheck.checked
+      const emailLabel = grid.querySelector('label[for="sp-email"]')
+      if (emailLabel) emailLabel.textContent = accessCheck.checked ? 'E-mail * (acesso externo)' : 'E-mail'
+      accessHelp.hidden = !accessCheck.checked
+    })
+    accessBox.append(accessLabel, accessHelp)
+    grid.appendChild(accessBox)
 
     const optionalDetails = createElement('details', {
       className: 'sp-clique-optional'
@@ -1251,6 +1349,10 @@
 
       try {
         const draft = readDraftFromForm(form, initialData)
+
+        if (draft.acessoExterno && (!draft.email || !form.elements.email.checkValidity())) {
+          throw new Error('Informe um e-mail válido para preparar o acesso externo.')
+        }
 
         if (!draft.tipoProcesso) {
           throw new Error(
@@ -1860,49 +1962,123 @@
     })
   }
 
-  async function selectInterestedSuggestion(name, interestedField) {
+  function visibleInterestedSuggestions() {
+    return Array.from(
+      document.querySelectorAll(
+        '.ui-autocomplete li, ' +
+        '.ui-menu-item, ' +
+        '[role="option"], ' +
+        'ul[id*="Interessado"] li, ' +
+        'div[id*="Interessado"] li'
+      )
+    ).filter(
+      (element) => element.offsetParent !== null
+    )
+  }
+
+  function interestedSuggestionName(element) {
+    const raw = cleanValue(
+      element?.textContent ||
+      element?.innerText ||
+      ''
+    )
+
+    const withoutMarker = raw.replace(
+      /^[\s"'“”$]+/,
+      ''
+    )
+
+    const metadataStart = withoutMarker.search(
+      /\s*[<(]/
+    )
+
+    return cleanValue(
+      (metadataStart > 0
+        ? withoutMarker.slice(0, metadataStart)
+        : withoutMarker
+      ).replace(/[\s"'“”;]+$/, '')
+    )
+  }
+
+  function armInterestedCreationConfirmation() {
+    try {
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_KEY,
+        String(Date.now())
+      )
+
+      document.dispatchEvent(
+        new CustomEvent(
+          INTERESTED_CONFIRM_EVENT
+        )
+      )
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+        error
+      )
+    }
+  }
+
+  function continueWithManualInterested(message, interestedField) {
+    window.alert(
+      `CLICK PROTOCOLISTA: ${message}\n\n` +
+      'Selecione o interessado correto. O FAST PROC continuará preenchendo os demais dados e liberará o botão SALVAR.'
+    )
+    interestedField.focus()
+    return false
+  }
+
+  async function selectInterestedSuggestion(name, email, interestedField) {
     const expectedName = normalize(name)
+    const expectedEmail = cleanValue(email).toLowerCase()
+    let result = null
 
     try {
-      const suggestion = await waitUntil(
+      result = await waitUntil(
         () => {
-          const candidates = Array.from(
-            document.querySelectorAll(
-              '.ui-autocomplete li, ' +
-              '.ui-menu-item, ' +
-              '[role="option"], ' +
-              'ul[id*="Interessado"] li, ' +
-              'div[id*="Interessado"] li'
-            )
-          ).filter(
-            (element) =>
-              element.offsetParent !== null
+          const candidates =
+            visibleInterestedSuggestions()
+
+          const matches = candidates.filter(
+            (element) => normalize(
+              interestedSuggestionName(element)
+            ) === expectedName
           )
 
-          return candidates.find(
-            (element) =>
-              normalize(
+          if (matches.length === 1) {
+            return { suggestion: matches[0] }
+          }
+
+          if (matches.length > 1 && expectedEmail) {
+            const emailMatches = matches.filter(
+              (element) => cleanValue(
                 element.textContent ||
                 element.innerText ||
                 ''
-              ) === expectedName
-          ) || null
+              ).toLowerCase().includes(expectedEmail)
+            )
+
+            if (emailMatches.length === 1) {
+              return { suggestion: emailMatches[0] }
+            }
+          }
+
+          return matches.length > 1
+            ? { ambiguous: true }
+            : null
         },
-        2500
+        4000
       )
-
-      suggestion.dispatchEvent(
-        new MouseEvent('mousedown', {
-          bubbles: true,
-          cancelable: true,
-          view: window
-        })
-      )
-
-      suggestion.click()
-
-      return true
     } catch (error) {
+      if (visibleInterestedSuggestions().length) {
+        return continueWithManualInterested(
+          'O SEI encontrou possíveis cadastros para este nome, mas não foi possível identificar um único registro com segurança.',
+          interestedField
+        )
+      }
+
+      armInterestedCreationConfirmation()
       interestedField.focus()
       interestedField.value = name
       dispatchFieldEvents(interestedField)
@@ -1944,6 +2120,25 @@
 
       return true
     }
+
+    if (result.ambiguous) {
+      return continueWithManualInterested(
+        'Há mais de um cadastro do SEI com este nome.',
+        interestedField
+      )
+    }
+
+    result.suggestion.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+    )
+
+    result.suggestion.click()
+
+    return true
   }
 
   function clickAddInterested(interestedField) {
@@ -2177,6 +2372,7 @@
     const interestedSelected =
       await selectInterestedSuggestion(
         draft.nome,
+        draft.email,
         interested
       )
 
@@ -2213,6 +2409,27 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    // Armar somente quando o operador salvar este processo, nunca no preenchimento.
+    const armExternalAccess = () => {
+      const key = 'spFastProcExternalAccess'
+      if (!draft.acessoExterno) {
+        sessionStorage.removeItem(key)
+        return
+      }
+      sessionStorage.setItem(key, JSON.stringify({
+        name: draft.nome, email: draft.email,
+        createdAt: Date.now(), processId: '', opened: false, filled: false
+      }))
+    }
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest?.('button,input,a')
+      const label = normalize(button?.textContent || button?.value || '').replace(/[^a-z]/g, '')
+      if (label === 'salvar') armExternalAccess()
+    }, true)
+    document.addEventListener('submit', (event) => {
+      if (event.target.contains?.(specification)) armExternalAccess()
+    }, true)
 
     closeInterestedSuggestions(interested)
 
