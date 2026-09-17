@@ -335,3 +335,22 @@ Os seletores usam os rótulos vistos no vídeo. A captura do inspetor confirmou 
 Relato: dois botões na barra após salvar processo. Identificada corrida entre o fluxo principal e o resgate: o principal verificava existência somente antes de aguardar dados e barra do SEI; o resgate podia inserir durante essa espera. O principal agora verifica novamente após todos os `await`, antes de criar o botão e seus eventos. Preservado o mecanismo de recuperação e sua ação nativa.
 
 Teste executável cobre duas chamadas principais concorrentes e resgate inserido durante a espera do principal: somente um botão. Validação visual no SEI após atualizar permanece pendente.
+
+## FAST PROC — reaproveitar interessado cadastrado no SEI — 17/09/2026
+
+**Estado: correção automatizada; confirmação operacional pendente.**
+
+O formulário nativo do SEI consulta interessados anteriores enquanto o nome é digitado. A captura operacional mostrou resultados em formatos como `"Nome"`, `"Nome" <email>;` e `Nome (email)`. O FAST PROC comparava o texto completo da sugestão com o nome puro e, após apenas 2,5 segundos, podia tratar um cadastro existente como nome inexistente.
+
+Solução:
+
+- aguardar até 4 segundos pela consulta nativa;
+- extrair o nome apresentado antes dos metadados entre `<...>` ou `(...)`, preservando nomes funcionais e patentes;
+- selecionar automaticamente somente uma correspondência exata de nome;
+- quando houver nomes idênticos, usar o e-mail do atendimento apenas se ele identificar uma única opção;
+- diante de várias correspondências ou sugestões inconclusivas, interromper a inclusão automática e pedir que o protocolista selecione o registro correto;
+- armar a confirmação automática de novo interessado somente quando a consulta não apresentar opção alguma.
+
+Isso evita duplicar o **cadastro do interessado**. A lista não comprova, por si, que já exista outro processo para o mesmo pedido; detecção de processo duplicado é uma verificação separada.
+
+Teste automatizado reproduz os formatos vistos na captura, correspondência por nome, desempate por e-mail, nomes idênticos, lista inconclusiva e pessoa nova. Após Fetch/Pull, validar com um interessado conhecido e outro novo no SEI real.

@@ -1962,49 +1962,113 @@
     })
   }
 
-  async function selectInterestedSuggestion(name, interestedField) {
+  function visibleInterestedSuggestions() {
+    return Array.from(
+      document.querySelectorAll(
+        '.ui-autocomplete li, ' +
+        '.ui-menu-item, ' +
+        '[role="option"], ' +
+        'ul[id*="Interessado"] li, ' +
+        'div[id*="Interessado"] li'
+      )
+    ).filter(
+      (element) => element.offsetParent !== null
+    )
+  }
+
+  function interestedSuggestionName(element) {
+    const raw = cleanValue(
+      element?.textContent ||
+      element?.innerText ||
+      ''
+    )
+
+    const withoutMarker = raw.replace(
+      /^[\s"'“”$]+/,
+      ''
+    )
+
+    const metadataStart = withoutMarker.search(
+      /\s*[<(]/
+    )
+
+    return cleanValue(
+      (metadataStart > 0
+        ? withoutMarker.slice(0, metadataStart)
+        : withoutMarker
+      ).replace(/[\s"'“”;]+$/, '')
+    )
+  }
+
+  function armInterestedCreationConfirmation() {
+    try {
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_KEY,
+        String(Date.now())
+      )
+
+      document.dispatchEvent(
+        new CustomEvent(
+          INTERESTED_CONFIRM_EVENT
+        )
+      )
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+        error
+      )
+    }
+  }
+
+  async function selectInterestedSuggestion(name, email, interestedField) {
     const expectedName = normalize(name)
+    const expectedEmail = cleanValue(email).toLowerCase()
+    let result = null
 
     try {
-      const suggestion = await waitUntil(
+      result = await waitUntil(
         () => {
-          const candidates = Array.from(
-            document.querySelectorAll(
-              '.ui-autocomplete li, ' +
-              '.ui-menu-item, ' +
-              '[role="option"], ' +
-              'ul[id*="Interessado"] li, ' +
-              'div[id*="Interessado"] li'
-            )
-          ).filter(
-            (element) =>
-              element.offsetParent !== null
+          const candidates =
+            visibleInterestedSuggestions()
+
+          const matches = candidates.filter(
+            (element) => normalize(
+              interestedSuggestionName(element)
+            ) === expectedName
           )
 
-          return candidates.find(
-            (element) =>
-              normalize(
+          if (matches.length === 1) {
+            return { suggestion: matches[0] }
+          }
+
+          if (matches.length > 1 && expectedEmail) {
+            const emailMatches = matches.filter(
+              (element) => cleanValue(
                 element.textContent ||
                 element.innerText ||
                 ''
-              ) === expectedName
-          ) || null
+              ).toLowerCase().includes(expectedEmail)
+            )
+
+            if (emailMatches.length === 1) {
+              return { suggestion: emailMatches[0] }
+            }
+          }
+
+          return matches.length > 1
+            ? { ambiguous: true }
+            : null
         },
-        2500
+        4000
       )
-
-      suggestion.dispatchEvent(
-        new MouseEvent('mousedown', {
-          bubbles: true,
-          cancelable: true,
-          view: window
-        })
-      )
-
-      suggestion.click()
-
-      return true
     } catch (error) {
+      if (visibleInterestedSuggestions().length) {
+        throw new Error(
+          'O SEI encontrou possíveis cadastros para este nome, mas não foi possível identificar um único registro com segurança. Selecione o interessado correto na lista antes de salvar.'
+        )
+      }
+
+      armInterestedCreationConfirmation()
       interestedField.focus()
       interestedField.value = name
       dispatchFieldEvents(interestedField)
@@ -2046,6 +2110,24 @@
 
       return true
     }
+
+    if (result.ambiguous) {
+      throw new Error(
+        'Há mais de um cadastro do SEI com este nome. Selecione manualmente o interessado correto antes de salvar.'
+      )
+    }
+
+    result.suggestion.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+    )
+
+    result.suggestion.click()
+
+    return true
   }
 
   function clickAddInterested(interestedField) {
@@ -2276,31 +2358,10 @@
 
     await wait(400)
 
-    /*
-     * O SEI pode disparar a confirmação já durante a seleção da
-     * sugestão, antes do clique no ícone de incluir interessado.
-     */
-    try {
-      sessionStorage.setItem(
-        INTERESTED_CONFIRM_KEY,
-        String(Date.now())
-      )
-
-      document.dispatchEvent(
-        new CustomEvent(
-          INTERESTED_CONFIRM_EVENT
-        )
-      )
-    } catch (error) {
-      console.warn(
-        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
-        error
-      )
-    }
-
     const interestedSelected =
       await selectInterestedSuggestion(
         draft.nome,
+        draft.email,
         interested
       )
 
