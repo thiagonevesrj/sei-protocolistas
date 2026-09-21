@@ -860,7 +860,34 @@ function testInterestedAutocompleteIsReleased () {
   assert.ok(source.includes('return continueWithManualInterested('))
 }
 
+function testReceiptInterestedExcludesQuickRequest () {
+  const source = read('cs_modules/protocolo_cliente/index.js')
+  const extraction = source.slice(source.indexOf('function section('), source.indexOf('const processType='))
+  const context = {
+    norm: value => String(value || '').normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim()
+  }
+  vm.createContext(context)
+  vm.runInContext(extraction + '\nthis.extractInterested = interested', context)
+  const names = 'PESSOA DE TESTE\nAUTO ESCOLA EXEMPLO LTDA'
+  for (const suffix of [
+    '\n⚡ REQUERIMENTO RÁPIDO',
+    '\n⚡\nREQUERIMENTO RÁPIDO\nProcesso aberto somente na unidade DETRAN/TESTE',
+    '\nREQUERIMENTO RAPIDO',
+    '\n⚡ ABRINDO...',
+    '\nANOTAÇÕES\nOutro texto',
+    ''
+  ]) {
+    assert.strictEqual(
+      context.extractInterested('INTERESSADO(S)\n' + names + suffix),
+      'PESSOA DE TESTE AUTO ESCOLA EXEMPLO LTDA'
+    )
+  }
+  assert.strictEqual(context.extractInterested('TIPO DO PROCESSO: teste'), '')
+}
+
 async function run () {
+  testReceiptInterestedExcludesQuickRequest()
   testInterestedConfirmation()
   testFastMailOperatorFallback()
   testNativeAuthenticationAutomation()
@@ -888,3 +915,4 @@ run().catch((error) => {
   console.error(error)
   process.exitCode = 1
 })
+

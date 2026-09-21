@@ -62,7 +62,8 @@ function section(t,start,ends){
   const m=String(t).match(new RegExp(esc(start)+'\\s*([\\s\\S]{0,500}?)(?='+ends.map(esc).join('|')+'|$)','i'));
   return m?norm(m[1]):'';
 }
-const interested=t=>section(t,'INTERESSADO(S)',['ATRIBUÍDO PARA','ATRIBUIDO PARA','ANOTAÇÕES','ANOTACOES']).replace(/^[-•\s]+/,'').split('\n')[0].trim();
+// O botão RQ pode vir logo após a lista de interessados, inclusive em outro frame.
+const interested=t=>section(t,'INTERESSADO(S)',['ATRIBUÍDO PARA','ATRIBUIDO PARA','ANOTAÇÕES','ANOTACOES','⚡','REQUERIMENTO RÁPIDO','REQUERIMENTO RAPIDO']).replace(/^[-•\s]+/,'').trim();
 const processType=t=>section(t,'TIPO DO PROCESSO',['INTERESSADO(S)','ATRIBUÍDO PARA','ATRIBUIDO PARA']).split('\n')[0].trim();
 const date=()=>{const d=new Date();return [String(d.getDate()).padStart(2,'0'),String(d.getMonth()+1).padStart(2,'0'),d.getFullYear()].join('/');};
 const esc=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

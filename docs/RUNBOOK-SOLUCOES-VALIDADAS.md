@@ -371,3 +371,8 @@ Na fase 3, foram adicionados dois botões acima da pesquisa:
 Cada botão sincroniza a fase nativa `atendimento`, seleciona o script do catálogo e aciona **INSERIR RESPOSTA** em um único clique. O conteúdo continua vindo de `data/catalogo-scripts.json`, sem duplicar o texto no código da interface. O campo **PESQUISAR ASSUNTO** permanece para todos os demais scripts e continua abrindo a prévia para inserção manual.
 
 Teste executável confirma os dois IDs na interface, seleção da fase, carregamento da prévia e um clique no botão real de inserção. Após Fetch/Pull, conferir no OWA que cada atalho insere uma única resposta acima do histórico, em HTML, e que a pesquisa continua funcional.
+
+
+## Comprovante do cliente — nome com texto do botão RQ — 21/09/2026
+
+A extração textual de INTERESSADO(S) incluía o botão REQUERIMENTO RÁPIDO quando não havia seção posterior de atribuição/anotações, inclusive entre frames. A leitura agora termina também nos delimitadores do botão, preservando os nomes anteriores. Nenhum cadastro ou processo é alterado. Teste de regressão cobre múltiplos interessados, botão com/sem acento, ícone em linha separada, estado ABRINDO e ausência do campo. Validação automatizada e lint do teste passaram; validar o comprovante regenerado no SEI real. PDFs já salvos não são modificados.
