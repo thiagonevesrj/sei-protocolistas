@@ -16,7 +16,6 @@
   const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
   const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
   const FEEDBACK_DESTINATION = atob('dGhpYWdvbmV2ZXNyakBnbWFpbC5jb20=')
-  const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
   const BCC_EMAIL = 'protocolodetran@detran.rj.gov.br'
   const CATALOG_PATH = 'data/catalogo-processos.json'
   const SCRIPT_CATALOG_PATH = 'data/catalogo-scripts.json'
@@ -25,6 +24,7 @@
   const REGISTER_ORIGIN_MESSAGE = 'sei-protocolistas:register-fast-mail-origin'
   const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
   const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
+  const OPEN_SEI_PROCESS_MESSAGE = 'sei-protocolistas:open-sei-process'
   const PRIORITY_AREA_ORDER = ['habilitacao', 'pericia-medica', 'veiculos', 'taxas', 'oficios']
   const CATALOG_OPEN_LABEL = 'BUSCAR OUTRO ATENDIMENTO'
   const CATALOG_CLOSE_LABEL = 'FECHAR BUSCA'
@@ -1830,10 +1830,10 @@
       status.textContent = !selectedWorkflowPhaseId
         ? 'Selecione a fase do atendimento.'
         : !selectedPriorityAreaId
-          ? 'Selecione uma área de orientação.'
-          : visibleTopics.length
-            ? 'Selecione o assunto.'
-            : 'Use a busca completa abaixo.'
+            ? 'Selecione uma área de orientação.'
+            : visibleTopics.length
+              ? 'Selecione o assunto.'
+              : 'Use a busca completa abaixo.'
     }
   }
 
@@ -2462,31 +2462,22 @@
         expiresAt: Date.now() + (15 * 60 * 1000)
       }
 
-      const seiWindow = window.open('about:blank', '_blank')
-      if (!seiWindow) throw new Error('Autorize pop-ups para abrir o SEI.')
-
-      try {
-        await storageSet({
-          [FAST_PROC_HANDOFF_KEY]: handoff,
-          [ATTENDANCE_KEY]: {
-            ...handoff,
-            updatedAt: Date.now()
-          }
-        })
-        await runtimeMessage({
-          type: REGISTER_ORIGIN_MESSAGE,
-          attendanceId,
-          email,
-          url: location.href,
-          createdAt: handoff.createdAt,
-          expiresAt: Date.now() + (60 * 60 * 1000)
-        })
-        seiWindow.location.replace(SEI_LOGIN_URL)
-        seiWindow.opener = null
-      } catch (error) {
-        seiWindow.close()
-        throw error
-      }
+      await storageSet({
+        [FAST_PROC_HANDOFF_KEY]: handoff,
+        [ATTENDANCE_KEY]: {
+          ...handoff,
+          updatedAt: Date.now()
+        }
+      })
+      await runtimeMessage({
+        type: REGISTER_ORIGIN_MESSAGE,
+        attendanceId,
+        email,
+        url: location.href,
+        createdAt: handoff.createdAt,
+        expiresAt: Date.now() + (60 * 60 * 1000)
+      })
+      await runtimeMessage({ type: OPEN_SEI_PROCESS_MESSAGE })
 
       if (button) {
         button.textContent = 'SEI ABERTO — PREPARANDO FAST PROC'

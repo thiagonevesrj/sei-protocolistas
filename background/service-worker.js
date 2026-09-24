@@ -9,12 +9,14 @@ const PROCESS_RESULT_READY_MESSAGE = 'sei-protocolistas:process-result-ready'
 const SEND_FEEDBACK_MESSAGE = 'sei-protocolistas:send-feedback-via-webmail'
 const OPEN_WORKDAY_SYSTEMS_MESSAGE = 'sei-protocolistas:open-workday-systems'
 const OPEN_WEBMAIL_MESSAGE = 'sei-protocolistas:open-webmail'
+const OPEN_SEI_PROCESS_MESSAGE = 'sei-protocolistas:open-sei-process'
 const GET_CURRENT_TAB_MESSAGE = 'sei-protocolistas:get-current-tab'
 const FEEDBACK_KEY = 'centralProtocolistaPendingFeedback'
 const FEEDBACK_COMPOSE_URL = 'https://venus2.detran.rj.gov.br/owa/?ae=Item&a=New&t=IPM.Note'
 const WEBMAIL_URL = 'https://venus2.detran.rj.gov.br/owa/'
 const WEBMAIL_MATCH_PATTERN = 'https://venus2.detran.rj.gov.br/owa/*'
 const SEI_LOGIN_URL = 'https://sei.rj.gov.br/sip/login.php?sigla_orgao_sistema=ERJ&sigla_sistema=SEI'
+const SEI_MATCH_PATTERN = '*://sei.rj.gov.br/*'
 const MAX_ROUTE_AGE = 60 * 60 * 1000
 
 function callApi (target, method, ...args) {
@@ -171,6 +173,40 @@ async function openWebmail (sender) {
   }
 }
 
+async function findReusableSeiTab (windowId = null) {
+  const tabs = await callApi(api.tabs, 'query', { url: SEI_MATCH_PATTERN })
+  return (tabs || [])
+    .filter((tab) => Boolean(tab?.id))
+    .sort((a, b) => {
+      const sameWindowA = windowId != null && a.windowId === windowId ? 1 : 0
+      const sameWindowB = windowId != null && b.windowId === windowId ? 1 : 0
+      return (sameWindowB - sameWindowA) ||
+        (Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0))
+    })[0] || null
+}
+
+async function openOrReuseSei (active = true, windowId = null) {
+  const existing = await findReusableSeiTab(windowId)
+  if (existing) {
+    const tab = await callApi(api.tabs, 'update', existing.id, {
+      url: SEI_LOGIN_URL,
+      active
+    })
+    if (active) await focusBrowserTab(tab || existing)
+    return { tab: tab || existing, reused: true }
+  }
+
+  const createProperties = { url: SEI_LOGIN_URL, active }
+  if (windowId != null) createProperties.windowId = windowId
+  const tab = await callApi(api.tabs, 'create', createProperties)
+  return { tab, reused: false }
+}
+
+async function openSeiForProcess (sender) {
+  const result = await openOrReuseSei(true, sender.tab?.windowId)
+  return { ok: true, tabId: result.tab.id, reused: result.reused }
+}
+
 async function readRoutes () {
   const stored = await callApi(api.storage.local, 'get', ROUTES_KEY)
   const routes = stored?.[ROUTES_KEY] || {}
@@ -317,18 +353,15 @@ async function openWorkdaySystems (sender) {
   const webmailTab = webmailResult.tab
 
   try {
-    const seiProperties = {
-      url: SEI_LOGIN_URL,
-      active: true
-    }
-    if (targetWindowId != null) seiProperties.windowId = targetWindowId
-    const seiTab = await callApi(api.tabs, 'create', seiProperties)
+    const seiResult = await openOrReuseSei(true, targetWindowId)
+    const seiTab = seiResult.tab
     return {
       ok: true,
       webmailTabId: webmailTab.id,
       webmailReused: webmailResult.reused,
       webmailRestored: webmailResult.restored,
-      seiTabId: seiTab.id
+      seiTabId: seiTab.id,
+      seiReused: seiResult.reused
     }
   } catch (error) {
     await focusBrowserTab(webmailTab)
@@ -354,6 +387,8 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     task = openWorkdaySystems(sender)
   } else if (message?.type === OPEN_WEBMAIL_MESSAGE) {
     task = openWebmail(sender)
+  } else if (message?.type === OPEN_SEI_PROCESS_MESSAGE) {
+    task = openSeiForProcess(sender)
   } else if (message?.type === GET_CURRENT_TAB_MESSAGE) {
     task = Promise.resolve(currentTab(sender))
   } else {

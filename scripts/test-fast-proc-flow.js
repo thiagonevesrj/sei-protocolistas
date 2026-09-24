@@ -607,7 +607,7 @@ function testHighlightedQuickRequestButton () {
     'const currentProcessId =\n      extractProcessId()'
   )
   const toolbarLookup = source.indexOf(
-    'const target = await waitFor('
+    'target = await waitFor('
   )
   const contextGuard = source.indexOf(
     "if (!context) {\n        console.log(\n          '[FAST PROC RQ] Processo não identificado como FAST PROC.'",
