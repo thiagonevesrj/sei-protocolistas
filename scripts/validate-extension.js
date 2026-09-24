@@ -159,7 +159,7 @@ if (manifest && packageJson) {
     (entry.js || []).includes('cs_modules/fast_proc_handoff/index.js')
   )
   expect(Boolean(handoffEntry), 'Manifesto: orquestrador FAST MAIL → FAST PROC obrigatório')
-  expect(handoffEntry?.all_frames === false, 'Manifesto: orquestrador deve executar apenas no frame principal')
+  expect(handoffEntry?.all_frames === true, 'Manifesto: orquestrador deve alcançar o formulário Enviar Processo dentro do frame do SEI')
 }
 
 expect(centralHtml.includes('FINALIZAR EXPEDIENTE') === false, 'Central: o botão deve alternar o texto pelo estado salvo')

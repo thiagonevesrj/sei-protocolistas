@@ -1,8 +1,6 @@
 (() => {
   'use strict'
 
-  if (window.top !== window) return
-
   const api = typeof browser === 'undefined' ? chrome : browser
   const HANDOFF_KEY = 'fastMailFastProcHandoff'
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
@@ -213,7 +211,7 @@
   }
 
   async function autoSelectDestination () {
-    if (action() !== 'procedimento_trabalhar') return false
+    if (action() !== 'procedimento_enviar') return false
 
     let stored
     try {
@@ -308,11 +306,11 @@
     window.setTimeout(() => observer.disconnect(), 15000)
   }
 
-  if (action() === 'procedimento_trabalhar') {
+  if (action() === 'procedimento_enviar') {
     autoSelectDestination().catch((error) => {
       console.error('[SEI Protocolistas] Falha ao selecionar destino automaticamente:', error)
     })
-  } else {
+  } else if (window.top === window) {
     continueHandoff().catch((error) => {
       console.error('[SEI Protocolistas] Falha ao localizar Iniciar Processo:', error)
     })
