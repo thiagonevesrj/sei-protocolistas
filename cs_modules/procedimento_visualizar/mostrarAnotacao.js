@@ -1,5 +1,7 @@
 /* global __mconsole, GetBaseUrl, currentBrowser */
 function MostrarAnotacao (BaseName) {
+  if (document.getElementById('seipp_div_anotacao')) return
+
   /** inicialização do módulo ***************************************************/
   const mconsole = new __mconsole(`${BaseName}.MostrarAnotacao`)
 

@@ -82,11 +82,16 @@ const centralSource = readText('central_protocolista/main.js')
 const centralHtml = readText('central_protocolista/index.html')
 const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
 const moduleInitSource = readText('cs_modules/core/end/moduleInit.js')
+const procedureViewSource = readText('cs_modules/procedimento_visualizar/index.js')
+const annotationSource = readText('cs_modules/procedimento_visualizar/mostrarAnotacao.js')
 
 expect(fastMailSource.includes('(?:Bcc|Cco)'), 'FAST MAIL: controle de cópia oculta deve reconhecer Bcc e Cco')
 expect(fastMailSource.includes('prepareBccWithRetry'), 'FAST MAIL: preenchimento automático da cópia oculta deve repetir tentativas de forma limitada')
 expect(moduleInitSource.includes("const NOTES_DEFAULT_MIGRATION_KEY = 'protocolistasNotesEnabledV1'"), 'Anotações: migração de preferências antigas obrigatória')
 expect(moduleInitSource.includes("SavedOptions.CheckTypes.push('mostraranotacao')"), 'Anotações: recurso deve ser habilitado para instalações existentes')
+expect(procedureViewSource.includes('  MostrarAnotacao(BaseName)'), 'Anotações: quadro deve carregar sempre na visualização do processo')
+expect(!procedureViewSource.includes("if (options.CheckTypes.includes('mostraranotacao'))"), 'Anotações: carregamento não deve depender de preferência antiga')
+expect(annotationSource.includes("document.getElementById('seipp_div_anotacao')"), 'Anotações: quadro precisa impedir inserção duplicada')
 
 if (manifest && packageJson) {
   expect(
