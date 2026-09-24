@@ -81,9 +81,12 @@ const protocolSource = readText('cs_modules/protocolo_cliente/index.js')
 const centralSource = readText('central_protocolista/main.js')
 const centralHtml = readText('central_protocolista/index.html')
 const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
+const moduleInitSource = readText('cs_modules/core/end/moduleInit.js')
 
 expect(fastMailSource.includes('(?:Bcc|Cco)'), 'FAST MAIL: controle de cópia oculta deve reconhecer Bcc e Cco')
 expect(fastMailSource.includes('prepareBccWithRetry'), 'FAST MAIL: preenchimento automático da cópia oculta deve repetir tentativas de forma limitada')
+expect(moduleInitSource.includes("const NOTES_DEFAULT_MIGRATION_KEY = 'protocolistasNotesEnabledV1'"), 'Anotações: migração de preferências antigas obrigatória')
+expect(moduleInitSource.includes("SavedOptions.CheckTypes.push('mostraranotacao')"), 'Anotações: recurso deve ser habilitado para instalações existentes')
 
 if (manifest && packageJson) {
   expect(
