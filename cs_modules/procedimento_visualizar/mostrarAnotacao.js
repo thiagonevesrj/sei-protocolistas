@@ -11,12 +11,53 @@ function MostrarAnotacao (BaseName) {
   let hdnInfraTipoPagina = ''
   let postUrl = ''
 
-  /** Pega a url de alteração do processo ***************************************/
-  const head = document.head.innerHTML
-  const a = head.indexOf('controlador.php?acao=anotacao_registrar&')
-  if (a === -1) return
-  const b = head.indexOf('"', a)
-  const url = GetBaseUrl() + head.substring(a, b)
+  /** Pega a URL de alteração do processo. No SEI-RJ atual, o atalho pode estar
+      no documento atual, no frame da árvore ou no frame de visualização. */
+  function findAnnotationUrl () {
+    const documents = []
+
+    function addDocument (doc) {
+      if (!doc || documents.includes(doc)) return
+      documents.push(doc)
+      Array.from(doc.querySelectorAll?.('iframe') || []).forEach((frame) => {
+        try {
+          addDocument(frame.contentDocument)
+        } catch (error) {}
+      })
+    }
+
+    try { addDocument(document) } catch (error) {}
+    try { addDocument(window.parent?.document) } catch (error) {}
+    try { addDocument(window.top?.document) } catch (error) {}
+
+    for (const doc of documents) {
+      const direct = doc.querySelector?.(
+        'a[href*="acao=anotacao_registrar"],form[action*="acao=anotacao_registrar"]'
+      )
+      const directUrl = direct?.getAttribute('href') || direct?.getAttribute('action')
+      if (directUrl) return new URL(directUrl.replace(/&amp;/g, '&'), GetBaseUrl()).href
+
+      const html = `${doc.head?.innerHTML || ''} ${doc.body?.innerHTML || ''}`
+      const match = html.match(/controlador\.php\?acao=anotacao_registrar(?:&amp;|&)[^"'<>\s]+/i)
+      if (match?.[0]) return new URL(match[0].replace(/&amp;/g, '&'), GetBaseUrl()).href
+    }
+
+    return ''
+  }
+
+  const url = findAnnotationUrl()
+  if (!url) {
+    const root = document.documentElement
+    const attempts = Number(root.dataset.seippAnnotationAttempts || 0)
+    if (attempts < 40) {
+      root.dataset.seippAnnotationAttempts = String(attempts + 1)
+      window.setTimeout(() => MostrarAnotacao(BaseName), 250)
+    } else {
+      mconsole.log('Atalho nativo de anotações não localizado.')
+    }
+    return
+  }
+  delete document.documentElement.dataset.seippAnnotationAttempts
 
   const element = document.getElementById('container') || document.body
 

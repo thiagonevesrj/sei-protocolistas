@@ -93,6 +93,9 @@ expect(moduleInitSource.includes("SavedOptions.CheckTypes.push('mostraranotacao'
 expect(procedureViewSource.includes('  MostrarAnotacao(BaseName)'), 'Anotações: quadro deve carregar sempre na visualização do processo')
 expect(!procedureViewSource.includes("if (options.CheckTypes.includes('mostraranotacao'))"), 'Anotações: carregamento não deve depender de preferência antiga')
 expect(annotationSource.includes("document.getElementById('seipp_div_anotacao')"), 'Anotações: quadro precisa impedir inserção duplicada')
+expect(annotationSource.includes('function findAnnotationUrl ()'), 'Anotações: endereço nativo deve ser pesquisado nos frames do SEI')
+expect(annotationSource.includes('frame.contentDocument'), 'Anotações: busca deve alcançar os frames da árvore e visualização')
+expect(annotationSource.includes('seippAnnotationAttempts'), 'Anotações: carregamento tardio da barra do SEI deve ser aguardado')
 expect(annotationRefreshSource.includes('treeFrame?.contentWindow'), 'Anotações: atualização da árvore deve aceitar frame ausente')
 expect(!annotationRefreshSource.includes("getElementById('ifrArvore').contentWindow"), 'Anotações: atualização da árvore não pode acessar frame inexistente diretamente')
 
