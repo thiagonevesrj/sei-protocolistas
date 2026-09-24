@@ -19,7 +19,7 @@ const context = {
 }
 context.window = context
 context.top = context
-vm.runInNewContext(source.replace('  if (readPending()) {', '  globalThis.api = { readPending, pageContext, bindProcess, fillFields, fieldByLabel, showStatus, fillSavedPassword, reconcile, findAccessLink };\n  if (readPending()) {'), context)
+vm.runInNewContext(source.replace('  if (readPending()) {', '  globalThis.api = { readPending, pageContext, bindProcess, fillFields, fieldByLabel, showStatus, fillSavedPassword, findPasswordField, hasSavedPassword, reconcile, findAccessLink };\n  if (readPending()) {'), context)
 const { api } = context
 const pending = { name: 'REQUERENTE TESTE', email: 'teste@example.org', createdAt: Date.now(), processId: '' }
 assert.strictEqual(api.readPending(), null)
@@ -88,6 +88,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json')))
 assert.ok(manifest.content_scripts.some(entry => entry.all_frames && entry.js?.includes('cs_modules/clique_protocolista/external-access.js')))
 assert.ok(!source.includes('.submit('))
 assert.ok(source.includes('Dados e senha preenchidos'))
+assert.ok(source.includes('if (!passwordField && await hasSavedPassword())'))
+assert.ok(source.indexOf('if (!passwordField && await hasSavedPassword())') < source.indexOf('pending.filled = true'))
 async function testSavedPassword () {
   const password = new Input()
   let reads = 0
@@ -149,6 +151,8 @@ async function testSavedPassword () {
     Object.assign(control, visible, { matches: () => true })
     return { textContent, control }
   })
+  context.document.querySelectorAll = selector => selector.startsWith('#pwdSenha') ? [password] : []
+  assert.strictEqual(api.findPasswordField(), password, 'deve localizar a senha mesmo quando o rótulo ainda não estiver associado')
   context.document.querySelectorAll = selector => selector.startsWith('h1') ? [heading] : labels
   box = undefined
   const completing = api.reconcile()

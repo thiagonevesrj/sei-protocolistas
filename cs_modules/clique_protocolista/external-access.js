@@ -172,6 +172,27 @@
     return Boolean(field.value)
   }
 
+  function findPasswordField () {
+    const byLabel = fieldByLabel('Senha', 'input[type="password"]')
+    if (byLabel) return byLabel
+    return Array.from(document.querySelectorAll(
+      '#pwdSenha, input[name="pwdSenha"], input[id*="senha" i], input[name*="senha" i], input[type="password"]'
+    )).find((field) => visible(field) && !field.disabled && !field.readOnly) || null
+  }
+
+  async function hasSavedPassword () {
+    const credentialsKey = 'centralProtocolistaSeiCredentials'
+    const stored = await new Promise((resolve) => {
+      try {
+        chrome.storage.local.get(credentialsKey, (result) => {
+          resolve(chrome.runtime.lastError ? {} : result || {})
+        })
+      } catch (_) { resolve({}) }
+    })
+    const credentials = stored[credentialsKey]
+    return Boolean(credentials?.remember && credentials.password)
+  }
+
   let busy = false
   let done = false
   async function reconcile () {
@@ -190,7 +211,14 @@
           showStatus(heading, 'Não foi possível completar todos os campos. Confira o formulário antes de disponibilizar o acesso.')
           return
         }
-        const passwordReady = await fillSavedPassword(fieldByLabel('Senha', 'input[type="password"]'))
+        const passwordField = findPasswordField()
+        // O SEI pode montar a senha depois dos demais campos. Se houver senha
+        // salva, aguardar esse controle em vez de encerrar a automação cedo.
+        if (!passwordField && await hasSavedPassword()) {
+          showStatus(heading, 'Dados preenchidos — aguardando o campo de senha do SEI…')
+          return
+        }
+        const passwordReady = await fillSavedPassword(passwordField)
         pending.filled = true
         sessionStorage.setItem(KEY, JSON.stringify(pending))
         showStatus(heading, passwordReady

@@ -376,3 +376,16 @@ Teste executável confirma os dois IDs na interface, seleção da fase, carregam
 ## Comprovante do cliente — nome com texto do botão RQ — 21/09/2026
 
 A extração textual de INTERESSADO(S) incluía o botão REQUERIMENTO RÁPIDO quando não havia seção posterior de atribuição/anotações, inclusive entre frames. A leitura agora termina também nos delimitadores do botão, preservando os nomes anteriores. Nenhum cadastro ou processo é alterado. Teste de regressão cobre múltiplos interessados, botão com/sem acento, ícone em linha separada, estado ABRINDO e ausência do campo. Validação automatizada e lint do teste passaram; validar o comprovante regenerado no SEI real. PDFs já salvos não são modificados.
+
+
+## Lote operacional — acesso externo e protocolo do cliente — 24/09/2026
+
+**Estado: implementação e testes automatizados concluídos; validação no SEI real pendente.**
+
+- **Senha do acesso externo:** o SEI pode criar o campo de senha depois dos demais controles. A automação não encerra mais o fluxo enquanto houver senha salva na Central e o campo ainda não estiver disponível. A localização também aceita os identificadores nativos de senha do SEI quando o rótulo não estiver associado corretamente. A senha continua apenas no armazenamento autorizado da Central e nunca é copiada para o contexto do processo.
+- **Cartão duplicado:** o Protocolo do Cliente não é mais criado no quadro da árvore. A execução permanece disponível na área de visualização correta do SEI.
+- **Atendimento por e-mail:** o cartão final oferece duas ações independentes: preparar a resposta no e-mail original e imprimir o mesmo comprovante disponível no atendimento presencial.
+- **Múltiplos destinos:** o reconhecimento aceita mensagens de abertura, encaminhamento, envio ou tramitação para uma ou várias unidades. Quando o SEI não expuser os nomes num formato reconhecível, o cartão ainda aparece com a indicação “AS UNIDADES SELECIONADAS”.
+- Nenhuma ação envia o processo, concede acesso externo ou dispara o e-mail sem o clique final do protocolista.
+
+Validação: `npm run validate` integral e lint dos arquivos novos/alterados passaram. Teste operacional mínimo: salvar processo com acesso externo e conferir senha; enviar para uma unidade e para duas unidades; validar cartão somente na área principal; em atendimento por e-mail testar separadamente retorno ao OWA e impressão.
