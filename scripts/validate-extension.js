@@ -82,6 +82,9 @@ const centralSource = readText('central_protocolista/main.js')
 const centralHtml = readText('central_protocolista/index.html')
 const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
 
+expect(fastMailSource.includes('(?:Bcc|Cco)'), 'FAST MAIL: controle de cópia oculta deve reconhecer Bcc e Cco')
+expect(fastMailSource.includes('prepareBccWithRetry'), 'FAST MAIL: preenchimento automático da cópia oculta deve repetir tentativas de forma limitada')
+
 if (manifest && packageJson) {
   expect(
     manifest.version === packageJson.version,

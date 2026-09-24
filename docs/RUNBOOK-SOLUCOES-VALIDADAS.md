@@ -389,3 +389,12 @@ A extração textual de INTERESSADO(S) incluía o botão REQUERIMENTO RÁPIDO qu
 - Nenhuma ação envia o processo, concede acesso externo ou dispara o e-mail sem o clique final do protocolista.
 
 Validação: `npm run validate` integral e lint dos arquivos novos/alterados passaram. Teste operacional mínimo: salvar processo com acesso externo e conferir senha; enviar para uma unidade e para duas unidades; validar cartão somente na área principal; em atendimento por e-mail testar separadamente retorno ao OWA e impressão.
+
+
+## FAST MAIL — Cco/Bcc em variações do OWA — 24/09/2026
+
+**Estado: correção automatizada; validação em contas reais pendente.**
+
+O localizador da cópia oculta reconhece agora tanto a nomenclatura **Bcc** quanto **Cco** em rótulos, opções, identificadores, nomes e campos editáveis. A preparação automática faz no máximo três tentativas, com intervalo limitado, para suportar contas em que a barra e o campo carregam mais lentamente. O endereço permanece `protocolodetran@detran.rj.gov.br`. Nenhuma tentativa envia o e-mail.
+
+Validação integral passou. O lint específico do teste passou; os quatro avisos de indentação já existentes em `fast_mail/index.js`, fora deste trecho, permanecem sem alteração.

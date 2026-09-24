@@ -381,7 +381,7 @@
       const labels = Array.from(doc.querySelectorAll('label,span,div,td'))
         .filter((element) =>
           isVisible(element) &&
-          /^Mostrar\s+Bcc$/i.test(elementText(element))
+          /^Mostrar\s+(?:Bcc|Cco)$/i.test(elementText(element))
         )
 
       for (const label of labels) {
@@ -407,7 +407,7 @@
 
       for (const checkbox of checkboxes) {
         const rowText = elementText(checkbox.closest('tr,div,td'))
-        if (/Mostrar\s+Bcc/i.test(rowText)) return checkbox
+        if (/Mostrar\s+(?:Bcc|Cco)/i.test(rowText)) return checkbox
       }
     }
 
@@ -458,7 +458,15 @@
       'input[aria-label*="bcc" i]',
       'textarea[aria-label*="bcc" i]',
       '[contenteditable="true"][aria-label*="bcc" i]',
-      '[contenteditable="true"][title*="bcc" i]'
+      '[contenteditable="true"][title*="bcc" i]',
+      'input[name*="cco" i]',
+      'textarea[name*="cco" i]',
+      'input[id*="cco" i]',
+      'textarea[id*="cco" i]',
+      'input[aria-label*="cco" i]',
+      'textarea[aria-label*="cco" i]',
+      '[contenteditable="true"][aria-label*="cco" i]',
+      '[contenteditable="true"][title*="cco" i]'
     ]
 
     for (const doc of allDocuments()) {
@@ -470,7 +478,7 @@
       const labels = Array.from(doc.querySelectorAll('label,td,span,div'))
         .filter((element) =>
           isVisible(element) &&
-          /^Bcc\.{0,3}:?$/i.test(elementText(element))
+          /^(?:Bcc|Cco)\.{0,3}:?$/i.test(elementText(element))
         )
 
       for (const label of labels) {
@@ -586,6 +594,14 @@
         : 'Bcc inserido — confirme no campo'
     }
     return filled
+  }
+
+  async function prepareBccWithRetry () {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (await prepareBcc()) return true
+      if (attempt < 2) await sleep(1500)
+    }
+    return false
   }
 
   function escapeHtml (value) {
@@ -2896,7 +2912,7 @@
     await autoInsertPendingProcessResponse()
 
     // O Bcc é obrigatório em todas as respostas: prepara automaticamente.
-    window.setTimeout(() => prepareBcc(), 700)
+    window.setTimeout(() => prepareBccWithRetry(), 700)
     window.setInterval(scan, 2500)
   }
 
