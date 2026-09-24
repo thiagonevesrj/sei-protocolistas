@@ -84,6 +84,7 @@ const scriptCatalogBuilderSource = readText('scripts/build-script-catalog.js')
 const moduleInitSource = readText('cs_modules/core/end/moduleInit.js')
 const procedureViewSource = readText('cs_modules/procedimento_visualizar/index.js')
 const annotationSource = readText('cs_modules/procedimento_visualizar/mostrarAnotacao.js')
+const annotationRefreshSource = readText('cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js')
 
 expect(fastMailSource.includes('(?:Bcc|Cco)'), 'FAST MAIL: controle de cópia oculta deve reconhecer Bcc e Cco')
 expect(fastMailSource.includes('prepareBccWithRetry'), 'FAST MAIL: preenchimento automático da cópia oculta deve repetir tentativas de forma limitada')
@@ -92,6 +93,8 @@ expect(moduleInitSource.includes("SavedOptions.CheckTypes.push('mostraranotacao'
 expect(procedureViewSource.includes('  MostrarAnotacao(BaseName)'), 'Anotações: quadro deve carregar sempre na visualização do processo')
 expect(!procedureViewSource.includes("if (options.CheckTypes.includes('mostraranotacao'))"), 'Anotações: carregamento não deve depender de preferência antiga')
 expect(annotationSource.includes("document.getElementById('seipp_div_anotacao')"), 'Anotações: quadro precisa impedir inserção duplicada')
+expect(annotationRefreshSource.includes('treeFrame?.contentWindow'), 'Anotações: atualização da árvore deve aceitar frame ausente')
+expect(!annotationRefreshSource.includes("getElementById('ifrArvore').contentWindow"), 'Anotações: atualização da árvore não pode acessar frame inexistente diretamente')
 
 if (manifest && packageJson) {
   expect(
