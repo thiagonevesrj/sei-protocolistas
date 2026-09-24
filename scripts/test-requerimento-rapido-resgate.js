@@ -63,6 +63,10 @@ async function testLateOriginalButton () {
   const assert = require('assert')
   const vm = require('vm')
   const original = fs.readFileSync(path.join(root, 'cs_modules/requerimento_rapido/index.js'), 'utf8')
+  assert.ok(
+    original.includes('Barra para incluir documento indisponível nesta tela.'),
+    'Ausência da barra nativa deve ser tratada sem gerar erro da extensão'
+  )
   const start = original.indexOf('  async function insertRqButton()')
   const end = original.indexOf('  function findExternalOption()', start)
   let existing = null

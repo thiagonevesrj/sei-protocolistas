@@ -566,24 +566,32 @@
       }
     }
 
-    const target = await waitFor(
-      () => {
-        const includeLink =
-          findIncludeDocumentLink()
+    let target
+    try {
+      target = await waitFor(
+        () => {
+          const includeLink =
+            findIncludeDocumentLink()
 
-        if (!includeLink) {
-          return null
-        }
+          if (!includeLink) {
+            return null
+          }
 
-        return {
-          includeLink,
-          parent:
-            includeLink.parentElement
-        }
-      },
-      15000,
-      250
-    )
+          return {
+            includeLink,
+            parent:
+              includeLink.parentElement
+          }
+        },
+        15000,
+        250
+      )
+    } catch (error) {
+      console.info(
+        '[FAST PROC RQ] Barra para incluir documento indisponível nesta tela.'
+      )
+      return
+    }
 
     const includeLink =
       target.includeLink
