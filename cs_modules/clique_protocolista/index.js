@@ -5,6 +5,7 @@
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
+  const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
   const INTERESTED_CONFIRM_KEY =
     'spFastProcConfirmarInclusaoInteressado'
   const INTERESTED_CONFIRM_EVENT =
@@ -94,6 +95,42 @@
     return normalize(value)
       .replace(/^(detran|administrativo)\s+/, '')
       .trim()
+  }
+
+  let catalogProcessTypes = []
+  let processCatalogReady = null
+
+  function loadProcessCatalog () {
+    if (processCatalogReady) return processCatalogReady
+    if (typeof fetch !== 'function') return Promise.resolve()
+
+    processCatalogReady = fetch(
+      browserApi.runtime.getURL(PROCESS_CATALOG_PATH)
+    )
+      .then((response) => {
+        if (!response.ok) throw new Error(`Catálogo indisponível (${response.status})`)
+        return response.json()
+      })
+      .then((catalog) => {
+        catalogProcessTypes = Array.isArray(catalog?.processTypes)
+          ? catalog.processTypes
+          : []
+      })
+      .catch((error) => {
+        console.warn('[SEI Protocolistas] Não foi possível carregar destinos do catálogo:', error)
+      })
+
+    return processCatalogReady
+  }
+
+  function catalogDestinationForProcess (label) {
+    const expected = processName(label)
+    const processType = catalogProcessTypes.find((item) =>
+      [item.name, ...(item.seiNames || [])]
+        .some((name) => processName(name) === expected)
+    )
+
+    return cleanValue(processType?.destinationUnit)
   }
 
   function matchesProcessTypeQuery (optionText, queryText) {
@@ -872,6 +909,7 @@
     ).filter(
       (option) => option.value
     )
+    let lastSuggestedDestination = ''
 
     const typeShortcuts = createElement('div', {
       className: 'sp-clique-type-shortcuts',
@@ -1071,7 +1109,7 @@
       hideTypeSuggestions()
     })
 
-    typeSelect.addEventListener('change', () => {
+    typeSelect.addEventListener('change', async () => {
       const selectedOption =
         typeSelect.selectedOptions[0]
 
@@ -1082,6 +1120,24 @@
         typeSearch.value =
           selectedOption.textContent
         updateQuickTypeButtons(selectedOption)
+
+        await loadProcessCatalog()
+        const suggestion = catalogDestinationForProcess(
+          selectedOption.dataset.processLabel || selectedOption.textContent
+        )
+        const destinationInput = grid.querySelector('input[name="destino"]')
+        const currentDestination = cleanValue(destinationInput?.value)
+
+        if (
+          destinationInput &&
+          suggestion &&
+          (!currentDestination || currentDestination === lastSuggestedDestination)
+        ) {
+          destinationInput.value = suggestion
+          dispatchFieldEvents(destinationInput)
+        }
+
+        lastSuggestedDestination = suggestion
       }
     })
 
@@ -1197,7 +1253,7 @@
       {
         name: 'destino',
         label: 'Unidade de destino',
-        placeholder: 'Unidade indicada no FAST MAIL'
+        placeholder: 'Sugerida pela tabela; pode ser alterada'
       },
       {
         name: 'telefone',
