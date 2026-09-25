@@ -849,6 +849,69 @@
       "responseModel": "standard",
       "documentsStatus": "pending-validation",
       "category": "veiculos"
+    },
+    {
+      "id": "baixa-restricao",
+      "name": "Baixa de Restrição",
+      "seiNames": [
+        "Veículos: Baixa de Restrição"
+      ],
+      "destinationUnit": "PROTDIRRV",
+      "quickTrigger": "BAIXA-RESTR",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "trello-current-card",
+      "category": "veiculos",
+      "citizenObjective": "Solicitar baixa de restrição de veículo",
+      "missingDocuments": [
+        {
+          "id": "general-request",
+          "label": "Requerimento Geral",
+          "text": "Requerimento Geral devidamente preenchido e assinado à caneta ou por certificação digital.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN_0049_requerimento_geral.pdf",
+          "linkLabel": "Acessar o Requerimento Geral"
+        },
+        {
+          "id": "supporting-document",
+          "label": "Documento probatório ou CRLV/CRV",
+          "text": "Documento probatório do alegado ou que auxilie na resolução da questão, quando houver, e CRLV ou CRV."
+        },
+        {
+          "id": "identification",
+          "label": "Documento oficial de identificação",
+          "text": "Documento oficial de identificação do requerente."
+        },
+        {
+          "id": "cpf",
+          "label": "CPF",
+          "text": "CPF do requerente ou documento oficial em que conste o número do CPF."
+        },
+        {
+          "id": "residence",
+          "label": "Comprovante ou Declaração de Residência",
+          "text": "Comprovante de residência em nome do requerente, emitido há no máximo seis meses, ou Declaração de Residência preenchida e assinada.",
+          "link": "https://www.detran.rj.gov.br/images/formularios/DETRAN0034_declararesid.pdf",
+          "linkLabel": "Acessar a Declaração de Residência",
+          "linkIntro": "Na ausência de comprovante em nome do requerente, utilize a Declaração de Residência disponível abaixo:"
+        },
+        {
+          "id": "company-documents",
+          "label": "Documentação da pessoa jurídica, quando aplicável",
+          "text": "CNPJ, documentos constitutivos e documento de identificação e CPF do sócio solicitante, quando aplicável."
+        },
+        {
+          "id": "representation",
+          "label": "Documentação de representação, quando houver",
+          "text": "Documentação de representação aplicável ao caso, incluindo procuração ou credencial e documentos de identificação do representante."
+        }
+      ],
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "DRV02 - TRIAGEM",
+        "card": "Baixa de Restrição",
+        "cardId": "64fb42402e475bb276514702",
+        "lastActivity": "2026-07-31"
+      }
     }
   ],
   "fastMailPriorityTopics": [
@@ -1145,6 +1208,22 @@
       "responseScriptIds": [
         "trello-6851ad988d08db37811e2631",
         "trello-656e43495224d33e21cb6ac0"
+      ]
+    },
+    {
+      "id": "baixa-restricao",
+      "label": "Baixa de Restrição",
+      "area": "veiculos",
+      "corePriority": true,
+      "corePriorityRank": 4,
+      "recentUsageCount": 0,
+      "searchQuery": "baixa restrição",
+      "processId": "baixa-restricao",
+      "canOpenProcess": false,
+      "blockedReason": "A abertura por e-mail depende da confirmação do tipo SEI e do destino do caso.",
+      "scriptId": "trello-64fb42402e475bb276514702",
+      "responseScriptIds": [
+        "trello-64fb42402e475bb276514702"
       ]
     }
   ],

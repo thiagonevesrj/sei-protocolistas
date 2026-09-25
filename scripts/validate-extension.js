@@ -386,7 +386,7 @@ if (catalog) {
   }
 
   const priorityTopics = catalog.fastMailPriorityTopics
-  expect(Array.isArray(priorityTopics) && priorityTopics.length === 17, 'FAST MAIL: 17 assuntos principais obrigatórios')
+  expect(Array.isArray(priorityTopics) && priorityTopics.length === 18, 'FAST MAIL: 18 assuntos principais obrigatórios')
   if (Array.isArray(priorityTopics)) {
     expectUniqueValues(priorityTopics.map((topic) => topic.id), 'FAST MAIL: assuntos prioritários')
     const priorityAreaIds = new Set((areas || []).map((area) => area.id))
@@ -472,6 +472,7 @@ if (catalog) {
       chassi: 'veiculos',
       'leilao-veiculos': 'veiculos',
       'generico-veiculos': 'veiculos',
+      'baixa-restricao': 'veiculos',
       oficios: 'oficios'
     }
     Object.entries(expectedPriorityAreas).forEach(([topicId, areaId]) => {

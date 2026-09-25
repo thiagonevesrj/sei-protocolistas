@@ -213,8 +213,7 @@
   function isBaixaMainButton (target) {
     const button = target?.closest?.('button')
     if (!button) return false
-    if (button.id === MAIN_BUTTON_ID) return true
-    return normalize(button.textContent).replace(/^\s*/, '') === 'baixa de restricao'
+    return button.id === MAIN_BUTTON_ID
   }
 
   function bindGlobalInterceptor () {
