@@ -77,12 +77,13 @@
       box.id = 'sp-fast-proc-destination-status'
       box.setAttribute('role', 'status')
       box.setAttribute('aria-live', 'polite')
-      box.style.margin = '10px 0 14px'
-      box.style.padding = '11px 13px'
+      box.style.margin = '0 0 12px'
+      box.style.padding = '6px 10px'
       box.style.borderRadius = '7px'
-      box.style.fontSize = '12px'
+      box.style.fontSize = '11px'
       box.style.fontWeight = '800'
       box.style.letterSpacing = '.02em'
+      box.style.display = 'inline-block'
 
       const reference = anchor || findSendProcessHeading()
       if (reference?.parentElement) reference.insertAdjacentElement('afterend', box)
@@ -172,9 +173,9 @@
         if (input || Date.now() - startedAt > 12000) {
           window.clearInterval(timer)
           const status = showDestinationProgress(
-            `FAST PROC — RECOMENDAÇÃO DO SETOR: ${destination}. DIGITE ${destination}, PRESSIONE SETA PARA BAIXO E ENTER PARA FIXAR.`,
+            `SETOR DE DESTINO: ${destination}`,
             'recommendation',
-            input
+            null
           )
           pulse(status)
           pulse(input)
