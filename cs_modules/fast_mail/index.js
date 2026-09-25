@@ -2052,7 +2052,7 @@
     const scriptDestination = ['catalog', 'reply'].includes(activePriorityAction)
       ? cleanValue(selectedResponseScript()?.routing?.destinationUnit)
       : ''
-    return manualDestination || processType?.destinationUnit || scriptDestination
+    return cleanValue(processType?.destinationUnit) || manualDestination || scriptDestination
   }
 
   function updateDestinationField (useProcedureDefault = true) {
@@ -2442,7 +2442,7 @@
       procedure.value = current.procedureId
       syncRouteWithProcedure(current.procedureId)
       if (destination && current.destination) destination.value = current.destination
-      updateDestinationField(false)
+      updateDestinationField(true)
       renderSelectedProcedure()
     } else {
       syncRouteWithProcedure('')
@@ -2489,6 +2489,7 @@
         procedureName: processType.name || '',
         seiProcessName: processType.seiNames?.[0] || processType.name || '',
         destination,
+        catalogDestination: cleanValue(processType.destinationUnit),
         areaId: area?.value || '',
         areaLabel: area?.selectedOptions?.[0]?.textContent || '',
         objectiveId: objective?.value || '',

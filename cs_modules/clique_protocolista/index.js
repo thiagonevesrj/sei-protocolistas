@@ -682,6 +682,8 @@
       acessoExterno: Boolean(form.elements.acessoExterno?.checked),
       destino:
         cleanValue(form.elements.destino.value),
+      catalogDestination:
+        cleanValue(initialData.catalogDestination),
       attendanceId: cleanValue(initialData.attendanceId),
       procedureId: cleanValue(initialData.procedureId),
       areaId: cleanValue(initialData.areaId),
@@ -1284,7 +1286,7 @@
       nome: initialData.name,
       cpf: initialData.cpf,
       email: initialData.email,
-      destino: initialData.destination
+      destino: initialData.catalogDestination || initialData.destination
     }
 
     Object.entries(initialFields).forEach(([name, value]) => {
@@ -2541,6 +2543,7 @@
           procedureName: handoff.procedureName,
           seiProcessName: handoff.seiProcessName,
           destination: handoff.destination,
+          catalogDestination: handoff.catalogDestination,
           areaId: handoff.areaId,
           areaLabel: handoff.areaLabel,
           objectiveId: handoff.objectiveId,
