@@ -2812,6 +2812,14 @@
 
     document.documentElement.appendChild(panel)
 
+    document.addEventListener('sei-protocolistas:select-priority-topic', (event) => {
+      const topicId = cleanValue(event.detail?.topicId)
+      if (!priorityTopics.some((topic) => topic.id === topicId)) return
+      const topic = panel.querySelector('#spfm-priority-topic')
+      if (topic) topic.value = topicId
+      selectPriorityTopic(topicId)
+    })
+
     panel.querySelector('#spfm-collapse').addEventListener('click', () => togglePanel(panel))
     panel.querySelector('#spfm-priority-topic').addEventListener('change', (event) => {
       selectPriorityTopic(event.target.value)

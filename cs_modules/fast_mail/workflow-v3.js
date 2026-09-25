@@ -310,6 +310,15 @@
     const select = document.querySelector('#spfm-v2-orientation-topic')
     const open = document.querySelector('#spfm-v2-orientation-open')
 
+    if (topic?.id === 'baixa-restricao') {
+      document.dispatchEvent(new CustomEvent('sei-protocolistas:select-priority-topic', {
+        detail: { topicId: topic.id }
+      }))
+      setSelected(topic.label, areaLabel(topic.area))
+      setStatus('Escolha qual é o caso para liberar as ações.')
+      return true
+    }
+
     if (!area || !select || !open) {
       setStatus('Navegação de atendimento ainda não ficou pronta.')
       return false
