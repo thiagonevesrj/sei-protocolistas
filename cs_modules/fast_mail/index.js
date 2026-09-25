@@ -1735,6 +1735,7 @@
     const topic = selectedPriorityTopic()
     const variant = selectedPriorityVariant(topic)
     if (!topic) return null
+    if (topic.requireVariantSelection && topic.variants?.length && !variant) return null
 
     return {
       ...topic,
@@ -1800,6 +1801,8 @@
 
   function selectPriorityTopic (topicId) {
     activePriorityAction = ''
+    const scriptResult = document.querySelector('#spfm-script-result')
+    if (scriptResult) scriptResult.value = ''
     const topicSelect = document.querySelector('#spfm-priority-topic')
     if (topicSelect) topicSelect.value = topicId
     const catalog = document.querySelector('#spfm-script-catalog')
@@ -1930,6 +1933,12 @@
   function openPriorityMissingDocuments () {
     const route = selectedPriorityRoute()
     const status = document.querySelector('#spfm-priority-status')
+    if (route?.topicId === 'baixa-restricao' && !route.canOpenProcess) {
+      // Inventários mantêm a orientação/checklist presencial do próprio caso.
+      // Não reutilizar a cobrança por e-mail da Baixa de Restrição geral.
+      openPriorityResponses()
+      return
+    }
     const documents = route?.processId ? missingDocumentsForProcedure(route.processId) : []
     if (!route?.processId || !documents.length) {
       if (status) status.textContent = 'Este assunto ainda não possui checklist documental configurado.'
@@ -2812,19 +2821,13 @@
 
     document.documentElement.appendChild(panel)
 
-    document.addEventListener('sei-protocolistas:select-priority-topic', (event) => {
-      const topicId = cleanValue(event.detail?.topicId)
-      if (!priorityTopics.some((topic) => topic.id === topicId)) return
-      const topic = panel.querySelector('#spfm-priority-topic')
-      if (topic) topic.value = topicId
-      selectPriorityTopic(topicId)
-    })
-
     panel.querySelector('#spfm-collapse').addEventListener('click', () => togglePanel(panel))
     panel.querySelector('#spfm-priority-topic').addEventListener('change', (event) => {
       selectPriorityTopic(event.target.value)
     })
-    panel.querySelector('#spfm-topic-variant').addEventListener('change', renderPriorityRoute)
+    panel.querySelector('#spfm-topic-variant').addEventListener('change', () => {
+      selectPriorityTopic(panel.querySelector('#spfm-priority-topic').value)
+    })
     panel.querySelector('#spfm-priority-reply').addEventListener('click', openPriorityResponses)
     panel.querySelector('#spfm-priority-missing').addEventListener('click', openPriorityMissingDocuments)
     panel.querySelector('#spfm-priority-open').addEventListener('click', openPriorityProcess)

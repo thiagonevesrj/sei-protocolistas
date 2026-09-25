@@ -1238,7 +1238,7 @@
         },
         {
           "id": "herdeiros",
-          "label": "Baixa de Restrição — Herdeiros",
+          "label": "Inventário — Herdeiros",
           "processId": "baixa-restricao",
           "canOpenProcess": false,
           "blockedReason": "Inventário para herdeiros: atendimento presencial conforme o script vigente.",
@@ -1249,7 +1249,7 @@
         },
         {
           "id": "terceiros",
-          "label": "Baixa de Restrição — Terceiros",
+          "label": "Inventário — Terceiros",
           "processId": "baixa-restricao",
           "canOpenProcess": false,
           "blockedReason": "Inventário para terceiros: atendimento presencial conforme o script vigente.",
@@ -1310,6 +1310,7 @@
         "manualSelection": true,
         "processIds": [
           "solicitacoes-gerais-veiculos",
+          "baixa-restricao",
           "cancelamento-comunicacao-venda",
           "averiguacao-clonagem"
         ]

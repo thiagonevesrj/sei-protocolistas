@@ -48,6 +48,7 @@
     const variant = Array.isArray(topic.variants)
       ? topic.variants.find((item) => item.id === variantId)
       : null
+    if (topic.requireVariantSelection && topic.variants?.length && !variant) return null
 
     return {
       ...topic,
@@ -60,7 +61,7 @@
     if (route.canOpenProcess && route.processId) return 'open'
 
     const reason = normalizeText(route.blockedReason)
-    if (reason.includes('somente presencial')) return 'presential'
+    if (reason.includes('somente presencial') || reason.includes('atendimento presencial')) return 'presential'
     if (reason.includes('sem abertura de processo administrativo') || reason.includes('nao abre processo')) return 'no-process'
     return 'unavailable'
   }

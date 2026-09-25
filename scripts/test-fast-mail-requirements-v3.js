@@ -121,8 +121,7 @@ assert.strictEqual(baixaTopic?.processId, 'baixa-restricao', 'Baixa de Restriç�
 assert.strictEqual(baixaTopic?.requireVariantSelection, true, 'Baixa de Restrição deve pedir o caso antes das ações')
 assert.deepStrictEqual(baixaTopic?.variants?.map((item) => item.id), ['geral', 'herdeiros', 'terceiros'], 'Baixa de Restrição deve preservar os três casos')
 assert.ok(workflow.includes("{ id: 'baixa-restricao', label: 'Baixa de Restrição' }"), 'Baixa de Restrição deve abrir como atendimento principal')
-assert.ok(workflow.includes("'sei-protocolistas:select-priority-topic'"), 'Baixa de Restrição deve acionar o controlador padrão')
-assert.ok(core.includes("document.addEventListener('sei-protocolistas:select-priority-topic'"), 'FAST MAIL deve receber a seleção do atendimento prioritário')
+assert.ok(!workflow.includes("'sei-protocolistas:select-priority-topic'"), 'Baixa de Restrição não deve desviar da navegação padrão que exibe o seletor')
 const laudoPericia = periciaProcess?.missingDocuments?.find((item) => item.id === 'medical-report')?.text || ''
 assert.ok(laudoPericia.includes('menos de seis meses'), 'Perícia Médica: laudo deve informar validade de seis meses')
 assert.ok(laudoPericia.includes('CID-10') && laudoPericia.includes('CIF'), 'Perícia Médica: exceção de deficiência irreversível deve manter CID-10 e CIF')

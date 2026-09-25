@@ -445,7 +445,7 @@
 
   function syncNativeVariant (variantId) {
     const nativeVariant = document.querySelector('#spfm-topic-variant')
-    if (!nativeVariant || !variantId) return
+    if (!nativeVariant) return
     nativeVariant.value = variantId
     nativeVariant.dispatchEvent(new Event('change', { bubbles: true }))
   }

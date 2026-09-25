@@ -272,8 +272,11 @@
   function syncHostVisibility () {
     const host = actionHost()
     if (!host) return
-    const hasVisibleChild = Array.from(host.children).some((child) => visible(child) || Array.from(child.querySelectorAll?.('button,select,input') || []).some(visible))
-    host.hidden = activeStage() !== 'orientacao' || !hasVisibleChild
+    // Os controles declaram se estão ativos. Medir a geometria aqui cria um
+    // ciclo: o host oculto esconde os filhos e nunca mais pode ser exibido.
+    const hasActiveChild = Array.from(host.children).some((child) => !child.hidden)
+    const hidden = activeStage() !== 'orientacao' || !hasActiveChild
+    if (host.hidden !== hidden) host.hidden = hidden
   }
 
   function operationalControls () {

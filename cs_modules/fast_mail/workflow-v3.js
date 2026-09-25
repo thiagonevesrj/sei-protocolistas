@@ -310,15 +310,6 @@
     const select = document.querySelector('#spfm-v2-orientation-topic')
     const open = document.querySelector('#spfm-v2-orientation-open')
 
-    if (topic?.id === 'baixa-restricao') {
-      document.dispatchEvent(new CustomEvent('sei-protocolistas:select-priority-topic', {
-        detail: { topicId: topic.id }
-      }))
-      setSelected(topic.label, areaLabel(topic.area))
-      setStatus('Escolha qual é o caso para liberar as ações.')
-      return true
-    }
-
     if (!area || !select || !open) {
       setStatus('Navegação de atendimento ainda não ficou pronta.')
       return false
@@ -348,15 +339,8 @@
   }
 
   function openBaixaRestricao () {
-    const button = document.querySelector('#spfm-p0-baixa-restricao')
-    if (!button) {
-      setStatus('Fluxo de Baixa de Restrição ainda não ficou pronto.')
-      return
-    }
-    button.click()
-    setSelected('Baixa de Restrição', 'VEÍCULOS')
-    setStatus('Escolha o tipo de baixa de restrição.')
-    cueLater(() => document.querySelector('#spfm-p0-baixa-chooser button:not([disabled])'))
+    const topic = orientationTopics().find((item) => item.id === 'baixa-restricao')
+    return topic ? selectOrientationTopic(topic) : false
   }
 
   function setSelected (label, meta = '') {
