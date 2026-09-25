@@ -40,52 +40,6 @@
     return rect.width > 0 && rect.height > 0
   }
 
-  function dispatch (element, type) {
-    if (!element) return
-    element.dispatchEvent(new Event(type, { bubbles: true }))
-  }
-
-  function setFieldValue (field, value) {
-    field.focus?.()
-    const prototype = Object.getPrototypeOf(field)
-    const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, 'value') : null
-    const setValue = (nextValue) => {
-      if (descriptor?.set) descriptor.set.call(field, nextValue)
-      else field.value = nextValue
-    }
-
-    setValue('')
-    field.dispatchEvent(new InputEvent('input', {
-      bubbles: true,
-      inputType: 'deleteContentBackward',
-      data: null
-    }))
-    setValue(value)
-    field.dispatchEvent(new InputEvent('input', {
-      bubbles: true,
-      inputType: 'insertText',
-      data: value
-    }))
-
-    const lastCharacter = value.slice(-1).toUpperCase() || 'A'
-    const keyCode = lastCharacter.charCodeAt(0)
-    ;['keydown', 'keyup'].forEach((type) => {
-      const event = new KeyboardEvent(type, {
-        key: lastCharacter,
-        code: `Key${lastCharacter}`,
-        bubbles: true,
-        cancelable: true,
-        keyCode,
-        which: keyCode
-      })
-      try {
-        Object.defineProperty(event, 'keyCode', { get: () => keyCode })
-        Object.defineProperty(event, 'which', { get: () => keyCode })
-      } catch (error) {}
-      field.dispatchEvent(event)
-    })
-  }
-
   function pulse (element) {
     if (!element || !visible(element)) return
     element.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
@@ -97,29 +51,6 @@
       { boxShadow: '0 0 0 0 rgba(244,200,77,0)' }
     ], { duration: 3200, easing: 'ease-out' })
   }
-
-  function pressKey (element, key, code, keyCode) {
-    if (!element) return
-    element.focus?.()
-    ;['keydown', 'keypress', 'keyup'].forEach((type) => {
-      const event = new KeyboardEvent(type, {
-        key,
-        code,
-        bubbles: true,
-        cancelable: true,
-        keyCode,
-        which: keyCode
-      })
-      try {
-        Object.defineProperty(event, 'keyCode', { get: () => keyCode })
-        Object.defineProperty(event, 'which', { get: () => keyCode })
-      } catch (error) {}
-      element.dispatchEvent(event)
-    })
-  }
-
-  const pressArrowDown = (element) => pressKey(element, 'ArrowDown', 'ArrowDown', 40)
-  const pressEnter = (element) => pressKey(element, 'Enter', 'Enter', 13)
 
   function findStartProcessLink () {
     const exact = document.querySelector(
@@ -158,15 +89,24 @@
       else document.body?.prepend(box)
     }
 
+    const recommendation = state === 'recommendation'
     box.dataset.state = state
-    box.style.border = state === 'ready'
+    box.style.border = recommendation || state === 'ready'
       ? '2px solid #d2a92f'
       : state === 'error'
         ? '2px solid #d27a2f'
         : '1px solid #d2a92f'
-    box.style.background = state === 'ready' ? '#0b2940' : '#07182c'
+    box.style.background = recommendation || state === 'ready' ? '#0b2940' : '#07182c'
     box.style.color = state === 'error' ? '#ffd9bd' : '#fff'
     box.textContent = message
+    box.getAnimations?.().forEach((animation) => animation.cancel())
+    if (recommendation) {
+      box.animate([
+        { opacity: 1, boxShadow: '0 0 0 0 rgba(244,200,77,0)' },
+        { opacity: 0.45, boxShadow: '0 0 0 7px rgba(244,200,77,.95)' },
+        { opacity: 1, boxShadow: '0 0 0 0 rgba(244,200,77,0)' }
+      ], { duration: 1100, iterations: Infinity, easing: 'ease-in-out' })
+    }
     return box
   }
 
@@ -207,62 +147,7 @@
       }) || null
   }
 
-  function findUnitsSelect (input) {
-    const scopes = [
-      input?.parentElement,
-      input?.parentElement?.nextElementSibling,
-      input?.closest('tr')?.nextElementSibling,
-      input?.closest('form')
-    ].filter(Boolean)
-
-    for (const scope of scopes) {
-      const selects = Array.from(scope.querySelectorAll?.('select') || [])
-      const select = selects.find((candidate) => candidate !== document.querySelector('select') && (visible(candidate) || candidate.multiple))
-      if (select) return select
-    }
-    return null
-  }
-
-  function selectDestinationOption (destination, input) {
-    const wanted = normalize(destination)
-    const select = findUnitsSelect(input)
-
-    if (select) {
-      const option = Array.from(select.options || []).find((candidate) => {
-        const text = normalize(candidate.textContent)
-        return text === wanted || text.startsWith(`${wanted} `) || text.includes(` ${wanted} `)
-      })
-
-      if (option) {
-        showDestinationProgress(`FAST PROC — ${destination} ENCONTRADO. PRÉ-SELECIONANDO E CONFIRMANDO…`, 'loading', input)
-        pressArrowDown(input)
-        pressEnter(input)
-        return select
-      }
-    }
-
-    const candidate = Array.from(document.querySelectorAll('a,li,td,div,span'))
-      .filter(visible)
-      .filter((element) => {
-        const text = normalize(element.textContent)
-        return text === wanted || text.startsWith(`${wanted} `)
-      })
-      .sort((a, b) => clean(a.textContent).length - clean(b.textContent).length)[0]
-
-    if (!candidate) return null
-    showDestinationProgress(`FAST PROC — ${destination} ENCONTRADO. PRÉ-SELECIONANDO E CONFIRMANDO…`, 'loading', input)
-    pressArrowDown(input)
-    pressEnter(input)
-    return candidate
-  }
-
-  function findSendButton () {
-    return Array.from(document.querySelectorAll('button,input[type="button"],input[type="submit"],a'))
-      .filter(visible)
-      .find((element) => /enviar/i.test(clean(element.value || element.textContent || element.title))) || null
-  }
-
-  async function autoSelectDestination () {
+  async function showDestinationRecommendation () {
     if (action() !== 'procedimento_enviar') return false
 
     let stored
@@ -280,61 +165,21 @@
     const destination = clean(context.destino || context.destination).toUpperCase()
     if (!destination) return false
 
-    showDestinationProgress(`FAST PROC — CARREGANDO SETOR DE DESTINO: ${destination}…`, 'loading')
-
     const startedAt = Date.now()
-    let announcedInput = false
-    let lastSearchAt = 0
     return new Promise((resolve) => {
       const timer = window.setInterval(() => {
         const input = findUnitsInput()
-        if (!input) {
-          if (Date.now() - startedAt > 12000) {
-            window.clearInterval(timer)
-            showDestinationProgress(`FAST PROC — NÃO FOI POSSÍVEL LOCALIZAR O CAMPO DE DESTINO (${destination}). Selecione manualmente.`, 'error')
-            resolve(false)
-          }
-          return
-        }
-
-        if (!announcedInput) {
-          announcedInput = true
-          showDestinationProgress(`FAST PROC — LOCALIZANDO ${destination} NA LISTA DE UNIDADES…`, 'loading', input)
-        }
-
-        if (
-          normalize(input.value) !== normalize(destination) &&
-          Date.now() - lastSearchAt >= 1200
-        ) {
-          lastSearchAt = Date.now()
-          setFieldValue(input, destination)
-        }
-
-        const selected = selectDestinationOption(destination, input)
-        if (!selected) {
-          if (Date.now() - startedAt > 12000) {
-            window.clearInterval(timer)
-            showDestinationProgress(`FAST PROC — SETOR ${destination} NÃO FOI SELECIONADO AUTOMATICAMENTE. CONFIRA O CAMPO DE UNIDADES.`, 'error', input)
-            pulse(input)
-            resolve(false)
-          }
-          return
-        }
-
-        window.clearInterval(timer)
-        window.setTimeout(() => {
-          const status = showDestinationProgress(`✓ SETOR CARREGADO: ${destination} — VOCÊ PODE SUBSTITUIR OU ADICIONAR OUTRA UNIDADE. DEPOIS, CONFIRA E CLIQUE EM ENVIAR.`, 'ready', input)
+        if (input || Date.now() - startedAt > 12000) {
+          window.clearInterval(timer)
+          const status = showDestinationProgress(
+            `FAST PROC — RECOMENDAÇÃO DO SETOR: ${destination}. DIGITE ${destination}, PRESSIONE SETA PARA BAIXO E ENTER PARA FIXAR.`,
+            'recommendation',
+            input
+          )
           pulse(status)
-          pulse(selected)
-
-          ;[350, 800, 1400].forEach((delay) => {
-            window.setTimeout(() => {
-              const send = findSendButton()
-              if (send) pulse(send)
-            }, delay)
-          })
-          resolve(true)
-        }, 450)
+          pulse(input)
+          resolve(Boolean(input))
+        }
       }, 180)
     })
   }
@@ -368,8 +213,8 @@
   }
 
   if (action() === 'procedimento_enviar') {
-    autoSelectDestination().catch((error) => {
-      console.error('[SEI Protocolistas] Falha ao selecionar destino automaticamente:', error)
+    showDestinationRecommendation().catch((error) => {
+      console.error('[SEI Protocolistas] Falha ao mostrar recomendação de destino:', error)
     })
   } else if (window.top === window) {
     continueHandoff().catch((error) => {
