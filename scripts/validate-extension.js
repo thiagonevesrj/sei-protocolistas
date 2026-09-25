@@ -86,6 +86,7 @@ const procedureViewSource = readText('cs_modules/procedimento_visualizar/index.j
 const annotationSource = readText('cs_modules/procedimento_visualizar/mostrarAnotacao.js')
 const annotationRefreshSource = readText('cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js')
 const annotationDisplaySource = readText('cs_modules/procedimento_visualizar/mostrarAnotacao.js')
+const procedureViewStyles = readText('cs_modules/procedimento_visualizar/styles.css')
 
 expect(fastMailSource.includes('(?:Bcc|Cco)'), 'FAST MAIL: controle de cópia oculta deve reconhecer Bcc e Cco')
 expect(fastMailSource.includes('prepareBccWithRetry'), 'FAST MAIL: preenchimento automático da cópia oculta deve repetir tentativas de forma limitada')
@@ -101,6 +102,9 @@ expect(annotationRefreshSource.includes('treeFrame?.contentWindow'), 'Anotaçõe
 expect(!annotationRefreshSource.includes("getElementById('ifrArvore').contentWindow"), 'Anotações: atualização da árvore não pode acessar frame inexistente diretamente')
 expect(annotationDisplaySource.includes("'controlador.php?acao=anotacao_registrar&'"), 'Anotações: deve preservar a leitura compatível com o SEI++ no cabeçalho da árvore')
 expect(annotationDisplaySource.includes("divAnotacao.id = 'seipp_div_anotacao'"), 'Anotações: deve inserir o painel na coluna da árvore')
+expect(procedureViewStyles.includes('textarea.seipp_anotacao_txt_editar'), 'Anotações: estilo do editor deve superar o tema escuro do SEI')
+expect(procedureViewStyles.includes('color: #333 !important'), 'Anotações: texto digitado deve permanecer legível')
+expect(procedureViewStyles.includes('caret-color: #333 !important'), 'Anotações: cursor de digitação deve permanecer visível')
 
 if (manifest && packageJson) {
   expect(
