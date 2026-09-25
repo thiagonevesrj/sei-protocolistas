@@ -5,6 +5,11 @@
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
+  const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
+  const INTERESTED_CONFIRM_KEY =
+    'spFastProcConfirmarInclusaoInteressado'
+  const INTERESTED_CONFIRM_EVENT =
+    'sp-fast-proc-armar-inclusao-interessado'
 
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const STORAGE_TIMEOUT = 5000
@@ -51,6 +56,23 @@
     ]
   ]
 
+  const QUICK_PROCESS_TYPES = [
+    ['DEV. TAXAS', 'Detran: Devolução de Taxas'],
+    [
+      'DESIST. 1ª HAB.',
+      'DETRAN: Desistência de categoria na 1ª habilitação'
+    ],
+    ['PERÍCIA MÉDICA', 'Detran: Solicitação de Perícia Médica'],
+    [
+      'GERAL VEÍCULOS',
+      'Detran: Solicitações Gerais - Veículos'
+    ],
+    [
+      'GERAL HABILITAÇÃO',
+      'Detran: Solicitação Geral - Habilitação'
+    ]
+  ]
+
   function normalize(value) {
     return String(value || '')
       .normalize('NFD')
@@ -73,6 +95,42 @@
     return normalize(value)
       .replace(/^(detran|administrativo)\s+/, '')
       .trim()
+  }
+
+  let catalogProcessTypes = []
+  let processCatalogReady = null
+
+  function loadProcessCatalog () {
+    if (processCatalogReady) return processCatalogReady
+    if (typeof fetch !== 'function') return Promise.resolve()
+
+    processCatalogReady = fetch(
+      browserApi.runtime.getURL(PROCESS_CATALOG_PATH)
+    )
+      .then((response) => {
+        if (!response.ok) throw new Error(`Catálogo indisponível (${response.status})`)
+        return response.json()
+      })
+      .then((catalog) => {
+        catalogProcessTypes = Array.isArray(catalog?.processTypes)
+          ? catalog.processTypes
+          : []
+      })
+      .catch((error) => {
+        console.warn('[SEI Protocolistas] Não foi possível carregar destinos do catálogo:', error)
+      })
+
+    return processCatalogReady
+  }
+
+  function catalogDestinationForProcess (label) {
+    const expected = processName(label)
+    const processType = catalogProcessTypes.find((item) =>
+      [item.name, ...(item.seiNames || [])]
+        .some((name) => processName(name) === expected)
+    )
+
+    return cleanValue(processType?.destinationUnit)
   }
 
   function matchesProcessTypeQuery (optionText, queryText) {
@@ -612,6 +670,28 @@
     grid.appendChild(wrapper)
   }
 
+  function addSelectField(grid, field) {
+    const wrapper = createElement('div', {
+      className:
+        'sp-clique-field' +
+        (field.wide ? ' sp-clique-field--wide' : '')
+    })
+    const label = createElement('label', {
+      htmlFor: `sp-${field.name}`
+    }, field.label)
+    const select = createElement('select', {
+      id: `sp-${field.name}`,
+      name: field.name
+    })
+
+    field.options.forEach(([value, text]) => {
+      select.appendChild(createElement('option', { value }, text))
+    })
+
+    wrapper.append(label, select)
+    grid.appendChild(wrapper)
+  }
+
   function readDraftFromForm(form, initialData = {}) {
     const selectedOption =
       form.elements.tipoProcesso.selectedOptions[0]
@@ -626,6 +706,8 @@
         selectedOption?.dataset.processLabel || '',
       tipoProcessoUrl:
         selectedOption?.dataset.processUrl || '',
+      prioridade:
+        cleanValue(form.elements.prioridade?.value),
       nome:
         cleanValue(form.elements.nome.value),
       cpf:
@@ -634,6 +716,7 @@
         cleanValue(form.elements.telefone.value),
       email:
         cleanValue(form.elements.email.value),
+      acessoExterno: Boolean(form.elements.acessoExterno?.checked),
       destino:
         cleanValue(form.elements.destino.value),
       attendanceId: cleanValue(initialData.attendanceId),
@@ -826,6 +909,59 @@
     ).filter(
       (option) => option.value
     )
+    let lastSuggestedDestination = ''
+
+    const typeShortcuts = createElement('div', {
+      className: 'sp-clique-type-shortcuts',
+      'aria-label': 'Tipos de processo mais usados'
+    })
+
+    const quickTypeButtons = QUICK_PROCESS_TYPES.map(
+      ([label, seiName]) => {
+        const option = typeOptions.find((candidate) =>
+          processName(
+            candidate.dataset.processLabel ||
+            candidate.textContent
+          ) === processName(seiName)
+        )
+        const button = createElement(
+          'button',
+          {
+            className: 'sp-clique-type-shortcut',
+            type: 'button',
+            'aria-pressed': 'false'
+          },
+          label
+        )
+
+        button.dataset.processType = seiName
+        button.addEventListener('click', () => {
+          selectTypeOption(option)
+          hideTypeSuggestions()
+          typeSearch.focus()
+        })
+        typeShortcuts.appendChild(button)
+
+        return button
+      }
+    )
+
+    const updateQuickTypeButtons = (selectedOption) => {
+      const selectedName = processName(
+        selectedOption?.dataset.processLabel ||
+        selectedOption?.textContent
+      )
+
+      quickTypeButtons.forEach((button) => {
+        const active = Boolean(selectedName) &&
+          processName(button.dataset.processType) === selectedName
+        button.classList.toggle(
+          'sp-clique-type-shortcut--active',
+          active
+        )
+        button.setAttribute('aria-pressed', String(active))
+      })
+    }
 
     const matchingTypeOptions = () => {
       const query = typeSearch.value
@@ -842,6 +978,7 @@
     const selectTypeOption = (option) => {
       if (!option) {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
         return false
       }
 
@@ -852,6 +989,7 @@
           bubbles: true
         })
       )
+      updateQuickTypeButtons(option)
 
       return true
     }
@@ -945,6 +1083,7 @@
         selectTypeOption(exactOption)
       } else {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
       }
     }
 
@@ -970,7 +1109,7 @@
       hideTypeSuggestions()
     })
 
-    typeSelect.addEventListener('change', () => {
+    typeSelect.addEventListener('change', async () => {
       const selectedOption =
         typeSelect.selectedOptions[0]
 
@@ -980,6 +1119,25 @@
       ) {
         typeSearch.value =
           selectedOption.textContent
+        updateQuickTypeButtons(selectedOption)
+
+        await loadProcessCatalog()
+        const suggestion = catalogDestinationForProcess(
+          selectedOption.dataset.processLabel || selectedOption.textContent
+        )
+        const destinationInput = grid.querySelector('input[name="destino"]')
+        const currentDestination = cleanValue(destinationInput?.value)
+
+        if (
+          destinationInput &&
+          suggestion &&
+          (!currentDestination || currentDestination === lastSuggestedDestination)
+        ) {
+          destinationInput.value = suggestion
+          dispatchFieldEvents(destinationInput)
+        }
+
+        lastSuggestedDestination = suggestion
       }
     })
 
@@ -1049,11 +1207,25 @@
 
     typeWrapper.append(
       typeLabel,
+      typeShortcuts,
       typeSearchBox,
       typeSelect
     )
 
     grid.appendChild(typeWrapper)
+
+    addSelectField(grid, {
+      name: 'prioridade',
+      label: 'Prioridade (opcional)',
+      wide: true,
+      options: [
+        ['', 'Sem prioridade'],
+        ['Idoso', 'Idoso'],
+        ['Idoso 80+', 'Idoso 80+'],
+        ['PcD', 'PcD'],
+        ['Empreendimento Estratégico', 'Empreendimento Estratégico']
+      ]
+    })
 
     ;[
       {
@@ -1081,7 +1253,7 @@
       {
         name: 'destino',
         label: 'Unidade de destino',
-        placeholder: 'Unidade indicada no FAST MAIL'
+        placeholder: 'Sugerida pela tabela; pode ser alterada'
       },
       {
         name: 'telefone',
@@ -1091,6 +1263,25 @@
         placeholder: 'Telefone com DDD'
       }
     ].forEach((field) => addField(grid, field))
+
+    const accessBox = createElement('div', { className: 'sp-clique-field sp-clique-field--wide' })
+    const accessLabel = createElement('label', { htmlFor: 'sp-acesso-externo' })
+    const accessCheck = createElement('input', {
+      id: 'sp-acesso-externo', name: 'acessoExterno', type: 'checkbox'
+    })
+    accessLabel.append(accessCheck, document.createTextNode(' Conceder acesso externo'))
+    const accessHelp = createElement('p', { className: 'sp-clique-access-help' },
+      'Será preparado acompanhamento integral por 365 dias, com motivo “Vistas ao processo”, usando a senha do SEI salva na Central. Confira e clique em Disponibilizar.')
+    accessHelp.hidden = true
+    accessCheck.addEventListener('change', () => {
+      const emailInput = grid.querySelector('#sp-email')
+      if (emailInput) emailInput.required = accessCheck.checked
+      const emailLabel = grid.querySelector('label[for="sp-email"]')
+      if (emailLabel) emailLabel.textContent = accessCheck.checked ? 'E-mail * (acesso externo)' : 'E-mail'
+      accessHelp.hidden = !accessCheck.checked
+    })
+    accessBox.append(accessLabel, accessHelp)
+    grid.appendChild(accessBox)
 
     const optionalDetails = createElement('details', {
       className: 'sp-clique-optional'
@@ -1251,6 +1442,10 @@
 
       try {
         const draft = readDraftFromForm(form, initialData)
+
+        if (draft.acessoExterno && (!draft.email || !form.elements.email.checkValidity())) {
+          throw new Error('Informe um e-mail válido para preparar o acesso externo.')
+        }
 
         if (!draft.tipoProcesso) {
           throw new Error(
@@ -1743,15 +1938,8 @@
       }
     }
 
-    const priority =
-      findFirst([
-        '#selGrauPrioridade',
-        '#selPrioridade',
-        'select[id*="Prioridade"]',
-        'select[name*="Prioridade"]'
-      ]) || findFieldByLabel('Prioridade')
-
-    hideSmallestFieldContainer(priority)
+    // A prioridade depende da situação concreta do requerente.
+    // O FAST PROC mantém o campo nativo visível para escolha manual.
   }
 
   function fillField(element, value) {
@@ -1763,6 +1951,30 @@
     element.value = value
     dispatchFieldEvents(element)
 
+    return true
+  }
+
+  function choosePriority(value) {
+    if (!value) return false
+
+    const select = findFirst([
+      '#selGrauPrioridade',
+      '#selPrioridade',
+      'select[id*="Prioridade"]',
+      'select[name*="Prioridade"]'
+    ]) || findFieldByLabel('Prioridade')
+
+    if (!select || select.tagName !== 'SELECT') return false
+
+    const expected = normalize(value)
+    const option = Array.from(select.options).find(
+      (item) => normalize(item.textContent) === expected
+    )
+
+    if (!option) return false
+
+    select.value = option.value
+    dispatchFieldEvents(select)
     return true
   }
 
@@ -1860,49 +2072,123 @@
     })
   }
 
-  async function selectInterestedSuggestion(name, interestedField) {
+  function visibleInterestedSuggestions() {
+    return Array.from(
+      document.querySelectorAll(
+        '.ui-autocomplete li, ' +
+        '.ui-menu-item, ' +
+        '[role="option"], ' +
+        'ul[id*="Interessado"] li, ' +
+        'div[id*="Interessado"] li'
+      )
+    ).filter(
+      (element) => element.offsetParent !== null
+    )
+  }
+
+  function interestedSuggestionName(element) {
+    const raw = cleanValue(
+      element?.textContent ||
+      element?.innerText ||
+      ''
+    )
+
+    const withoutMarker = raw.replace(
+      /^[\s"'“”$]+/,
+      ''
+    )
+
+    const metadataStart = withoutMarker.search(
+      /\s*[<(]/
+    )
+
+    return cleanValue(
+      (metadataStart > 0
+        ? withoutMarker.slice(0, metadataStart)
+        : withoutMarker
+      ).replace(/[\s"'“”;]+$/, '')
+    )
+  }
+
+  function armInterestedCreationConfirmation() {
+    try {
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_KEY,
+        String(Date.now())
+      )
+
+      document.dispatchEvent(
+        new CustomEvent(
+          INTERESTED_CONFIRM_EVENT
+        )
+      )
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+        error
+      )
+    }
+  }
+
+  function continueWithManualInterested(message, interestedField) {
+    window.alert(
+      `CLICK PROTOCOLISTA: ${message}\n\n` +
+      'Selecione o interessado correto. O FAST PROC continuará preenchendo os demais dados e liberará o botão SALVAR.'
+    )
+    interestedField.focus()
+    return false
+  }
+
+  async function selectInterestedSuggestion(name, email, interestedField) {
     const expectedName = normalize(name)
+    const expectedEmail = cleanValue(email).toLowerCase()
+    let result = null
 
     try {
-      const suggestion = await waitUntil(
+      result = await waitUntil(
         () => {
-          const candidates = Array.from(
-            document.querySelectorAll(
-              '.ui-autocomplete li, ' +
-              '.ui-menu-item, ' +
-              '[role="option"], ' +
-              'ul[id*="Interessado"] li, ' +
-              'div[id*="Interessado"] li'
-            )
-          ).filter(
-            (element) =>
-              element.offsetParent !== null
+          const candidates =
+            visibleInterestedSuggestions()
+
+          const matches = candidates.filter(
+            (element) => normalize(
+              interestedSuggestionName(element)
+            ) === expectedName
           )
 
-          return candidates.find(
-            (element) =>
-              normalize(
+          if (matches.length === 1) {
+            return { suggestion: matches[0] }
+          }
+
+          if (matches.length > 1 && expectedEmail) {
+            const emailMatches = matches.filter(
+              (element) => cleanValue(
                 element.textContent ||
                 element.innerText ||
                 ''
-              ) === expectedName
-          ) || null
+              ).toLowerCase().includes(expectedEmail)
+            )
+
+            if (emailMatches.length === 1) {
+              return { suggestion: emailMatches[0] }
+            }
+          }
+
+          return matches.length > 1
+            ? { ambiguous: true }
+            : null
         },
-        2500
+        4000
       )
-
-      suggestion.dispatchEvent(
-        new MouseEvent('mousedown', {
-          bubbles: true,
-          cancelable: true,
-          view: window
-        })
-      )
-
-      suggestion.click()
-
-      return true
     } catch (error) {
+      if (visibleInterestedSuggestions().length) {
+        return continueWithManualInterested(
+          'O SEI encontrou possíveis cadastros para este nome, mas não foi possível identificar um único registro com segurança.',
+          interestedField
+        )
+      }
+
+      armInterestedCreationConfirmation()
       interestedField.focus()
       interestedField.value = name
       dispatchFieldEvents(interestedField)
@@ -1944,6 +2230,25 @@
 
       return true
     }
+
+    if (result.ambiguous) {
+      return continueWithManualInterested(
+        'Há mais de um cadastro do SEI com este nome.',
+        interestedField
+      )
+    }
+
+    result.suggestion.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+    )
+
+    result.suggestion.click()
+
+    return true
   }
 
   function clickAddInterested(interestedField) {
@@ -2166,6 +2471,13 @@
       )
     }
 
+    if (draft.prioridade && !choosePriority(draft.prioridade)) {
+      console.warn(
+        '[SEI Protocolistas] Prioridade não localizada:',
+        draft.prioridade
+      )
+    }
+
     if (!fillField(interested, draft.nome)) {
       throw new Error(
         'O campo Interessados não foi encontrado.'
@@ -2177,6 +2489,7 @@
     const interestedSelected =
       await selectInterestedSuggestion(
         draft.nome,
+        draft.email,
         interested
       )
 
@@ -2213,6 +2526,27 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    // Armar somente quando o operador salvar este processo, nunca no preenchimento.
+    const armExternalAccess = () => {
+      const key = 'spFastProcExternalAccess'
+      if (!draft.acessoExterno) {
+        sessionStorage.removeItem(key)
+        return
+      }
+      sessionStorage.setItem(key, JSON.stringify({
+        name: draft.nome, email: draft.email,
+        createdAt: Date.now(), processId: '', opened: false, filled: false
+      }))
+    }
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest?.('button,input,a')
+      const label = normalize(button?.textContent || button?.value || '').replace(/[^a-z]/g, '')
+      if (label === 'salvar') armExternalAccess()
+    }, true)
+    document.addEventListener('submit', (event) => {
+      if (event.target.contains?.(specification)) armExternalAccess()
+    }, true)
 
     closeInterestedSuggestions(interested)
 

@@ -3,9 +3,19 @@
 const CARD='sp-protocolo-cliente-card';
 const CONTEXT_KEY='cliqueProtocolistaContexto';
 const EMAIL_RESULT_KEY='fastMailProcessoFinalizado';
+const OPERATOR_KEY='fastMailOperadorValidado';
+const METRICS_KEY='centralProtocolistaMetricsByOperator';
 const RETURN_TO_EMAIL_MESSAGE='sei-protocolistas:return-fast-mail';
 const browserApi=typeof browser==='undefined'?chrome:browser;
 let cardLoading=false;
+function isTreeFrame(){
+  try{
+    const frame=window.frameElement;
+    const marker=[window.name,frame?.id,frame?.name,frame?.title].filter(Boolean).join(' ');
+    return /(?:^|[_\s-])(?:ifr)?arvore(?:$|[_\s-])/i.test(marker)||Boolean(document.querySelector('#divArvore'));
+  }catch(error){return false;}
+}
+if(isTreeFrame())return;
 const storageGet=key=>new Promise((resolve,reject)=>{
   const result=browserApi.storage.local.get(key,items=>{
     const error=browserApi.runtime?.lastError;
@@ -20,6 +30,21 @@ const storageSet=items=>new Promise((resolve,reject)=>{
   });
   if(result?.then)result.then(resolve,reject);
 });
+async function recordProcessMetric(button){
+  if(button?.dataset.metricRecorded==='true')return;
+  try{
+    const stored=await storageGet([OPERATOR_KEY,METRICS_KEY]);
+    const operatorNumber=norm(stored[OPERATOR_KEY]?.number);
+    const allMetrics=stored[METRICS_KEY]&&typeof stored[METRICS_KEY]==='object'?stored[METRICS_KEY]:{};
+    const state=operatorNumber?allMetrics[operatorNumber]:null;
+    if(!state?.active)return;
+    const counters=state.active.counters||{};
+    await storageSet({[METRICS_KEY]:{...allMetrics,[operatorNumber]:{...state,active:{...state.active,counters:{emails:Number(counters.emails||0),processes:Number(counters.processes||0)+1,requirements:Number(counters.requirements||0)}}}}});
+    if(button)button.dataset.metricRecorded='true';
+  }catch(error){
+    console.warn('[SEI Protocolistas] Não foi possível registrar a métrica local:',error);
+  }
+}
 const runtimeMessage=message=>new Promise((resolve,reject)=>{
   const result=browserApi.runtime.sendMessage(message,response=>{
     const error=browserApi.runtime?.lastError;
@@ -39,13 +64,24 @@ function docs(){
 }
 const allText=()=>docs().map(d=>d.body?.innerText||'').join('\n');
 const processNo=t=>(String(t).match(/SEI-\d{6}\/\d{5,9}\/\d{4}/i)||[''])[0].toUpperCase();
-const destination=t=>{const m=String(t).match(/Processo aberto somente na unidade\s+([A-Z0-9/_-]+)\.?/i);return m?m[1].toUpperCase():'';};
+const destination=t=>{
+  const text=String(t||'');
+  const single=text.match(/Processo aberto somente na unidade\s+([A-Z0-9/_-]+)\.?/i);
+  if(single)return single[1].toUpperCase();
+  const multiple=text.match(/Processo\s+(?:aberto|encaminhado|enviado|tramitado)[^\n.]{0,80}?(?:nas|para as)\s+unidades?\s*:?\s*([^\n.]+)/i);
+  if(!multiple)return '';
+  const units=[...multiple[1].matchAll(/(?:DETRAN\/)?[A-Z][A-Z0-9_-]{2,}/gi)]
+    .map(match=>match[0].toUpperCase())
+    .filter(unit=>!['E','PARA','NAS','UNIDADES'].includes(unit));
+  return [...new Set(units)].join(' E ');
+};
 function section(t,start,ends){
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const m=String(t).match(new RegExp(esc(start)+'\\s*([\\s\\S]{0,500}?)(?='+ends.map(esc).join('|')+'|$)','i'));
   return m?norm(m[1]):'';
 }
-const interested=t=>section(t,'INTERESSADO(S)',['ATRIBUÍDO PARA','ATRIBUIDO PARA','ANOTAÇÕES','ANOTACOES']).replace(/^[-•\s]+/,'').split('\n')[0].trim();
+// O botão RQ pode vir logo após a lista de interessados, inclusive em outro frame.
+const interested=t=>section(t,'INTERESSADO(S)',['ATRIBUÍDO PARA','ATRIBUIDO PARA','ANOTAÇÕES','ANOTACOES','⚡','REQUERIMENTO RÁPIDO','REQUERIMENTO RAPIDO']).replace(/^[-•\s]+/,'').trim();
 const processType=t=>section(t,'TIPO DO PROCESSO',['INTERESSADO(S)','ATRIBUÍDO PARA','ATRIBUIDO PARA']).split('\n')[0].trim();
 const date=()=>{const d=new Date();return [String(d.getDate()).padStart(2,'0'),String(d.getMonth()+1).padStart(2,'0'),d.getFullYear()].join('/');};
 const esc=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -68,8 +104,8 @@ return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Com
 <section class="card legal"><h2>OBSERVAÇÕES IMPORTANTES</h2><p><strong>Observação:</strong> Sempre que qualquer documento físico ficar retido na abertura do processo, será fornecido ao requerente comprovante descrevendo o documento.</p><p><strong>Importante:</strong> A Administração poderá solicitar a exibição do original de qualquer documento digitalizado ou enviado eletronicamente pelo requerente, conforme o art. 49 do Decreto SEI-RJ nº 48.209, de 19 de setembro de 2022.</p></section>
 <section class="sig"><div></div><span>Assinatura e matrícula do servidor</span></section></main></body></html>`;
 }
-function openPreview(){const w=open('','_blank');if(!w){alert('Autorize pop-ups para o SEI.');return}w.document.write(printHtml(data()));w.document.close();w.focus();}
-function message(){const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>/Processo aberto somente na unidade/i.test(e.textContent||''));return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
+async function openPreview(event){const w=open('','_blank');if(!w){alert('Autorize pop-ups para o SEI.');return}await recordProcessMetric(event?.currentTarget);w.document.write(printHtml(data()));w.document.close();w.focus();}
+function message(){const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>/Processo\s+(?:aberto|encaminhado|enviado|tramitado).{0,120}(?:unidade|unidades)/i.test((e.textContent||'').replace(/\s+/g,' ')));return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
 async function readContext(){
   try{
     const stored=await storageGet(CONTEXT_KEY);
@@ -95,6 +131,8 @@ async function prepareEmailResponse(button,context,processData){
       requerente:processData.requerente,
       tipo:processData.tipo,
       destino:processData.destino,
+      procedureId:context?.procedureId||'',
+      areaId:context?.areaId||'',
       data:processData.data,
       createdAt:Date.now(),
       expiresAt:Date.now()+60*60*1000
@@ -112,6 +150,7 @@ async function prepareEmailResponse(button,context,processData){
       type:RETURN_TO_EMAIL_MESSAGE,
       attendanceId:payload.attendanceId
     });
+    await recordProcessMetric(button);
     button.textContent='E-MAIL ORIGINAL ABERTO';
   }catch(error){
     console.error('[SEI Protocolistas] Falha ao preparar resposta por e-mail:',error);
@@ -123,18 +162,20 @@ async function prepareEmailResponse(button,context,processData){
 async function insertCard(){
   if(document.getElementById(CARD)||cardLoading)return;
   const m=message();if(!m)return;
-  const dest=destination(m.textContent);if(!dest||/^DETRAN\/SERVPROT\.?$/i.test(dest.trim()))return;
   cardLoading=true;
   try{
     const context=await readContext();
     if(document.getElementById(CARD))return;
+    const dest=destination(m.textContent)||destination(allText())||String(context?.destino||context?.destination||'').toUpperCase()||'AS UNIDADES SELECIONADAS';
+    if(/^DETRAN\/SERVPROT\.?$/i.test(dest.trim()))return;
     const isEmail=context?.modalidade==='email';
     const processData=data();
     processData.destino=dest;
     const s=document.createElement('section');s.id=CARD;
     if(isEmail){
-      s.innerHTML=`<div class="sp-icon">⚡</div><div class="sp-eye">PROCESSO FINALIZADO</div><h2>Processo encaminhado com sucesso</h2><p>O processo foi enviado para <strong>${esc(dest)}</strong>.</p><p>Prepare os dados para concluir o atendimento no e-mail original.</p><button type="button">✉ PREPARAR RESPOSTA POR E-MAIL</button><div class="sp-thanks">Obrigado por usar o <strong>SEI Protocolistas</strong></div><img src="${chrome.runtime.getURL('icons/sei-protocolistas-wordmark.png')}" alt="SEI Protocolistas">`;
-      s.querySelector('button').addEventListener('click',event=>prepareEmailResponse(event.currentTarget,context,processData));
+      s.innerHTML=`<div class="sp-icon">⚡</div><div class="sp-eye">PROCESSO FINALIZADO</div><h2>Processo encaminhado com sucesso</h2><p>O processo foi enviado para <strong>${esc(dest)}</strong>.</p><p>Prepare os dados para concluir o atendimento no e-mail original ou gere o comprovante.</p><div class="sp-protocolo-actions"><button type="button" data-action="email">✉ PREPARAR RESPOSTA POR E-MAIL</button><button type="button" data-action="print">🖨 IMPRIMIR PROTOCOLO DO CLIENTE</button></div><div class="sp-thanks">Obrigado por usar o <strong>SEI Protocolistas</strong></div><img src="${chrome.runtime.getURL('icons/sei-protocolistas-wordmark.png')}" alt="SEI Protocolistas">`;
+      s.querySelector('[data-action="email"]').addEventListener('click',event=>prepareEmailResponse(event.currentTarget,context,processData));
+      s.querySelector('[data-action="print"]').addEventListener('click',openPreview);
     }else{
       s.innerHTML=`<div class="sp-icon">⚡</div><div class="sp-eye">PROCESSO FINALIZADO</div><h2>Processo encaminhado com sucesso</h2><p>O processo foi enviado para <strong>${esc(dest)}</strong>.</p><p>Imprima o comprovante de acompanhamento para entregar ao requerente.</p><button type="button">🖨 IMPRIMIR PROTOCOLO DO CLIENTE</button><div class="sp-thanks">Obrigado por usar o <strong>SEI Protocolistas</strong></div><img src="${chrome.runtime.getURL('icons/sei-protocolistas-wordmark.png')}" alt="SEI Protocolistas">`;
       s.querySelector('button').addEventListener('click',openPreview);

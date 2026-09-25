@@ -1,0 +1,250 @@
+/*
+ * Guia Inicial do Protocolista — camada isolada.
+ * Extraído do antigo protocolista-theme-v1.css para não reativar estilos antigos do OWA.
+ */
+
+#sp-protocolista-guide-overlay {
+  --sp-guide-navy: #07182c;
+  --sp-guide-navy-2: #0d2744;
+  --sp-guide-gold: #f1c44f;
+
+  position: fixed;
+  z-index: 2147483646;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 13, 27, 0.68);
+  backdrop-filter: blur(2px);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#sp-protocolista-guide-overlay[hidden] {
+  display: none !important;
+}
+
+#sp-protocolista-guide {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  overflow: hidden;
+  color: #eef4fb;
+  background: var(--sp-guide-navy);
+  border: 1px solid rgba(241, 196, 79, 0.68);
+  border-radius: 18px;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
+}
+
+#sp-protocolista-guide * {
+  box-sizing: border-box;
+}
+
+.sp-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(241, 196, 79, 0.24);
+}
+
+.sp-guide-brand {
+  display: grid;
+  gap: 3px;
+}
+
+.sp-guide-brand strong {
+  font-size: 17px;
+  letter-spacing: 0.04em;
+}
+
+.sp-guide-brand span {
+  color: var(--sp-guide-gold);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.sp-guide-close {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  color: var(--sp-guide-gold);
+  background: #030d1b;
+  border: 1px solid rgba(241, 196, 79, 0.48);
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.sp-guide-body {
+  padding: 22px 24px 18px;
+  overflow-y: auto;
+  max-height: calc(min(760px, 100vh - 32px) - 154px);
+}
+
+.sp-guide-step-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 9px;
+  margin-bottom: 12px;
+  color: #07182c;
+  background: var(--sp-guide-gold);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.sp-guide-title {
+  margin: 0 0 10px;
+  color: #ffffff;
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.sp-guide-lead {
+  margin: 0 0 18px;
+  color: #b8c7d9;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sp-guide-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sp-guide-card {
+  min-height: 92px;
+  padding: 13px;
+  background: #0b213b;
+  border: 1px solid rgba(174, 189, 208, 0.2);
+  border-radius: 11px;
+}
+
+.sp-guide-card strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--sp-guide-gold);
+  font-size: 12px;
+}
+
+.sp-guide-card span {
+  display: block;
+  color: #c3cfdd;
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.sp-guide-callout {
+  margin-top: 14px;
+  padding: 12px 14px;
+  color: #eaf2fb;
+  background: rgba(23, 74, 126, 0.28);
+  border: 1px solid rgba(120, 164, 209, 0.34);
+  border-left: 4px solid var(--sp-guide-gold);
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sp-guide-footer {
+  display: grid;
+  gap: 12px;
+  padding: 14px 20px 18px;
+  background: #051326;
+  border-top: 1px solid rgba(174, 189, 208, 0.15);
+}
+
+.sp-guide-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sp-guide-no-show {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #c8d4e1;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+}
+
+.sp-guide-no-show input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--sp-guide-gold);
+}
+
+.sp-guide-progress {
+  color: #8799ad;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sp-guide-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sp-guide-actions button {
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 15px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sp-guide-secondary {
+  color: #dbe6f2;
+  background: transparent;
+  border: 1px solid rgba(174, 189, 208, 0.32);
+}
+
+.sp-guide-primary {
+  color: #07182c;
+  background: var(--sp-guide-gold);
+  border: 1px solid var(--sp-guide-gold);
+}
+
+#sei-protocolistas-fast-mail-status .spfm-experience-button {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 7px;
+  color: #b9c7d8;
+  background: transparent;
+  border: 1px dashed rgba(174, 189, 208, 0.28);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-experience-button:hover,
+#sei-protocolistas-fast-mail-status .spfm-experience-button:focus-visible {
+  color: #f1c44f;
+  border-color: rgba(241, 196, 79, 0.55);
+}
+
+@media (max-width: 620px) {
+  .sp-guide-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-guide-footer-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

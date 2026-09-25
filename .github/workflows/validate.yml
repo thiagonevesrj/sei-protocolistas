@@ -24,3 +24,12 @@ jobs:
 
       - name: Validar estrutura da extensão
         run: npm run validate
+
+      - name: Instalar dependências de teste
+        run: npm ci --ignore-scripts
+
+      - name: Preparar navegador de teste
+        run: npx playwright install --with-deps chromium
+
+      - name: Testar Fast Mail no navegador
+        run: npm run test:browser
