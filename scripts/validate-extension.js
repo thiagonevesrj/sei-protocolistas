@@ -433,6 +433,7 @@ if (catalog) {
       'transferencia-prontuario': 'transferencia-prontuario-habilitacao',
       'generico-habilitacao': 'solicitacao-geral-habilitacao',
       'generico-veiculos': 'solicitacoes-gerais-veiculos',
+      'baixa-restricao': 'baixa-restricao',
       'cnh-estrangeira': 'averbacao-cnh-estrangeira',
       oficios: 'oficio-mero-expediente'
     }

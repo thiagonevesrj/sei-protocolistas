@@ -118,6 +118,8 @@ const periciaProcess = processCatalog.processTypes.find((item) => item.id === 's
 assert.ok(baixaProcess, 'Baixa de Restrição deve ter checklist documental próprio')
 assert.ok(baixaProcess.missingDocuments.length >= 6, 'Baixa de Restrição deve oferecer documentos para marcar')
 assert.strictEqual(baixaTopic?.processId, 'baixa-restricao', 'Baixa de Restrição deve usar o fluxo padrão de ações')
+assert.strictEqual(baixaTopic?.requireVariantSelection, true, 'Baixa de Restrição deve pedir o caso antes das ações')
+assert.deepStrictEqual(baixaTopic?.variants?.map((item) => item.id), ['geral', 'herdeiros', 'terceiros'], 'Baixa de Restrição deve preservar os três casos')
 assert.ok(workflow.includes("{ id: 'baixa-restricao', label: 'Baixa de Restrição' }"), 'Baixa de Restrição deve abrir como atendimento principal')
 const laudoPericia = periciaProcess?.missingDocuments?.find((item) => item.id === 'medical-report')?.text || ''
 assert.ok(laudoPericia.includes('menos de seis meses'), 'Perícia Médica: laudo deve informar validade de seis meses')

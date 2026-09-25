@@ -1219,11 +1219,45 @@
       "recentUsageCount": 0,
       "searchQuery": "baixa restrição",
       "processId": "baixa-restricao",
-      "canOpenProcess": false,
-      "blockedReason": "A abertura por e-mail depende da confirmação do tipo SEI e do destino do caso.",
+      "canOpenProcess": true,
       "scriptId": "trello-64fb42402e475bb276514702",
       "responseScriptIds": [
         "trello-64fb42402e475bb276514702"
+      ],
+      "requireVariantSelection": true,
+      "variants": [
+        {
+          "id": "geral",
+          "label": "Baixa de Restrição — Geral",
+          "processId": "baixa-restricao",
+          "canOpenProcess": true,
+          "scriptId": "trello-64fb42402e475bb276514702",
+          "responseScriptIds": [
+            "trello-64fb42402e475bb276514702"
+          ]
+        },
+        {
+          "id": "herdeiros",
+          "label": "Baixa de Restrição — Herdeiros",
+          "processId": "baixa-restricao",
+          "canOpenProcess": false,
+          "blockedReason": "Inventário para herdeiros: atendimento presencial conforme o script vigente.",
+          "scriptId": "trello-6540fdf582f80285a553bc8f",
+          "responseScriptIds": [
+            "trello-6540fdf582f80285a553bc8f"
+          ]
+        },
+        {
+          "id": "terceiros",
+          "label": "Baixa de Restrição — Terceiros",
+          "processId": "baixa-restricao",
+          "canOpenProcess": false,
+          "blockedReason": "Inventário para terceiros: atendimento presencial conforme o script vigente.",
+          "scriptId": "trello-6540fde403de990b0588c29b",
+          "responseScriptIds": [
+            "trello-6540fde403de990b0588c29b"
+          ]
+        }
       ]
     }
   ],

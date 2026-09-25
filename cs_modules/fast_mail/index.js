@@ -1759,6 +1759,12 @@
     const currentVariant = variantSelect.value
     const variants = Array.isArray(topic?.variants) ? topic.variants : []
     variantSelect.innerHTML = ''
+    if (topic?.requireVariantSelection && variants.length) {
+      const placeholder = document.createElement('option')
+      placeholder.value = ''
+      placeholder.textContent = 'Escolha o caso'
+      variantSelect.appendChild(placeholder)
+    }
     variants.forEach((variant) => {
       const option = document.createElement('option')
       option.value = variant.id
@@ -1770,7 +1776,8 @@
     }
     variantField.hidden = variants.length === 0
 
-    const route = selectedPriorityRoute()
+    const variantRequired = Boolean(topic?.requireVariantSelection && variants.length && !selectedPriorityVariant(topic))
+    const route = variantRequired ? null : selectedPriorityRoute()
     const hasMissingDocuments = Boolean(route?.processId && missingDocumentsForProcedure(route.processId).length)
     actionStep.hidden = !route
     replyButton.disabled = !route?.scriptId
@@ -1779,8 +1786,10 @@
     missingButton.hidden = !hasMissingDocuments
     openButton.disabled = !route?.canOpenProcess || !route?.processId
     openButton.classList.toggle('is-primary', Boolean(route?.canOpenProcess && route?.processId))
-    status.textContent = !route
-      ? 'Selecione o assunto.'
+    status.textContent = variantRequired
+      ? 'Escolha qual é o caso para liberar as ações.'
+      : !route
+        ? 'Selecione o assunto.'
       : route.canOpenProcess
         ? 'Selecione uma ação.'
         : route.blockedReason || 'Atendimento somente por resposta.'
