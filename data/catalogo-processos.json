@@ -662,7 +662,7 @@
         {
           "id": "medical-report",
           "label": "Laudo médico",
-          "text": "Laudo médico contendo CID, tipo e grau da deficiência, dentro das condições de validade aplicáveis ao caso."
+          "text": "Laudo médico emitido há menos de seis meses da data da perícia, contendo CID, tipo e grau da deficiência. Quando se tratar de deficiência física, mental e/ou intelectual de caráter irreversível, poderá ser apresentado laudo de médico especialista da rede pública ou privada, independentemente da data de emissão, desde que contenha nome do paciente, CID-10, CIF, carimbo e número de registro profissional do médico e a condição de irreversibilidade da deficiência."
         },
         {
           "id": "audiometry",
