@@ -43,6 +43,8 @@
   ]
 
   const SIMPLE_IDENTIFICATION_TITLE = 'SCRIPT DE SIMPLES IDENTIFICAÇÃO'
+  const MISSING_DOCUMENTS_REQUIREMENT_ID = 'trello-64dce067e561c15a3e301d8c'
+  const MISSING_DOCUMENTS_REQUIREMENT_TITLE = 'EXIGENCIA - DOCUMENTOS FALTANDO'
   const GENERIC_TRIAGE_TITLES = new Set([
     ...QUICK_TRIAGE.map((item) => item.title),
     SIMPLE_IDENTIFICATION_TITLE
@@ -525,6 +527,22 @@
       button.addEventListener('click', () => selectOrientationTopic(topic))
       container.appendChild(button)
     })
+
+    const missingDocuments = scriptById(MISSING_DOCUMENTS_REQUIREMENT_ID) || scriptByTitle(MISSING_DOCUMENTS_REQUIREMENT_TITLE)
+    if (!missingDocuments) return
+
+    const requestDocuments = document.createElement('button')
+    requestDocuments.type = 'button'
+    requestDocuments.id = 'spfm-workflow-v3-request-documents'
+    requestDocuments.className = 'spfm-workflow-v3-service-button is-emphasis'
+    requestDocuments.textContent = 'COBRAR DOCUMENTOS'
+    requestDocuments.title = 'Abrir o modelo para solicitar os documentos que estão faltando'
+    requestDocuments.addEventListener('click', () => {
+      setStage('exigencias')
+      chooseRequirementResult({ type: 'script', script: missingDocuments })
+      setStatus('Modelo de cobrança aberto. Informe os documentos faltantes e clique em INSERIR RESPOSTA.')
+    })
+    container.appendChild(requestDocuments)
   }
 
   function bindSearch (root, inputId, resultSelector, render, timerSetter) {

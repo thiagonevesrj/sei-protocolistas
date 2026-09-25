@@ -111,4 +111,7 @@ assert.ok(workflow.includes('data-spfm-requirement-shortcut="trello-65aa7153e4f4
 assert.ok(workflow.includes('data-spfm-requirement-shortcut="trello-651313630a420501b4752ebb"'))
 assert.ok(workflow.includes('JÁ EXISTE PROCESSO ABERTO'))
 assert.ok(workflow.includes('SOBRE ANDAMENTO'))
+assert.ok(workflow.includes("MISSING_DOCUMENTS_REQUIREMENT_ID = 'trello-64dce067e561c15a3e301d8c'"))
+assert.ok(workflow.includes("requestDocuments.textContent = 'COBRAR DOCUMENTOS'"))
+assert.ok(workflow.includes('Modelo de cobrança aberto. Informe os documentos faltantes'))
 console.log('FAST MAIL EXIGÊNCIAS: pesquisa manual e atalhos de inserção direta disponíveis.')
