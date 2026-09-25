@@ -234,6 +234,7 @@
       })
 
       if (option) {
+        showDestinationProgress(`FAST PROC — ${destination} ENCONTRADO. PRÉ-SELECIONANDO E CONFIRMANDO…`, 'loading', input)
         pressArrowDown(input)
         pressEnter(input)
         return select
@@ -249,6 +250,7 @@
       .sort((a, b) => clean(a.textContent).length - clean(b.textContent).length)[0]
 
     if (!candidate) return null
+    showDestinationProgress(`FAST PROC — ${destination} ENCONTRADO. PRÉ-SELECIONANDO E CONFIRMANDO…`, 'loading', input)
     pressArrowDown(input)
     pressEnter(input)
     return candidate
@@ -320,17 +322,19 @@
         }
 
         window.clearInterval(timer)
-        const status = showDestinationProgress(`✓ SETOR CARREGADO: ${destination} — VOCÊ PODE SUBSTITUIR OU ADICIONAR OUTRA UNIDADE. DEPOIS, CONFIRA E CLIQUE EM ENVIAR.`, 'ready', input)
-        pulse(status)
-        pulse(selected)
+        window.setTimeout(() => {
+          const status = showDestinationProgress(`✓ SETOR CARREGADO: ${destination} — VOCÊ PODE SUBSTITUIR OU ADICIONAR OUTRA UNIDADE. DEPOIS, CONFIRA E CLIQUE EM ENVIAR.`, 'ready', input)
+          pulse(status)
+          pulse(selected)
 
-        ;[350, 800, 1400].forEach((delay) => {
-          window.setTimeout(() => {
-            const send = findSendButton()
-            if (send) pulse(send)
-          }, delay)
-        })
-        resolve(true)
+          ;[350, 800, 1400].forEach((delay) => {
+            window.setTimeout(() => {
+              const send = findSendButton()
+              if (send) pulse(send)
+            }, delay)
+          })
+          resolve(true)
+        }, 450)
       }, 180)
     })
   }
