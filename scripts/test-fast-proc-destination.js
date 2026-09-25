@@ -36,7 +36,7 @@ assert(handoff.includes('else if (window.top === window)'), 'FAST PROC destino: 
 assert(handoff.includes('context.destino || context.destination'), 'FAST PROC destino: unidade escolhida deve vir do contexto')
 assert(handoff.includes('function findUnitsInput ()'), 'FAST PROC destino: deve localizar o campo Unidades')
 assert(handoff.includes('function showDestinationRecommendation ()'), 'FAST PROC destino: deve somente mostrar a recomendação da tabela')
-assert(handoff.includes('SETOR DE DESTINO:'), 'FAST PROC destino: deve mostrar o setor recomendado')
+assert(handoff.includes('COPIAR DESTINO:'), 'FAST PROC destino: deve deixar claro que o setor recomendado pode ser copiado')
 assert(handoff.includes("box.style.display = 'inline-block'"), 'FAST PROC destino: recomendação deve ser compacta')
 assert(handoff.includes('function makeRecommendationCopyable'), 'FAST PROC destino: recomendação deve poder ser copiada com um clique')
 assert(handoff.includes('Clique para copiar'), 'FAST PROC destino: recomendação deve indicar que pode ser copiada')

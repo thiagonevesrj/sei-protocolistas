@@ -131,7 +131,7 @@
   }
 
   function makeRecommendationCopyable (box, destination) {
-    const label = `SETOR DE DESTINO: ${destination}`
+    const label = `COPIAR DESTINO: ${destination}`
     box.title = `Clique para copiar ${destination}`
     box.style.cursor = 'copy'
     box.onclick = async () => {
@@ -208,7 +208,7 @@
         if (input || Date.now() - startedAt > 12000) {
           window.clearInterval(timer)
           const status = showDestinationProgress(
-            `SETOR DE DESTINO: ${destination}`,
+            `COPIAR DESTINO: ${destination}`,
             'recommendation',
             null
           )
