@@ -633,6 +633,28 @@
     grid.appendChild(wrapper)
   }
 
+  function addSelectField(grid, field) {
+    const wrapper = createElement('div', {
+      className:
+        'sp-clique-field' +
+        (field.wide ? ' sp-clique-field--wide' : '')
+    })
+    const label = createElement('label', {
+      htmlFor: `sp-${field.name}`
+    }, field.label)
+    const select = createElement('select', {
+      id: `sp-${field.name}`,
+      name: field.name
+    })
+
+    field.options.forEach(([value, text]) => {
+      select.appendChild(createElement('option', { value }, text))
+    })
+
+    wrapper.append(label, select)
+    grid.appendChild(wrapper)
+  }
+
   function readDraftFromForm(form, initialData = {}) {
     const selectedOption =
       form.elements.tipoProcesso.selectedOptions[0]
@@ -647,6 +669,8 @@
         selectedOption?.dataset.processLabel || '',
       tipoProcessoUrl:
         selectedOption?.dataset.processUrl || '',
+      prioridade:
+        cleanValue(form.elements.prioridade?.value),
       nome:
         cleanValue(form.elements.nome.value),
       cpf:
@@ -1133,6 +1157,19 @@
     )
 
     grid.appendChild(typeWrapper)
+
+    addSelectField(grid, {
+      name: 'prioridade',
+      label: 'Prioridade (opcional)',
+      wide: true,
+      options: [
+        ['', 'Sem prioridade'],
+        ['Idoso', 'Idoso'],
+        ['Idoso 80+', 'Idoso 80+'],
+        ['PcD', 'PcD'],
+        ['Empreendimento Estratégico', 'Empreendimento Estratégico']
+      ]
+    })
 
     ;[
       {
@@ -1845,15 +1882,8 @@
       }
     }
 
-    const priority =
-      findFirst([
-        '#selGrauPrioridade',
-        '#selPrioridade',
-        'select[id*="Prioridade"]',
-        'select[name*="Prioridade"]'
-      ]) || findFieldByLabel('Prioridade')
-
-    hideSmallestFieldContainer(priority)
+    // A prioridade depende da situação concreta do requerente.
+    // O FAST PROC mantém o campo nativo visível para escolha manual.
   }
 
   function fillField(element, value) {
@@ -1865,6 +1895,30 @@
     element.value = value
     dispatchFieldEvents(element)
 
+    return true
+  }
+
+  function choosePriority(value) {
+    if (!value) return false
+
+    const select = findFirst([
+      '#selGrauPrioridade',
+      '#selPrioridade',
+      'select[id*="Prioridade"]',
+      'select[name*="Prioridade"]'
+    ]) || findFieldByLabel('Prioridade')
+
+    if (!select || select.tagName !== 'SELECT') return false
+
+    const expected = normalize(value)
+    const option = Array.from(select.options).find(
+      (item) => normalize(item.textContent) === expected
+    )
+
+    if (!option) return false
+
+    select.value = option.value
+    dispatchFieldEvents(select)
     return true
   }
 
@@ -2358,6 +2412,13 @@
       fillField(
         observations,
         output.observations
+      )
+    }
+
+    if (draft.prioridade && !choosePriority(draft.prioridade)) {
+      console.warn(
+        '[SEI Protocolistas] Prioridade não localizada:',
+        draft.prioridade
       )
     }
 

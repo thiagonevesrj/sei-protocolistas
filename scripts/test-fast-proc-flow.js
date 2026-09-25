@@ -543,7 +543,13 @@ function testUnusedSeiFieldsAreHidden () {
   assert.ok(hideFunction > -1 && hideFunction < fillFunction)
   assert.ok(hideCall > fillFunction)
   assert.ok(source.includes('#optProtocoloAutomatico'))
-  assert.ok(source.includes('#selGrauPrioridade'))
+  assert.ok(!source.includes("hideSmallestFieldContainer(priority)"))
+  assert.ok(source.includes('O FAST PROC mantém o campo nativo visível'))
+  assert.ok(source.includes("label: 'Prioridade (opcional)'"))
+  assert.ok(source.includes("['', 'Sem prioridade']"))
+  assert.ok(source.includes("['Idoso 80+', 'Idoso 80+']"))
+  assert.ok(source.includes("['PcD', 'PcD']"))
+  assert.ok(source.includes('function choosePriority(value)'))
   assert.ok(source.includes("'display',\n          'none',\n          'important'"))
 }
 
@@ -915,4 +921,3 @@ run().catch((error) => {
   console.error(error)
   process.exitCode = 1
 })
-

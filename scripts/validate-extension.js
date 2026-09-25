@@ -85,6 +85,7 @@ const moduleInitSource = readText('cs_modules/core/end/moduleInit.js')
 const procedureViewSource = readText('cs_modules/procedimento_visualizar/index.js')
 const annotationSource = readText('cs_modules/procedimento_visualizar/mostrarAnotacao.js')
 const annotationRefreshSource = readText('cs_modules/anotacao_registrar/atualizarAnotacaoNaArvore.js')
+const annotationDisplaySource = readText('cs_modules/procedimento_visualizar/mostrarAnotacao.js')
 
 expect(fastMailSource.includes('(?:Bcc|Cco)'), 'FAST MAIL: controle de cópia oculta deve reconhecer Bcc e Cco')
 expect(fastMailSource.includes('prepareBccWithRetry'), 'FAST MAIL: preenchimento automático da cópia oculta deve repetir tentativas de forma limitada')
@@ -98,6 +99,8 @@ expect(annotationSource.includes('frame.contentDocument'), 'Anotações: busca d
 expect(annotationSource.includes('seippAnnotationAttempts'), 'Anotações: carregamento tardio da barra do SEI deve ser aguardado')
 expect(annotationRefreshSource.includes('treeFrame?.contentWindow'), 'Anotações: atualização da árvore deve aceitar frame ausente')
 expect(!annotationRefreshSource.includes("getElementById('ifrArvore').contentWindow"), 'Anotações: atualização da árvore não pode acessar frame inexistente diretamente')
+expect(annotationDisplaySource.includes("'controlador.php?acao=anotacao_registrar&'"), 'Anotações: deve preservar a leitura compatível com o SEI++ no cabeçalho da árvore')
+expect(annotationDisplaySource.includes("divAnotacao.id = 'seipp_div_anotacao'"), 'Anotações: deve inserir o painel na coluna da árvore')
 
 if (manifest && packageJson) {
   expect(
