@@ -109,6 +109,16 @@ if (manifest && packageJson) {
   )
   expect(/^\d+\.\d+\.\d+$/.test(manifest.version), 'Manifesto: versão deve usar o formato X.Y.Z')
   expect(manifest.manifest_version === 3, 'Manifesto: manifest_version deve ser 3')
+  const procedureViewScripts = manifest.content_scripts
+    ?.find((entry) => entry.matches?.some((match) => match.includes('acao=procedimento_visualizar')))
+    ?.js || []
+  const assignmentScript = 'cs_modules/procedimento_visualizar/consultarAtribuicao.js'
+  const procedureIndexScript = 'cs_modules/procedimento_visualizar/index.js'
+  expect(procedureViewScripts.includes(assignmentScript), 'Anotações: consultarAtribuicao.js deve ser carregado como no SEI++')
+  expect(
+    procedureViewScripts.indexOf(assignmentScript) < procedureViewScripts.indexOf(procedureIndexScript),
+    'Anotações: consultarAtribuicao.js deve carregar antes de procedimento_visualizar/index.js'
+  )
   expect(!/[ÃÂ]/.test(manifest.description || ''), 'Manifesto: descrição contém texto corrompido')
   const expectedPermissions = ['storage', 'sessions']
   const permissions = manifest.permissions || []

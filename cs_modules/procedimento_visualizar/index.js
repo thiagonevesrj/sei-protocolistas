@@ -41,6 +41,9 @@ ModuleInit(BaseName).then((options) => {
   /* Mostra o tipo do processo e interessados */
   if (options.CheckTypes.includes('exibeinfointeressado')) ConsultarInteressado(BaseName)
 
+  /* A anotação precisa iniciar mesmo que algum módulo opcional falhe. */
+  MostrarAnotacao(BaseName)
+
   /* Mostra a quem o processo está atribuído */
   if (options.exibeinfoatribuicao) consultarAtribuicao(BaseName)
 
@@ -59,10 +62,6 @@ ModuleInit(BaseName).then((options) => {
   }
   /* Mostra o botão de 'usar documento como modelo' */
   if (options.usardocumentocomomodelo) documentoModelo(BaseName)
-
-  /* Mostra a anotação em todos os processos. É uma ferramenta operacional
-     padrão do SEI Protocolistas e não pode depender de preferência antiga. */
-  MostrarAnotacao(BaseName)
 
   /*
    * A função herdada que abria documentos em nova aba com Ctrl foi desativada.
