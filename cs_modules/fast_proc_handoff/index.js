@@ -98,25 +98,28 @@
     ], { duration: 3200, easing: 'ease-out' })
   }
 
-  function pressEnter (element) {
+  function pressKey (element, key, code, keyCode) {
     if (!element) return
     element.focus?.()
     ;['keydown', 'keypress', 'keyup'].forEach((type) => {
       const event = new KeyboardEvent(type, {
-        key: 'Enter',
-        code: 'Enter',
+        key,
+        code,
         bubbles: true,
         cancelable: true,
-        keyCode: 13,
-        which: 13
+        keyCode,
+        which: keyCode
       })
       try {
-        Object.defineProperty(event, 'keyCode', { get: () => 13 })
-        Object.defineProperty(event, 'which', { get: () => 13 })
+        Object.defineProperty(event, 'keyCode', { get: () => keyCode })
+        Object.defineProperty(event, 'which', { get: () => keyCode })
       } catch (error) {}
       element.dispatchEvent(event)
     })
   }
+
+  const pressArrowDown = (element) => pressKey(element, 'ArrowDown', 'ArrowDown', 40)
+  const pressEnter = (element) => pressKey(element, 'Enter', 'Enter', 13)
 
   function findStartProcessLink () {
     const exact = document.querySelector(
@@ -231,12 +234,8 @@
       })
 
       if (option) {
-        Array.from(select.options || []).forEach((candidate) => { candidate.selected = false })
-        option.selected = true
-        if (!select.multiple) select.value = option.value
-        dispatch(select, 'input')
-        dispatch(select, 'change')
-        pressEnter(select)
+        pressArrowDown(input)
+        pressEnter(input)
         return select
       }
     }
@@ -250,10 +249,9 @@
       .sort((a, b) => clean(a.textContent).length - clean(b.textContent).length)[0]
 
     if (!candidate) return null
-    const clickable = candidate.closest('a,button,li') || candidate
-    clickable.click?.()
-    pressEnter(clickable)
-    return clickable
+    pressArrowDown(input)
+    pressEnter(input)
+    return candidate
   }
 
   function findSendButton () {
