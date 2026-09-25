@@ -84,6 +84,10 @@ function testInterestedConfirmation () {
 function testFastMailOperatorFallback () {
   const source = read('cs_modules/fast_mail/index.js')
 
+  assert.ok(source.includes('const isInvalidatedContext = (error) =>'))
+  assert.ok(source.includes('/extension context invalidated/i'))
+  assert.ok(source.includes('settleExtensionError(error, {}, resolve, reject)'))
+  assert.ok(source.includes('settleExtensionError(error, undefined, resolve, reject)'))
   assert.ok(source.includes('function validStoredOperator (value)'))
   assert.ok(source.includes('async function resolveOperator ()'))
   assert.ok(source.includes('const visibleOperator = findOperator()'))

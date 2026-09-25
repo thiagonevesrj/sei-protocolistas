@@ -55,31 +55,65 @@
       : []
   }
 
+  const isInvalidatedContext = (error) =>
+    /extension context invalidated/i.test(
+      String(error?.message || error || '')
+    )
+
+  const settleExtensionError = (error, fallback, resolve, reject) => {
+    if (isInvalidatedContext(error)) resolve(fallback)
+    else reject(error)
+  }
+
   const storageGet = (keys) => new Promise((resolve, reject) => {
-    const result = api.storage.local.get(keys, (items) => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else resolve(items)
-    })
-    if (result?.then) result.then(resolve, reject)
+    try {
+      const result = api.storage.local.get(keys, (items) => {
+        const error = api.runtime?.lastError
+        if (error) settleExtensionError(error, {}, resolve, reject)
+        else resolve(items)
+      })
+      if (result?.then) {
+        result.then(resolve, (error) => {
+          settleExtensionError(error, {}, resolve, reject)
+        })
+      }
+    } catch (error) {
+      settleExtensionError(error, {}, resolve, reject)
+    }
   })
 
   const storageSet = (items) => new Promise((resolve, reject) => {
-    const result = api.storage.local.set(items, () => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else resolve()
-    })
-    if (result?.then) result.then(resolve, reject)
+    try {
+      const result = api.storage.local.set(items, () => {
+        const error = api.runtime?.lastError
+        if (error) settleExtensionError(error, undefined, resolve, reject)
+        else resolve()
+      })
+      if (result?.then) {
+        result.then(resolve, (error) => {
+          settleExtensionError(error, undefined, resolve, reject)
+        })
+      }
+    } catch (error) {
+      settleExtensionError(error, undefined, resolve, reject)
+    }
   })
 
   const storageRemove = (keys) => new Promise((resolve, reject) => {
-    const result = api.storage.local.remove(keys, () => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else resolve()
-    })
-    if (result?.then) result.then(resolve, reject)
+    try {
+      const result = api.storage.local.remove(keys, () => {
+        const error = api.runtime?.lastError
+        if (error) settleExtensionError(error, undefined, resolve, reject)
+        else resolve()
+      })
+      if (result?.then) {
+        result.then(resolve, (error) => {
+          settleExtensionError(error, undefined, resolve, reject)
+        })
+      }
+    } catch (error) {
+      settleExtensionError(error, undefined, resolve, reject)
+    }
   })
 
   async function recordWorkdayMetric (metric) {
@@ -117,13 +151,21 @@
   }
 
   const runtimeMessage = (message) => new Promise((resolve, reject) => {
-    const result = api.runtime.sendMessage(message, (response) => {
-      const error = api.runtime?.lastError
-      if (error) reject(error)
-      else if (response?.ok === false) reject(new Error(response.error || 'Falha na comunicação da extensão.'))
-      else resolve(response || {})
-    })
-    if (result?.then) result.then(resolve, reject)
+    try {
+      const result = api.runtime.sendMessage(message, (response) => {
+        const error = api.runtime?.lastError
+        if (error) settleExtensionError(error, {}, resolve, reject)
+        else if (response?.ok === false) reject(new Error(response.error || 'Falha na comunicação da extensão.'))
+        else resolve(response || {})
+      })
+      if (result?.then) {
+        result.then(resolve, (error) => {
+          settleExtensionError(error, {}, resolve, reject)
+        })
+      }
+    } catch (error) {
+      settleExtensionError(error, {}, resolve, reject)
+    }
   })
 
   const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
