@@ -6,6 +6,7 @@ const EMAIL_RESULT_KEY='fastMailProcessoFinalizado';
 const OPERATOR_KEY='fastMailOperadorValidado';
 const METRICS_KEY='centralProtocolistaMetricsByOperator';
 const RETURN_TO_EMAIL_MESSAGE='sei-protocolistas:return-fast-mail';
+const SEND_PENDING_KEY='seiProtocolistasEnvioProcessoPendente';
 const browserApi=typeof browser==='undefined'?chrome:browser;
 let cardLoading=false;
 function isTreeFrame(){
@@ -105,7 +106,12 @@ return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Com
 <section class="sig"><div></div><span>Assinatura e matrícula do servidor</span></section></main></body></html>`;
 }
 async function openPreview(event){const w=open('','_blank');if(!w){alert('Autorize pop-ups para o SEI.');return}await recordProcessMetric(event?.currentTarget);w.document.write(printHtml(data()));w.document.close();w.focus();}
-function message(){const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>{const text=(e.textContent||'').replace(/\s+/g,' ').trim();return /Processo\s+(?:aberto|encaminhado|enviado|tramitado).{0,180}(?:unidade|unidades)/i.test(text)||/Processo.{0,100}(?:encaminhado|enviado).{0,100}sucesso/i.test(text);});return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
+function markSendPending(){try{sessionStorage.setItem(SEND_PENDING_KEY,String(Date.now()));}catch(error){}}
+function sendPending(){try{const at=Number(sessionStorage.getItem(SEND_PENDING_KEY)||0);return at>0&&Date.now()-at<2*60*1000;}catch(error){return false;}}
+function clearSendPending(){try{sessionStorage.removeItem(SEND_PENDING_KEY);}catch(error){}}
+function isFinalSendControl(element){const control=element?.closest?.('button,input[type="button"],input[type="submit"],a');if(!control)return false;const label=norm(control.value||control.textContent||control.title);return /^enviar$/.test(label.toLowerCase());}
+function armFinalSend(){document.addEventListener('click',event=>{if(isFinalSendControl(event.target))markSendPending();},true);document.addEventListener('submit',event=>{const submitter=event.submitter;if(!submitter||isFinalSendControl(submitter))markSendPending();},true);}
+function message(){if(!sendPending())return null;const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>{const text=(e.textContent||'').replace(/\s+/g,' ').trim();return /Processo.{0,140}(?:encaminhado|enviado).{0,140}(?:sucesso|(?:para|às?)\s+(?:as\s+)?unidades?)/i.test(text);});return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
 async function readContext(){
   try{
     const stored=await storageGet(CONTEXT_KEY);
@@ -181,11 +187,12 @@ async function insertCard(){
       s.querySelector('button').addEventListener('click',openPreview);
     }
     m.insertAdjacentElement('afterend',s);
+    clearSendPending();
   }finally{
     cardLoading=false;
   }
 }
 hideProgrammed();
-if(action()==='procedimento_enviar'){insertCard();const o=new MutationObserver(()=>{hideProgrammed();insertCard();});o.observe(document.documentElement,{childList:true,subtree:true,characterData:true});setTimeout(()=>o.disconnect(),30000)}
+if(action()==='procedimento_enviar'){armFinalSend();insertCard();const o=new MutationObserver(()=>{hideProgrammed();insertCard();});o.observe(document.documentElement,{childList:true,subtree:true,characterData:true});setTimeout(()=>o.disconnect(),30000)}
 if(['arvore_visualizar','procedimento_visualizar','procedimento_trabalhar','arvore_processar_html'].includes(action())){insertCard();const o=new MutationObserver(insertCard);o.observe(document.documentElement,{childList:true,subtree:true,characterData:true});setTimeout(()=>o.disconnect(),30000)}
 })();
