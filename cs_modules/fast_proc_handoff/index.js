@@ -225,9 +225,7 @@
     if (!context) return false
     if (!context.createdAt || Date.now() - context.createdAt > CONTEXT_MAX_AGE) return false
 
-    const destination = clean(
-      context.catalogDestination || context.destino || context.destination
-    ).toUpperCase()
+    const destination = clean(context.destino || context.destination).toUpperCase()
     if (!destination) return false
 
     showDestinationProgress(`FAST PROC — CARREGANDO SETOR DE DESTINO: ${destination}…`, 'loading')

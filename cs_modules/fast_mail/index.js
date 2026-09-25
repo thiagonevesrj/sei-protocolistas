@@ -2052,7 +2052,7 @@
     const scriptDestination = ['catalog', 'reply'].includes(activePriorityAction)
       ? cleanValue(selectedResponseScript()?.routing?.destinationUnit)
       : ''
-    return cleanValue(processType?.destinationUnit) || manualDestination || scriptDestination
+    return manualDestination || cleanValue(processType?.destinationUnit) || scriptDestination
   }
 
   function updateDestinationField (useProcedureDefault = true) {
@@ -2489,7 +2489,6 @@
         procedureName: processType.name || '',
         seiProcessName: processType.seiNames?.[0] || processType.name || '',
         destination,
-        catalogDestination: cleanValue(processType.destinationUnit),
         areaId: area?.value || '',
         areaLabel: area?.selectedOptions?.[0]?.textContent || '',
         objectiveId: objective?.value || '',
