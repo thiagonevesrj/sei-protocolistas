@@ -49,11 +49,41 @@
     field.focus?.()
     const prototype = Object.getPrototypeOf(field)
     const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, 'value') : null
-    if (descriptor?.set) descriptor.set.call(field, value)
-    else field.value = value
-    dispatch(field, 'input')
-    dispatch(field, 'change')
-    field.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', code: 'KeyA', bubbles: true }))
+    const setValue = (nextValue) => {
+      if (descriptor?.set) descriptor.set.call(field, nextValue)
+      else field.value = nextValue
+    }
+
+    setValue('')
+    field.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      inputType: 'deleteContentBackward',
+      data: null
+    }))
+    setValue(value)
+    field.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      inputType: 'insertText',
+      data: value
+    }))
+
+    const lastCharacter = value.slice(-1).toUpperCase() || 'A'
+    const keyCode = lastCharacter.charCodeAt(0)
+    ;['keydown', 'keyup'].forEach((type) => {
+      const event = new KeyboardEvent(type, {
+        key: lastCharacter,
+        code: `Key${lastCharacter}`,
+        bubbles: true,
+        cancelable: true,
+        keyCode,
+        which: keyCode
+      })
+      try {
+        Object.defineProperty(event, 'keyCode', { get: () => keyCode })
+        Object.defineProperty(event, 'which', { get: () => keyCode })
+      } catch (error) {}
+      field.dispatchEvent(event)
+    })
   }
 
   function pulse (element) {
@@ -66,6 +96,26 @@
       { boxShadow: '0 0 0 5px rgba(244,200,77,.9)' },
       { boxShadow: '0 0 0 0 rgba(244,200,77,0)' }
     ], { duration: 3200, easing: 'ease-out' })
+  }
+
+  function pressEnter (element) {
+    if (!element) return
+    element.focus?.()
+    ;['keydown', 'keypress', 'keyup'].forEach((type) => {
+      const event = new KeyboardEvent(type, {
+        key: 'Enter',
+        code: 'Enter',
+        bubbles: true,
+        cancelable: true,
+        keyCode: 13,
+        which: 13
+      })
+      try {
+        Object.defineProperty(event, 'keyCode', { get: () => 13 })
+        Object.defineProperty(event, 'which', { get: () => 13 })
+      } catch (error) {}
+      element.dispatchEvent(event)
+    })
   }
 
   function findStartProcessLink () {
@@ -186,6 +236,7 @@
         if (!select.multiple) select.value = option.value
         dispatch(select, 'input')
         dispatch(select, 'change')
+        pressEnter(select)
         return select
       }
     }
@@ -201,6 +252,7 @@
     if (!candidate) return null
     const clickable = candidate.closest('a,button,li') || candidate
     clickable.click?.()
+    pressEnter(clickable)
     return clickable
   }
 
@@ -232,6 +284,7 @@
 
     const startedAt = Date.now()
     let announcedInput = false
+    let lastSearchAt = 0
     return new Promise((resolve) => {
       const timer = window.setInterval(() => {
         const input = findUnitsInput()
@@ -249,7 +302,13 @@
           showDestinationProgress(`FAST PROC — LOCALIZANDO ${destination} NA LISTA DE UNIDADES…`, 'loading', input)
         }
 
-        if (normalize(input.value) !== normalize(destination)) setFieldValue(input, destination)
+        if (
+          normalize(input.value) !== normalize(destination) &&
+          Date.now() - lastSearchAt >= 1200
+        ) {
+          lastSearchAt = Date.now()
+          setFieldValue(input, destination)
+        }
 
         const selected = selectDestinationOption(destination, input)
         if (!selected) {
