@@ -6,6 +6,7 @@
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const MAX_AGE = 15 * 60 * 1000
   const CONTEXT_MAX_AGE = 60 * 60 * 1000
+  let recommendationRestoreTimer = null
 
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim()
   const normalize = (value) => clean(value)
@@ -111,6 +112,40 @@
     return box
   }
 
+  async function copyDestination (destination) {
+    try {
+      await navigator.clipboard.writeText(destination)
+      return true
+    } catch (error) {
+      const helper = document.createElement('textarea')
+      helper.value = destination
+      helper.setAttribute('readonly', '')
+      helper.style.position = 'fixed'
+      helper.style.opacity = '0'
+      document.body.appendChild(helper)
+      helper.select()
+      const copied = document.execCommand('copy')
+      helper.remove()
+      return copied
+    }
+  }
+
+  function makeRecommendationCopyable (box, destination) {
+    const label = `SETOR DE DESTINO: ${destination}`
+    box.title = `Clique para copiar ${destination}`
+    box.style.cursor = 'copy'
+    box.onclick = async () => {
+      const copied = await copyDestination(destination)
+      box.textContent = copied
+        ? `✓ COPIADO: ${destination}`
+        : `NÃO FOI POSSÍVEL COPIAR: ${destination}`
+      if (recommendationRestoreTimer) window.clearTimeout(recommendationRestoreTimer)
+      recommendationRestoreTimer = window.setTimeout(() => {
+        box.textContent = label
+      }, 1400)
+    }
+  }
+
   function findUnitsLabel () {
     return Array.from(document.querySelectorAll('label,td,th,div,span'))
       .filter(visible)
@@ -177,6 +212,7 @@
             'recommendation',
             null
           )
+          makeRecommendationCopyable(status, destination)
           pulse(status)
           pulse(input)
           resolve(Boolean(input))
