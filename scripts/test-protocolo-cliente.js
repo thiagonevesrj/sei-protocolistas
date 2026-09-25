@@ -13,6 +13,8 @@ assert.ok(source.includes('if(isTreeFrame())return;'), 'o cartão deve ser recus
 assert.ok(source.includes('data-action="email"'), 'atendimento por e-mail deve manter o retorno ao OWA')
 assert.ok(source.includes('data-action="print"'), 'atendimento por e-mail deve oferecer impressão do protocolo')
 assert.ok(source.includes("'AS UNIDADES SELECIONADAS'"), 'múltiplos destinos devem manter o cartão mesmo sem texto reconhecível')
+assert.ok(source.includes("if(action()==='procedimento_enviar'){insertCard()"), 'o cartão deve ser procurado na própria tela de envio')
+assert.ok(source.includes("(?:encaminhado|enviado).{0,100}sucesso"), 'a confirmação de sucesso deve gerar cartão mesmo quando os destinos aparecem separados')
 
 const destinationSource = source.match(/const destination=t=>\{[\s\S]*?\n\};/)
 assert.ok(destinationSource, 'extrator de destinos não localizado')

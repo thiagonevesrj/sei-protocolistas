@@ -263,7 +263,7 @@
         }
 
         window.clearInterval(timer)
-        const status = showDestinationProgress(`✓ SETOR CARREGADO: ${destination} — CONFIRA E CLIQUE EM ENVIAR.`, 'ready', input)
+        const status = showDestinationProgress(`✓ SETOR CARREGADO: ${destination} — VOCÊ PODE SUBSTITUIR OU ADICIONAR OUTRA UNIDADE. DEPOIS, CONFIRA E CLIQUE EM ENVIAR.`, 'ready', input)
         pulse(status)
         pulse(selected)
 

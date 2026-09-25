@@ -105,7 +105,7 @@ return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Com
 <section class="sig"><div></div><span>Assinatura e matrícula do servidor</span></section></main></body></html>`;
 }
 async function openPreview(event){const w=open('','_blank');if(!w){alert('Autorize pop-ups para o SEI.');return}await recordProcessMetric(event?.currentTarget);w.document.write(printHtml(data()));w.document.close();w.focus();}
-function message(){const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>/Processo\s+(?:aberto|encaminhado|enviado|tramitado).{0,120}(?:unidade|unidades)/i.test((e.textContent||'').replace(/\s+/g,' ')));return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
+function message(){const itens=[...document.querySelectorAll('p,div,span,td')].filter(e=>{const text=(e.textContent||'').replace(/\s+/g,' ').trim();return /Processo\s+(?:aberto|encaminhado|enviado|tramitado).{0,180}(?:unidade|unidades)/i.test(text)||/Processo.{0,100}(?:encaminhado|enviado).{0,100}sucesso/i.test(text);});return itens.sort((a,b)=>(a.textContent||'').trim().length-(b.textContent||'').trim().length)[0]||null;}
 async function readContext(){
   try{
     const stored=await storageGet(CONTEXT_KEY);
@@ -186,6 +186,6 @@ async function insertCard(){
   }
 }
 hideProgrammed();
-if(action()==='procedimento_enviar'){const o=new MutationObserver(hideProgrammed);o.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>o.disconnect(),20000)}
+if(action()==='procedimento_enviar'){insertCard();const o=new MutationObserver(()=>{hideProgrammed();insertCard();});o.observe(document.documentElement,{childList:true,subtree:true,characterData:true});setTimeout(()=>o.disconnect(),30000)}
 if(['arvore_visualizar','procedimento_visualizar','procedimento_trabalhar','arvore_processar_html'].includes(action())){insertCard();const o=new MutationObserver(insertCard);o.observe(document.documentElement,{childList:true,subtree:true,characterData:true});setTimeout(()=>o.disconnect(),30000)}
 })();
