@@ -1982,6 +1982,7 @@
     setEmailPreparationVisible(false)
     const toggleButton = document.querySelector('#spfm-script-toggle')
     if (toggleButton) toggleButton.textContent = CATALOG_OPEN_LABEL
+    applyProcedureSelection(route.processId)
     syncRouteWithProcedure(route.processId)
     setManualRouteFieldsVisible(false)
     if (status) status.textContent = 'Confira os dados abaixo e abra o processo no FAST PROC.'
@@ -2978,3 +2979,4 @@
 
   initialize()
 })()
+

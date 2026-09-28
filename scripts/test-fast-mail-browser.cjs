@@ -114,6 +114,15 @@ async function main () {
     await page.locator('#spfm-insert-requirement').click()
     await page.waitForFunction(() => document.querySelector('#ifBdy').contentDocument.body.textContent.includes('Requerimento Geral'))
     assert.ok((await body.textContent()).includes('Histórico de teste'), 'Cobrança preserva histórico')
+    await page.locator('[data-spfm-workflow-stage="orientacao"]').click()
+    await page.locator('#spfm-workflow-v3-orientation-search').fill('instrutor autonomo')
+    await page.getByRole('button', { name: /AUTORIZAÇÃO DE INSTRUTOR AUTÔNOMO DE TRANSITO/i }).first().click()
+    const openInstructor = page.getByRole('button', { name: 'ABRIR PROCESSO', exact: true })
+    await openInstructor.waitFor({ state: 'visible' })
+    assert.equal(await openInstructor.isDisabled(), false, 'Instrutor autônomo deve permitir abertura por e-mail')
+    await openInstructor.click()
+    await page.locator('#spfm-process-setup').waitFor({ state: 'visible' })
+    assert.notEqual(await page.locator('#spfm-procedure').inputValue(), '', 'A abertura deve preparar um processo')
     const out = process.env.TEST_ARTIFACT_DIR || path.join(root, '..', 'browser-artifacts')
     fs.mkdirSync(out, { recursive: true })
     await page.locator('[data-spfm-workflow-stage="orientacao"]').click()
@@ -139,3 +148,4 @@ async function main () {
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1 })
+

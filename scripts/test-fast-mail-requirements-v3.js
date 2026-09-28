@@ -133,5 +133,6 @@ assert.strictEqual(instructorProcess.manualSeiTypeSelection, true, 'Sem nome con
 assert.ok(overlay.includes("const instructorTitle = 'AUTORIZAÇÃO DE INSTRUTOR AUTÔNOMO DE TRANSITO"), 'O atendimento deve entrar no catálogo operacional do FAST MAIL')
 assert.ok(overlay.includes("destinationUnit: 'SERVNPDA'"), 'O atendimento deve recomendar SERVNPDA')
 assert.ok(overlay.includes("id: 'trello-69fb7779994cb991fa518e2e'"), 'O atendimento deve manter o vínculo com o cartão do Trello')
+assert.ok(core.includes('applyProcedureSelection(route.processId)'), 'A abertura deve fixar o atendimento selecionado antes do FAST PROC')
 console.log('FAST MAIL EXIGÊNCIAS: pesquisa manual e atalhos de inserção direta disponíveis.')
 

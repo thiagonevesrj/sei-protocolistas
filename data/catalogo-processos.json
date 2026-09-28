@@ -1317,6 +1317,11 @@
             "id": "outra-solicitacao-habilitacao",
             "label": "Fazer outra solicitação sobre habilitação/CNH",
             "processId": "solicitacao-geral-habilitacao"
+          },
+          {
+            "id": "autorizacao-instrutor-autonomo",
+            "label": "Autorização de instrutor autônomo",
+            "processId": "autorizacao-instrutor-autonomo-transito"
           }
         ]
       },
