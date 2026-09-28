@@ -8,6 +8,7 @@ const vm = require('vm')
 const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
 const workflow = read('cs_modules/fast_mail/workflow-v3.js')
 const core = read('cs_modules/fast_mail/index.js')
+const overlay = read('cs_modules/fast_mail/trellinho-overlay-v2.js')
 const processCatalog = JSON.parse(read('data/catalogo-processos.json'))
 
 function extract (source, name) {
@@ -115,6 +116,7 @@ assert.ok(workflow.includes('SOBRE ANDAMENTO'))
 const baixaProcess = processCatalog.processTypes.find((item) => item.id === 'baixa-restricao')
 const baixaTopic = processCatalog.fastMailPriorityTopics.find((item) => item.id === 'baixa-restricao')
 const periciaProcess = processCatalog.processTypes.find((item) => item.id === 'solicitacao-pericia-medica')
+const instructorProcess = processCatalog.processTypes.find((item) => item.id === 'autorizacao-instrutor-autonomo-transito')
 assert.ok(baixaProcess, 'Baixa de Restrição deve ter checklist documental próprio')
 assert.ok(baixaProcess.missingDocuments.length >= 6, 'Baixa de Restrição deve oferecer documentos para marcar')
 assert.strictEqual(baixaTopic?.processId, 'baixa-restricao', 'Baixa de Restrição deve usar o fluxo padrão de ações')
@@ -125,4 +127,11 @@ assert.ok(!workflow.includes("'sei-protocolistas:select-priority-topic'"), 'Baix
 const laudoPericia = periciaProcess?.missingDocuments?.find((item) => item.id === 'medical-report')?.text || ''
 assert.ok(laudoPericia.includes('menos de seis meses'), 'Perícia Médica: laudo deve informar validade de seis meses')
 assert.ok(laudoPericia.includes('CID-10') && laudoPericia.includes('CIF'), 'Perícia Médica: exceção de deficiência irreversível deve manter CID-10 e CIF')
+assert.ok(instructorProcess, 'Autorização de Instrutor Autônomo deve permitir abertura por e-mail')
+assert.strictEqual(instructorProcess.destinationUnit, 'SERVNPDA', 'Autorização de Instrutor Autônomo deve recomendar SERVNPDA')
+assert.strictEqual(instructorProcess.manualSeiTypeSelection, true, 'Sem nome confirmado no SEI, o tipo deve permanecer manual')
+assert.ok(overlay.includes("const instructorTitle = 'AUTORIZAÇÃO DE INSTRUTOR AUTÔNOMO DE TRANSITO"), 'O atendimento deve entrar no catálogo operacional do FAST MAIL')
+assert.ok(overlay.includes("destinationUnit: 'SERVNPDA'"), 'O atendimento deve recomendar SERVNPDA')
+assert.ok(overlay.includes("id: 'trello-69fb7779994cb991fa518e2e'"), 'O atendimento deve manter o vínculo com o cartão do Trello')
 console.log('FAST MAIL EXIGÊNCIAS: pesquisa manual e atalhos de inserção direta disponíveis.')
+

@@ -912,6 +912,27 @@
         "cardId": "64fb42402e475bb276514702",
         "lastActivity": "2026-07-31"
       }
+    },
+    {
+      "id": "autorizacao-instrutor-autonomo-transito",
+      "name": "Autorização de Instrutor Autônomo de Trânsito",
+      "seiNames": [
+        "AUTORIZAÇÃO DE INSTRUTOR AUTÔNOMO DE TRANSITO (Portaria DETRAN-RJ Nº 7058 DE 30/04/2026)"
+      ],
+      "destinationUnit": "SERVNPDA",
+      "quickTrigger": "INSTRUTOR-AUTONOMO",
+      "priority": true,
+      "responseModel": "standard",
+      "documentsStatus": "trello-current-card",
+      "category": "habilitacao",
+      "manualSeiTypeSelection": true,
+      "source": {
+        "board": "SCRIPTS - FASE02 - Orientação",
+        "list": "SERVNPDA - Autônomo",
+        "card": "AUTORIZAÇÃO DE INSTRUTOR AUTÔNOMO DE TRANSITO (Portaria DETRAN-RJ Nº 7058 DE 30/04/2026)",
+        "cardId": "69fb7779994cb991fa518e2e",
+        "lastActivity": "2026-07-21"
+      }
     }
   ],
   "fastMailPriorityTopics": [
@@ -1338,3 +1359,4 @@
     ]
   }
 }
+

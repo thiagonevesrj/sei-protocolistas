@@ -200,6 +200,7 @@
   function operationalRecords (payload) {
     const records = Array.isArray(payload?.records) ? payload.records.slice() : []
     const leilaoTitle = 'Leilão - Geral (COMISLE)'
+    const instructorTitle = 'AUTORIZAÇÃO DE INSTRUTOR AUTÔNOMO DE TRANSITO (Portaria DETRAN-RJ Nº 7058 DE 30/04/2026)'
 
     if (!records.some((record) => normalize(record.title) === normalize(leilaoTitle))) {
       records.push({
@@ -207,6 +208,20 @@
         title: leilaoTitle,
         group: 'Leilão',
         destinationUnit: 'COMISLE',
+        seiProcessName: '',
+        manualSeiTypeSelection: true
+      })
+    }
+
+    // O cartão de orientação vigente prevê abertura presencial ou por e-mail.
+    // Ele não integra a planilha operacional, então é incluído para não ser
+    // interpretado como atendimento exclusivamente presencial.
+    if (!records.some((record) => normalize(record.title) === normalize(instructorTitle))) {
+      records.push({
+        id: 'trello-69fb7779994cb991fa518e2e',
+        title: instructorTitle,
+        group: 'SERVNPDA - Autônomo',
+        destinationUnit: 'SERVNPDA',
         seiProcessName: '',
         manualSeiTypeSelection: true
       })
@@ -380,3 +395,4 @@
     }
   }
 })()
+
