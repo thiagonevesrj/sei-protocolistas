@@ -39,6 +39,9 @@ assert(handoff.includes('function showDestinationRecommendation ()'), 'FAST PROC
 assert(handoff.includes('COPIAR DESTINO:'), 'FAST PROC destino: deve deixar claro que o setor recomendado pode ser copiado')
 assert(handoff.includes("box.style.display = 'inline-block'"), 'FAST PROC destino: recomendação deve ser compacta')
 assert(handoff.includes('function makeRecommendationCopyable'), 'FAST PROC destino: recomendação deve poder ser copiada com um clique')
+assert(handoff.includes('function selectedDestinationUnits ()'), 'FAST PROC destino: deve registrar todas as unidades antes do envio')
+assert(handoff.includes('function rememberSelectedDestinations ()'), 'FAST PROC destino: deve guardar múltiplos destinos no contexto do protocolo')
+assert(handoff.includes('destinos.join(\' E \')'), 'FAST PROC destino: os destinos do cartão devem manter todas as unidades')
 assert(handoff.includes('Clique para copiar'), 'FAST PROC destino: recomendação deve indicar que pode ser copiada')
 assert(handoff.includes('✓ COPIADO:'), 'FAST PROC destino: deve confirmar a cópia do setor')
 assert(handoff.includes("'recommendation'"), 'FAST PROC destino: recomendação deve ter apresentação própria')
@@ -54,3 +57,4 @@ if (failures.length) {
 }
 
 console.log('Destino automático do FAST PROC validado.')
+

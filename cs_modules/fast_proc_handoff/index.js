@@ -29,6 +29,19 @@
     }
   })
 
+  const storageSet = (items) => new Promise((resolve, reject) => {
+    try {
+      const result = api.storage.local.set(items, () => {
+        const error = api.runtime?.lastError
+        if (error) reject(error)
+        else resolve()
+      })
+      if (result?.then) result.then(resolve, reject)
+    } catch (error) {
+      reject(error)
+    }
+  })
+
   function action () {
     return new URLSearchParams(location.search).get('acao') || ''
   }
@@ -69,6 +82,13 @@
       .filter(visible)
       .filter((element) => normalize(element.textContent).includes('enviar processo'))
       .sort((a, b) => clean(a.textContent).length - clean(b.textContent).length)[0] || null
+  }
+
+  function findSendProcessButton () {
+    return Array.from(document.querySelectorAll('button,input[type="button"],input[type="submit"],a,[role="button"]'))
+      .filter(visible)
+      .filter((element) => normalize(element.textContent || element.value || element.title).includes('enviar processo'))
+      .sort((a, b) => clean(a.textContent || a.value).length - clean(b.textContent || b.value).length)[0] || null
   }
 
   function showDestinationProgress (message, state = 'loading', anchor = null) {
@@ -183,6 +203,61 @@
       }) || null
   }
 
+  function unitCodes (value) {
+    return [...String(value || '').matchAll(/(?:DETRAN\/)?[A-Z][A-Z0-9_-]{2,}/gi)]
+      .map((match) => match[0].toUpperCase())
+      .filter((unit) => !['PARA', 'NAS', 'UNIDADES', 'SELECIONADAS'].includes(unit))
+  }
+
+  function selectedDestinationUnits () {
+    const selects = Array.from(document.querySelectorAll('select'))
+      .filter((select) => {
+        const context = normalize(`${select.id} ${select.name} ${select.parentElement?.textContent || ''}`)
+        return context.includes('unidade') && !context.includes('orgao das unidades')
+      })
+
+    const units = selects.flatMap((select) => {
+      const options = select.multiple || select.size > 1
+        ? Array.from(select.options)
+        : Array.from(select.selectedOptions)
+      return options.flatMap((option) => unitCodes(option.textContent || option.value))
+    })
+
+    return [...new Set(units)]
+  }
+
+  async function rememberSelectedDestinations () {
+    const destinos = selectedDestinationUnits()
+    if (destinos.length < 2) return
+
+    const stored = await storageGet(CONTEXT_KEY)
+    const context = stored[CONTEXT_KEY]
+    if (!context) return
+
+    await storageSet({
+      [CONTEXT_KEY]: {
+        ...context,
+        destino: destinos.join(' E '),
+        destinos
+      }
+    })
+  }
+
+  function bindSelectedDestinations () {
+    document.addEventListener('click', (event) => {
+      if (findSendProcessButton() !== event.target.closest?.('button,input,a,[role="button"]')) return
+      rememberSelectedDestinations().catch((error) => {
+        console.warn('[SEI Protocolistas] Não foi possível registrar os destinos selecionados:', error)
+      })
+    }, true)
+
+    document.addEventListener('submit', () => {
+      rememberSelectedDestinations().catch((error) => {
+        console.warn('[SEI Protocolistas] Não foi possível registrar os destinos selecionados:', error)
+      })
+    }, true)
+  }
+
   async function showDestinationRecommendation () {
     if (action() !== 'procedimento_enviar') return false
 
@@ -250,6 +325,7 @@
   }
 
   if (action() === 'procedimento_enviar') {
+    bindSelectedDestinations()
     showDestinationRecommendation().catch((error) => {
       console.error('[SEI Protocolistas] Falha ao mostrar recomendação de destino:', error)
     })
@@ -259,3 +335,4 @@
     })
   }
 })()
+

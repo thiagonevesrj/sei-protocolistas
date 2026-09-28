@@ -18,6 +18,9 @@ const destinationSource = source.match(/const destination=t=>\{[\s\S]*?\n\};/)
 assert.ok(destinationSource, 'extrator de destinos não localizado')
 const context = {}
 vm.runInNewContext(destinationSource[0].replace('const destination=', 'globalThis.destination='), context)
+const mergeDestinationsSource = source.match(/const mergeDestinations=[\s\S]*?\n};/)
+assert.ok(mergeDestinationsSource, 'combinador de destinos não localizado')
+vm.runInNewContext(mergeDestinationsSource[0].replace('const mergeDestinations=', 'globalThis.mergeDestinations='), context)
 
 assert.strictEqual(
   context.destination('Processo aberto somente na unidade DETRAN/DIVMED.'),
@@ -31,5 +34,11 @@ assert.strictEqual(
   context.destination('Processo encaminhado para as unidades: DIVAP, DIRRV'),
   'DIVAP E DIRRV'
 )
+assert.strictEqual(
+  context.mergeDestinations('DETRAN/DIVAF', ['DETRAN/DIRRV', 'DETRAN/DIVAF']),
+  'DETRAN/DIVAF E DETRAN/DIRRV'
+)
+assert.ok(source.includes('context?.destinos'), 'o cartão deve priorizar todos os destinos guardados antes do envio')
 
 console.log('PROTOCOLO CLIENTE: quadro único, impressão por e-mail e múltiplos destinos verificados.')
+

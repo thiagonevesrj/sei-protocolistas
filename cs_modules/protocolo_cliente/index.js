@@ -75,6 +75,13 @@ const destination=t=>{
     .filter(unit=>!['E','PARA','NAS','UNIDADES'].includes(unit));
   return [...new Set(units)].join(' E ');
 };
+const mergeDestinations=(...values)=>{
+  const units=values.flatMap(value=>Array.isArray(value)?value:String(value||'').split(/\s+E\s+|[,;]+/i))
+    .flatMap(value=>String(value||'').match(/(?:DETRAN\/)?[A-Z][A-Z0-9_-]{2,}/gi)||[])
+    .map(value=>value.toUpperCase())
+    .filter(value=>!['PARA','NAS','UNIDADES','SELECIONADAS'].includes(value));
+  return [...new Set(units)].join(' E ');
+};
 function section(t,start,ends){
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const m=String(t).match(new RegExp(esc(start)+'\\s*([\\s\\S]{0,500}?)(?='+ends.map(esc).join('|')+'|$)','i'));
@@ -166,7 +173,7 @@ async function insertCard(){
   try{
     const context=await readContext();
     if(document.getElementById(CARD))return;
-    const dest=destination(m.textContent)||destination(allText())||String(context?.destino||context?.destination||'').toUpperCase()||'AS UNIDADES SELECIONADAS';
+    const dest=mergeDestinations(destination(m.textContent),destination(allText()),context?.destinos,context?.destino,context?.destination)||'AS UNIDADES SELECIONADAS';
     if(/^DETRAN\/SERVPROT\.?$/i.test(dest.trim()))return;
     const isEmail=context?.modalidade==='email';
     const processData=data();
@@ -189,3 +196,4 @@ hideProgrammed();
 if(action()==='procedimento_enviar'){const o=new MutationObserver(hideProgrammed);o.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>o.disconnect(),20000)}
 if(['arvore_visualizar','procedimento_visualizar','procedimento_trabalhar','arvore_processar_html'].includes(action())){insertCard();const o=new MutationObserver(insertCard);o.observe(document.documentElement,{childList:true,subtree:true,characterData:true});setTimeout(()=>o.disconnect(),30000)}
 })();
+
