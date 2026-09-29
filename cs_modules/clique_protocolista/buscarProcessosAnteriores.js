@@ -223,8 +223,12 @@
     const form = document.querySelector('#seiSearch')
     filtersButton.textContent = form?.hidden ? 'Mostrar filtros' : 'Ocultar filtros'
     if (state !== 'busy' && form && !form.hidden) highlightSearchButton(form)
-    notice.style.borderColor = state === 'error' ? '#d14949' : '#d6ad35'
-    notice.style.background = state === 'error' ? '#541b25' : '#071a33'
+    notice.style.borderColor = state === 'error'
+      ? '#d14949'
+      : state === 'complete' ? '#29a36a' : '#d6ad35'
+    notice.style.background = state === 'error'
+      ? '#541b25'
+      : state === 'complete' ? '#103b2a' : '#071a33'
     return notice
   }
 
@@ -233,12 +237,22 @@
     const total = summary.match(/\bde\s+(\d+)\b/i)?.[1]
     if (total) return Number(total)
 
+    const pageSummary = document.body?.textContent || ''
+    const pageTotal = pageSummary.match(/exibindo\s+\d+\s*[-–]\s*\d+\s+de\s+(\d+)/i)?.[1]
+    if (pageTotal) return Number(pageTotal)
+
     return document.querySelectorAll(
-      '.retorno-ajax .pesquisaTituloRegistro, .retorno-ajax table tbody tr'
+      '.retorno-ajax .pesquisaTituloRegistro, .retorno-ajax table tbody tr, .pesquisaTituloRegistro'
     ).length
   }
 
   function resultsAreReady () {
+    const pageText = document.body?.textContent || ''
+    const hasPageSummary = /exibindo\s+\d+\s*[-–]\s*\d+\s+de\s+\d+/i.test(pageText)
+    const pageHasNoResults = normalize(pageText).includes('sua pesquisa nao encontrou') ||
+      normalize(pageText).includes('nenhum protocolo correspondente')
+    if (hasPageSummary || pageHasNoResults) return true
+
     const results = document.querySelector('.retorno-ajax')
     if (!results) return false
 

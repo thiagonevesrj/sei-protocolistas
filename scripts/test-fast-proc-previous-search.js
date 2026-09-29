@@ -17,9 +17,11 @@ async function runScenario (options) {
     lookup: {
       cpf: '123.456.789-00',
       applicantName: 'Maria da Silva',
+      ...(options.searching ? { state: 'searching' } : {}),
       createdAt: Date.now()
     },
     notice: null,
+    pageText: options.pageText || '',
     submitted: false,
     removed: false
   }
@@ -102,7 +104,10 @@ async function runScenario (options) {
     getAttribute: () => ''
   }
   const document = {
-    body: { append (item) { state.notice = item } },
+    body: {
+      textContent: options.pageText || '',
+      append (item) { state.notice = item }
+    },
     head: { append () {} },
     querySelector (selector) {
       const fields = {
@@ -118,8 +123,8 @@ async function runScenario (options) {
         '[name="chkSinDocumentosGerados"]': generatedDocuments,
         '#chkSinDocumentosRecebidos': externalDocuments,
         '[name="chkSinDocumentosRecebidos"]': externalDocuments,
-        '.retorno-ajax': results,
-        '.total-registros-infinite': summary
+        '.retorno-ajax': options.detachedResults ? null : results,
+        '.total-registros-infinite': options.detachedResults ? null : summary
       }
       return fields[selector] || null
     },
@@ -188,10 +193,19 @@ async function run () {
   assert.strictEqual(missingUnitHistory.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
   assert.ok(missingUnitHistory.state.notice.children[1].textContent.includes('Com Tramitação na Unidade'))
 
+  const pageResults = await runScenario({
+    searching: true,
+    detachedResults: true,
+    pageText: 'Resultado da Pesquisa Exibindo 1 - 10 de 13 processos'
+  })
+  assert.ok(pageResults.state.notice.children[1].textContent.includes('Pesquisa concluída'))
+  assert.ok(pageResults.state.notice.children[1].textContent.includes('13 processo(s) listado(s)'))
+  assert.strictEqual(pageResults.state.notice.style.background, '#103b2a')
+
   const outsideButton = await runScenario({ searchButtonOutsideForm: true })
   assert.strictEqual(outsideButton.state.submitted, true, 'O botão Pesquisar fora do formulário também deve ser acionado')
 
-  console.log('FAST PROC: consulta por CPF, tramitação na unidade e botão de pesquisa validados.')
+  console.log('FAST PROC: consulta por CPF, botão de pesquisa e conclusão dos resultados validados.')
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1 })
