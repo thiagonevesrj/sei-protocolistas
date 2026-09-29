@@ -25,7 +25,12 @@ const context = {
     .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
   document: {
     querySelectorAll: () => visible,
-    dispatchEvent: () => { armed++ }
+    dispatchEvent: () => { armed++ },
+    getElementById: () => null,
+    createElement: () => ({
+      style: {},
+      setAttribute () {}
+    })
   },
   sessionStorage: { setItem: () => {} },
   Date,
@@ -34,6 +39,7 @@ const context = {
   KeyboardEvent: class {},
   window: { alert: message => alerts.push(message) },
   dispatchFieldEvents: () => {},
+  closeInterestedSuggestions: () => {},
   wait: async () => {},
   waitUntil: async test => {
     const result = test()
@@ -73,7 +79,9 @@ async function run () {
   const exact = suggestion('"Thiago Rangel" <thiagorangel@alerj.rj.gov.br>;')
   visible = [exact, suggestion('1º TEN THIAGO GONÇALVES FONSECA JAUHAR')]
   assert.strictEqual(
-    await context.api.selectInterestedSuggestion('Thiago Rangel', '', {}),
+    await context.api.selectInterestedSuggestion('Thiago Rangel', '', {
+      insertAdjacentElement () {}
+    }),
     true
   )
   assert.strictEqual(exact.clicked, true)
@@ -83,12 +91,17 @@ async function run () {
   const second = suggestion('"NOME IGUAL" <segundo@example.org>;')
   visible = [first, second]
   assert.strictEqual(
-    await context.api.selectInterestedSuggestion('Nome Igual', 'segundo@example.org', {}),
+    await context.api.selectInterestedSuggestion('Nome Igual', 'segundo@example.org', {
+      insertAdjacentElement () {}
+    }),
     true
   )
   assert.strictEqual(second.clicked, true, 'E-mail deve desempatar nomes idênticos')
 
-  const manualField = { focus () { this.focused = true } }
+  const manualField = {
+    focus () { this.focused = true },
+    dispatchEvent () {}
+  }
   assert.strictEqual(
     await context.api.selectInterestedSuggestion('Nome Igual', '', manualField),
     false
@@ -100,9 +113,10 @@ async function run () {
   visible = [suggestion('THIAGO PARECIDO')]
   assert.strictEqual(
     await context.api.selectInterestedSuggestion('Thiago Procurado', '', manualField),
-    false
+    true
   )
-  assert.strictEqual(armed, 0, 'Lista inconclusiva não deve criar interessado automaticamente')
+  assert.strictEqual(armed, 1, 'Sugestões com nome diferente não devem bloquear a inclusão')
+  assert.strictEqual(alerts.length, 1, 'Nome parecido não deve exibir aviso de duplicidade')
 
   visible = []
   const field = {
@@ -113,8 +127,9 @@ async function run () {
     await context.api.selectInterestedSuggestion('Pessoa Nova', '', field),
     true
   )
-  assert.strictEqual(armed, 1, 'Somente ausência da lista autoriza o fluxo de novo interessado')
+  assert.strictEqual(armed, 2, 'A ausência de nome igual deve seguir o fluxo de novo interessado')
   console.log('FAST PROC: consulta nativa e proteção contra interessado duplicado verificadas.')
 }
 
 run().catch(error => { console.error(error); process.exitCode = 1 })
+

@@ -8,10 +8,6 @@
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
   const INTERESTED_CONFIRM_KEY =
     'spFastProcConfirmarInclusaoInteressado'
-  const INTERESTED_CONFIRM_NAME_KEY =
-    'spFastProcNomeInteressadoPendente'
-  const INTERESTED_CONFIRM_RESULT_KEY =
-    'spFastProcResultadoConfirmacaoInteressado'
   const INTERESTED_CONFIRM_EVENT =
     'sp-fast-proc-armar-inclusao-interessado'
 
@@ -2114,17 +2110,12 @@
     )
   }
 
-  function armInterestedCreationConfirmation(name) {
+  function armInterestedCreationConfirmation() {
     try {
       sessionStorage.setItem(
         INTERESTED_CONFIRM_KEY,
         String(Date.now())
       )
-      sessionStorage.setItem(
-        INTERESTED_CONFIRM_NAME_KEY,
-        cleanValue(name)
-      )
-      sessionStorage.removeItem(INTERESTED_CONFIRM_RESULT_KEY)
 
       document.dispatchEvent(
         new CustomEvent(
@@ -2214,14 +2205,21 @@
         4000
       )
     } catch (error) {
-      if (visibleInterestedSuggestions().length) {
+      const exactMatches = visibleInterestedSuggestions().filter(
+        (element) => normalize(interestedSuggestionName(element)) === expectedName
+      )
+
+      if (exactMatches.length) {
         return continueWithManualInterested(
-          'O SEI encontrou possíveis cadastros para este nome, mas não foi possível identificar um único registro com segurança.',
+          exactMatches.length > 1
+            ? 'Há mais de um cadastro do SEI com este nome.'
+            : 'O SEI já possui um cadastro com este nome. Confira e selecione o registro correto.',
           interestedField
         )
       }
 
-      armInterestedCreationConfirmation(name)
+      closeInterestedSuggestions(interestedField)
+      armInterestedCreationConfirmation()
       interestedField.focus()
       interestedField.value = name
       dispatchFieldEvents(interestedField)
@@ -2260,25 +2258,6 @@
       )
 
       await wait(300)
-
-      let creationResult = ''
-      try {
-        creationResult = sessionStorage.getItem(
-          INTERESTED_CONFIRM_RESULT_KEY
-        ) || ''
-        sessionStorage.removeItem(INTERESTED_CONFIRM_RESULT_KEY)
-      } catch (error) {
-        // Sem confirmação explícita, a inclusão não deve ser automatizada.
-      }
-
-      if (creationResult !== 'accepted') {
-        return continueWithManualInterested(
-          creationResult === 'cancelled'
-            ? 'A inclusão de um novo cadastro foi cancelada.'
-            : 'O SEI não confirmou a inclusão de um novo cadastro. Confira o nome e selecione ou inclua o interessado manualmente.',
-          interestedField
-        )
-      }
 
       return true
     }
