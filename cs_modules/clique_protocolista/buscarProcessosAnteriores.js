@@ -224,6 +224,7 @@
     filtersButton.style.display = state === 'busy' ? 'none' : 'inline-block'
     const form = document.querySelector('#seiSearch')
     filtersButton.textContent = form?.hidden ? 'Mostrar filtros' : 'Ocultar filtros'
+    if (state !== 'busy' && form && !form.hidden) highlightSearchButton(form)
     notice.style.borderColor = state === 'error' ? '#d14949' : '#d6ad35'
     notice.style.background = state === 'error' ? '#541b25' : '#071a33'
     return notice

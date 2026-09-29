@@ -178,6 +178,7 @@ async function run () {
   const missingAgency = await runScenario({ agencyText: 'OUTRO ÓRGÃO' })
   assert.strictEqual(missingAgency.specification.value, '')
   assert.strictEqual(missingAgency.state.submitted, false)
+  assert.strictEqual(missingAgency.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
   assert.ok(missingAgency.state.notice.children[1].textContent.includes('não encontrou o órgão DETRAN'))
 
   console.log('FAST PROC: consulta anterior por CPF, órgão, tramitação e pesquisa automática validada.')
