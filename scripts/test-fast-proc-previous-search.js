@@ -118,7 +118,7 @@ async function runScenario (options) {
       return fields[selector] || null
     },
     querySelectorAll (selector) {
-      return selector === 'label' ? [historyLabel] : []
+      return selector === 'label' && !options.missingUnitHistory ? [historyLabel] : []
     },
     getElementById (id) {
       return id === 'sp-fast-proc-process-lookup-notice' ? state.notice : null
@@ -181,7 +181,12 @@ async function run () {
   assert.strictEqual(missingAgency.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
   assert.ok(missingAgency.state.notice.children[1].textContent.includes('não encontrou o órgão DETRAN'))
 
-  console.log('FAST PROC: consulta anterior por CPF, órgão, tramitação e pesquisa automática validada.')
+  const missingUnitHistory = await runScenario({ agencyText: 'DETRAN', missingUnitHistory: true })
+  assert.strictEqual(missingUnitHistory.state.submitted, false)
+  assert.strictEqual(missingUnitHistory.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
+  assert.ok(missingUnitHistory.state.notice.children[1].textContent.includes('Com Tramitação na Unidade'))
+
+  console.log('FAST PROC: consulta anterior por CPF, seleção, aviso de falha e destaque da pesquisa validados.')
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1 })

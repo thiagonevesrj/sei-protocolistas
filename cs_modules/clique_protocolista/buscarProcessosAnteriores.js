@@ -32,21 +32,38 @@
   }
 
   function findLabelField (labelText, selector) {
-    const label = Array.from(document.querySelectorAll('label')).find((item) =>
-      normalize(item.textContent).includes(normalize(labelText))
+    const target = normalize(labelText)
+    const directLabel = Array.from(document.querySelectorAll('label')).find((item) =>
+      normalize(item.textContent).includes(target)
     )
-    if (!label) return null
-
-    const id = label.htmlFor || label.getAttribute('for')
-    if (id) {
-      const field = document.getElementById(id)
+    if (directLabel) {
+      const id = directLabel.htmlFor || directLabel.getAttribute('for')
+      if (id) {
+        const field = document.getElementById(id)
+        if (field) return field
+      }
+      const field = directLabel.querySelector(selector) ||
+        directLabel.parentElement?.querySelector(selector) ||
+        directLabel.parentElement?.parentElement?.querySelector(selector)
       if (field) return field
     }
 
-    return label.querySelector(selector) ||
-      label.parentElement?.querySelector(selector) ||
-      label.parentElement?.parentElement?.querySelector(selector) ||
-      null
+    const selectorType = selector.match(/input\[type="([^"]+)"\]/)?.[1]
+    const candidates = Array.from(document.querySelectorAll(selectorType
+      ? `input[type="${selectorType}"]`
+      : selector))
+
+    return candidates.find((field) => {
+      const labelsText = Array.from(field.labels || [])
+        .map((label) => label.textContent)
+        .join(' ')
+      const nearbyText = [
+        field.parentElement?.textContent,
+        field.parentElement?.parentElement?.textContent,
+        field.closest('td, .form-group, .row')?.textContent
+      ].join(' ')
+      return normalize(`${labelsText} ${nearbyText}`).includes(target)
+    }) || null
   }
 
   function findSearchFields () {
@@ -58,11 +75,11 @@
       '[name="txtDescricaoPesquisa"]',
       '#txtEspecificacaoPesquisa',
       '[name="txtEspecificacaoPesquisa"]'
-    ])
+    ]) || findLabelField('Especificação / Descrição', 'input, textarea')
     const processCheckbox = findFirst([
       '#chkSinProcessos',
       '[name="chkSinProcessos"]'
-    ])
+    ]) || findLabelField('Processos', 'input[type="checkbox"], input[type="radio"]')
     const agency = findFirst([
       '#selOrgaoPesquisa',
       '[name="selOrgaoPesquisa"], [name="selOrgaoPesquisa[]"]'
@@ -73,10 +90,6 @@
       '[name="chkSinTramitacaoUnidade"]',
       '[name="chkSinTramitacaoNaUnidade"]'
     ]) || findLabelField('Com Tramitação na Unidade', 'input[type="checkbox"]')
-
-    if (!specification || !processCheckbox || !agency || !unitHistory) {
-      return null
-    }
 
     return { form, specification, processCheckbox, agency, unitHistory }
   }
@@ -288,7 +301,7 @@
     const started = Date.now()
     while (Date.now() - started < timeoutMs) {
       const fields = findSearchFields()
-      if (fields) return fields
+      if (fields?.form) return fields
       await new Promise((resolve) => window.setTimeout(resolve, 150))
     }
     return null
@@ -298,7 +311,10 @@
     if (!isProcessSearchPage()) return
 
     const fields = await waitForSearchFields()
-    if (!fields) return
+    if (!fields) {
+      showLookupNotice('FAST PROC abriu a pesquisa, mas não localizou o formulário do SEI nesta tela. Atualize a página e tente novamente.', 'error')
+      return
+    }
 
     const stored = await browserApi.storage.local.get(LOOKUP_KEY)
     const lookup = stored[LOOKUP_KEY]
@@ -323,6 +339,18 @@
     if (cpf.length !== 11) {
       await browserApi.storage.local.remove(LOOKUP_KEY)
       showLookupNotice('FAST PROC não encontrou um CPF válido para a pesquisa.', 'error')
+      return
+    }
+
+    const missingFields = [
+      !fields.processCheckbox && 'a opção Processos',
+      !fields.specification && 'o campo Especificação / Descrição',
+      !fields.agency && 'o campo Órgão Gerador',
+      !fields.unitHistory && 'a opção Com Tramitação na Unidade'
+    ].filter(Boolean)
+    if (missingFields.length) {
+      await browserApi.storage.local.remove(LOOKUP_KEY)
+      showLookupNotice(`FAST PROC não reconheceu ${missingFields.join(', ')}. Confira os filtros destacados e pesquise manualmente.`, 'error')
       return
     }
 
