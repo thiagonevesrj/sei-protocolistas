@@ -73,6 +73,7 @@ async function runScenario (options) {
   }
   const searchButton = {
     value: 'Pesquisar',
+    classList: { add (name) { state.searchButtonClass = name } },
     click () { state.submitted = true }
   }
   const resultRow = {}
@@ -169,6 +170,7 @@ async function run () {
   assert.strictEqual(matched.unitHistory.checked, true)
   assert.strictEqual(matched.agency.value, '4')
   assert.strictEqual(matched.state.submitted, true)
+  assert.strictEqual(matched.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
   assert.strictEqual(matched.form.hidden, true)
   assert.ok(matched.state.notice.children[1].textContent.includes('Pesquisa concluída'))
   assert.ok(matched.state.notice.children[1].textContent.includes('1 processo'))

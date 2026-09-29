@@ -124,6 +124,12 @@
     ])
   }
 
+  function highlightSearchButton (form) {
+    const button = form && getSearchButton(form)
+    if (button) button.classList?.add('sp-fast-proc-search-button-highlight')
+    return button
+  }
+
   function findFirstWithin (root, selectors) {
     for (const selector of selectors) {
       const element = root.querySelector(selector)
@@ -174,7 +180,11 @@
       ].join(';')
 
       const spinnerStyle = document.createElement('style')
-      spinnerStyle.textContent = '@keyframes sp-fast-proc-spin { to { transform: rotate(360deg) } }'
+      spinnerStyle.textContent = [
+        '@keyframes sp-fast-proc-spin { to { transform: rotate(360deg) } }',
+        '@keyframes sp-fast-proc-search-pulse { 50% { box-shadow: 0 0 0 6px rgb(240 197 75 / 28%), 0 0 18px rgb(240 197 75 / 70%); } }',
+        '.sp-fast-proc-search-button-highlight { outline: 3px solid #f0c54b !important; outline-offset: 3px !important; box-shadow: 0 0 0 3px rgb(240 197 75 / 25%), 0 0 14px rgb(240 197 75 / 65%) !important; animation: sp-fast-proc-search-pulse 1.2s ease-in-out infinite; position: relative; z-index: 2; }'
+      ].join('\n')
       document.head?.append(spinnerStyle)
 
       const text = document.createElement('span')
@@ -199,6 +209,7 @@
         if (!form) return
         form.hidden = !form.hidden
         filtersButton.textContent = form.hidden ? 'Mostrar filtros' : 'Ocultar filtros'
+        if (!form.hidden) highlightSearchButton(form)
       })
 
       notice.append(spinner, text, filtersButton)
@@ -263,6 +274,7 @@
 
     const form = document.querySelector('#seiSearch')
     if (form) form.hidden = false
+    highlightSearchButton(form)
     showLookupNotice(
       'O SEI ainda não confirmou os resultados. Os filtros foram preenchidos; confira e clique em Pesquisar.',
       'error'
@@ -335,6 +347,7 @@
     await browserApi.storage.local.set({
       [LOOKUP_KEY]: { ...lookup, state: 'searching' }
     })
+    highlightSearchButton(fields.form)
     showLookupNotice(
       `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} no DETRAN, com tramitação na unidade...`,
       'busy'
