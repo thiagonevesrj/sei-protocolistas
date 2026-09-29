@@ -64,6 +64,17 @@
     cursor: pointer !important;
 }
 
+#sp-protocolo-cliente-card .sp-protocolo-actions {
+    display: grid !important;
+    gap: 8px !important;
+    margin: 20px auto 14px !important;
+}
+
+#sp-protocolo-cliente-card .sp-protocolo-actions button {
+    width: 100% !important;
+    margin: 0 !important;
+}
+
 #sp-protocolo-cliente-card .sp-thanks {
     margin-top: 2px !important;
     color: #ffffff !important;

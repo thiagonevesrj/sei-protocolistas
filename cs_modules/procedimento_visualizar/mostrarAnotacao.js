@@ -1,5 +1,7 @@
 /* global __mconsole, GetBaseUrl, currentBrowser */
 function MostrarAnotacao (BaseName) {
+  if (document.getElementById('seipp_div_anotacao')) return
+
   /** inicialização do módulo ***************************************************/
   const mconsole = new __mconsole(`${BaseName}.MostrarAnotacao`)
 
@@ -8,17 +10,11 @@ function MostrarAnotacao (BaseName) {
   let hdnIdProtocolo = ''
   let hdnInfraTipoPagina = ''
   let postUrl = ''
-
-  /** Pega a url de alteração do processo ***************************************/
-  const head = document.head.innerHTML
-  const a = head.indexOf('controlador.php?acao=anotacao_registrar&')
-  if (a === -1) return
-  const b = head.indexOf('"', a)
-  const url = GetBaseUrl() + head.substring(a, b)
+  let url = ''
 
   const element = document.getElementById('container') || document.body
 
-  // Criação dos containers principais
+  // O bloco deve aparecer mesmo enquanto o SEI ainda monta a barra de ações.
   const separador = document.createElement('div')
   separador.className = 'seipp-separador'
   const span = document.createElement('span')
@@ -27,8 +23,139 @@ function MostrarAnotacao (BaseName) {
 
   const divAnotacao = document.createElement('div')
   divAnotacao.id = 'seipp_div_anotacao'
+  divAnotacao.textContent = 'Localizando as anotações do processo...'
 
   element.append(separador, divAnotacao)
+
+  /** Pega a URL de alteração do processo. No SEI-RJ atual, o atalho pode estar
+      no documento atual, no frame da árvore ou no frame de visualização. */
+  function findAnnotationUrl () {
+    const documents = []
+
+    function addDocument (doc) {
+      if (!doc || documents.includes(doc)) return
+      documents.push(doc)
+      Array.from(doc.querySelectorAll?.('iframe') || []).forEach((frame) => {
+        try {
+          addDocument(frame.contentDocument)
+        } catch (error) {}
+      })
+    }
+
+    try { addDocument(document) } catch (error) {}
+    try { addDocument(window.parent?.document) } catch (error) {}
+    try { addDocument(window.top?.document) } catch (error) {}
+
+    function extractUrl (source) {
+      if (!source) return ''
+
+      let normalized = String(source)
+        .replace(/&amp;/gi, '&')
+        .replace(/\\u0026|\\x26/gi, '&')
+        .replace(/\\\//g, '/')
+
+      try {
+        if (/%(?:3f|26|3d)/i.test(normalized)) {
+          normalized = decodeURIComponent(normalized)
+        }
+      } catch (error) {}
+
+      const match = normalized.match(
+        /(?:https?:\/\/[^"'<>\s]+\/)?controlador\.php\?acao=anotacao_registrar[^"'<>\\\s)]*/i
+      )
+
+      if (!match?.[0]) return ''
+
+      try {
+        return new URL(match[0], GetBaseUrl()).href
+      } catch (error) {
+        return ''
+      }
+    }
+
+    for (const doc of documents) {
+      // Caminho usado pelo SEI++ no SEI-RJ 5.0.4: a ação fica escrita
+      // diretamente no HTML do cabeçalho da árvore.
+      const headHtml = doc.head?.innerHTML || ''
+      const legacyStart = headHtml.indexOf(
+        'controlador.php?acao=anotacao_registrar&'
+      )
+      if (legacyStart >= 0) {
+        const legacyEnd = headHtml.indexOf('"', legacyStart)
+        if (legacyEnd > legacyStart) {
+          const legacyUrl = extractUrl(
+            headHtml.substring(legacyStart, legacyEnd)
+          )
+          if (legacyUrl) return legacyUrl
+        }
+      }
+
+      const direct = doc.querySelector?.(
+        'a[href*="acao=anotacao_registrar"],form[action*="acao=anotacao_registrar"]'
+      )
+      const directUrl = direct?.getAttribute('href') || direct?.getAttribute('action')
+      const extractedDirectUrl = extractUrl(directUrl)
+      if (extractedDirectUrl) return extractedDirectUrl
+
+      const html = `${headHtml} ${doc.body?.innerHTML || ''}`
+      const extractedHtmlUrl = extractUrl(html)
+      if (extractedHtmlUrl) return extractedHtmlUrl
+    }
+
+    return ''
+  }
+
+  function findNativeAnnotationControl () {
+    return Array.from(document.querySelectorAll('a, button, input, img'))
+      .find((candidate) => {
+        if (candidate.closest('#seipp_div_anotacao')) return false
+        const description = [
+          candidate.textContent,
+          candidate.getAttribute('title'),
+          candidate.getAttribute('aria-label'),
+          candidate.getAttribute('alt'),
+          candidate.getAttribute('src')
+        ].filter(Boolean).join(' ').normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+        return /anotac|note/.test(description)
+      })
+  }
+
+  function showNativeFallback () {
+    divAnotacao.textContent = ''
+    const message = document.createElement('p')
+    message.textContent = 'Use o botão abaixo para abrir as anotações do SEI.'
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'infraButton'
+    button.textContent = 'ABRIR ANOTAÇÕES'
+    button.addEventListener('click', () => {
+      const control = findNativeAnnotationControl()
+      const clickable = control?.closest('a, button') || control
+      if (clickable) clickable.click()
+    })
+    divAnotacao.append(message, button)
+  }
+
+  function resolveAnnotationUrl () {
+    url = findAnnotationUrl()
+    if (url) {
+      delete document.documentElement.dataset.seippAnnotationAttempts
+      mostrarNota()
+      return
+    }
+
+    const root = document.documentElement
+    const attempts = Number(root.dataset.seippAnnotationAttempts || 0)
+    if (attempts < 40) {
+      root.dataset.seippAnnotationAttempts = String(attempts + 1)
+      window.setTimeout(resolveAnnotationUrl, 250)
+    } else {
+      mconsole.log('Atalho nativo de anotações não localizado.')
+      showNativeFallback()
+    }
+  }
 
   // Utilitário para limpar filhos
   function clearChildren (el) {
@@ -245,5 +372,5 @@ function MostrarAnotacao (BaseName) {
   }
 
   /* mostra a nota assim que a página carregar */
-  mostrarNota()
+  resolveAnnotationUrl()
 }

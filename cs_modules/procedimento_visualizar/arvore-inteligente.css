@@ -1,0 +1,155 @@
+#sp-arvore-context-menu,
+#sp-arvore-rename-dialog,
+#sp-arvore-toast {
+  position: fixed;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#sp-arvore-context-menu *,
+#sp-arvore-rename-dialog * {
+  box-sizing: border-box;
+}
+
+#sp-arvore-context-menu {
+  display: grid;
+  gap: 6px;
+  width: 250px;
+  padding: 6px;
+  color: #f8fafc;
+  background: #07182c;
+  border: 1px solid #d9ad31;
+  border-radius: 10px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
+}
+
+#sp-arvore-context-menu .sp-arvore-context-title {
+  padding: 6px 8px 4px;
+  overflow: hidden;
+  color: #aebdd0;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#sp-arvore-context-menu .sp-arvore-context-action {
+  width: 100%;
+  padding: 9px 10px;
+  color: #071224;
+  text-align: left;
+  background: #f1c44f;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+#sp-arvore-context-menu .sp-arvore-context-action:hover,
+#sp-arvore-context-menu .sp-arvore-context-action:focus {
+  filter: brightness(1.05);
+  outline: 2px solid rgba(241, 196, 79, 0.35);
+}
+
+#sp-arvore-context-menu .sp-arvore-context-action:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+#sp-arvore-rename-dialog {
+  display: grid;
+  gap: 7px;
+  width: 300px;
+  padding: 12px;
+  color: #f8fafc;
+  background: #07182c;
+  border: 1px solid #d9ad31;
+  border-radius: 12px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.42);
+}
+
+#sp-arvore-rename-dialog strong {
+  color: #f1c44f;
+  font-size: 12px;
+}
+
+#sp-arvore-rename-dialog small {
+  overflow: hidden;
+  color: #aebdd0;
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#sp-arvore-rename-dialog input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  color: #f8fafc;
+  background: #030d1b;
+  border: 1px solid rgba(174, 189, 208, 0.36);
+  border-radius: 7px;
+  outline: none;
+  font-size: 12px;
+}
+
+#sp-arvore-rename-dialog input:focus {
+  border-color: #f1c44f;
+  box-shadow: 0 0 0 2px rgba(241, 196, 79, 0.14);
+}
+
+#sp-arvore-rename-dialog .sp-arvore-rename-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+#sp-arvore-rename-dialog button {
+  min-height: 32px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+#sp-arvore-rename-dialog .sp-arvore-cancel {
+  color: #d6deea;
+  background: #07182c;
+  border: 1px solid rgba(174, 189, 208, 0.3);
+}
+
+#sp-arvore-rename-dialog .sp-arvore-save {
+  color: #071224;
+  background: #f1c44f;
+  border: 1px solid #f1c44f;
+}
+
+#sp-arvore-rename-dialog button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+#sp-arvore-toast {
+  right: 16px;
+  bottom: 16px;
+  max-width: min(390px, calc(100vw - 32px));
+  padding: 10px 12px;
+  color: #f8fafc;
+  background: #07182c;
+  border: 1px solid rgba(174, 189, 208, 0.35);
+  border-radius: 9px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+#sp-arvore-toast.is-success {
+  border-color: #d9ad31;
+}
+
+#sp-arvore-toast.is-error {
+  border-color: #d76060;
+}
