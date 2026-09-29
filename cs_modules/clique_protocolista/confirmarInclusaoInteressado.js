@@ -2,6 +2,8 @@
   'use strict'
 
   const CONFIRM_KEY = 'spFastProcConfirmarInclusaoInteressado'
+  const NAME_KEY = 'spFastProcNomeInteressadoPendente'
+  const RESULT_KEY = 'spFastProcResultadoConfirmacaoInteressado'
   const ARM_EVENT = 'sp-fast-proc-armar-inclusao-interessado'
   const MAX_AGE = 10 * 60 * 1000
   const nativeConfirm = window.confirm.bind(window)
@@ -40,15 +42,32 @@
     if (isInterestedConfirmation && hasActiveFastProcConfirmation()) {
       armedAt = 0
 
+      let name = ''
       try {
+        name = String(sessionStorage.getItem(NAME_KEY) || '')
+          .replace(/\s+/g, ' ')
+          .trim()
         sessionStorage.removeItem(CONFIRM_KEY)
+        sessionStorage.removeItem(NAME_KEY)
       } catch (error) {
-        // A confirmação já está limitada à mensagem exata do interessado.
+        // A confirmação continua limitada à mensagem exata do interessado.
       }
 
-      return true
+      const accepted = nativeConfirm(
+        `O SEI não localizou um cadastro existente${name ? ` para “${name}”` : ''}. ` +
+        'Confira o nome e o CPF. Deseja confirmar a inclusão de um novo interessado?'
+      )
+
+      try {
+        sessionStorage.setItem(RESULT_KEY, accepted ? 'accepted' : 'cancelled')
+      } catch (error) {
+        // O FAST PROC tratará a ausência de resposta como confirmação pendente.
+      }
+
+      return accepted
     }
 
     return nativeConfirm(message)
   }
 })()
+

@@ -8,6 +8,10 @@
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
   const INTERESTED_CONFIRM_KEY =
     'spFastProcConfirmarInclusaoInteressado'
+  const INTERESTED_CONFIRM_NAME_KEY =
+    'spFastProcNomeInteressadoPendente'
+  const INTERESTED_CONFIRM_RESULT_KEY =
+    'spFastProcResultadoConfirmacaoInteressado'
   const INTERESTED_CONFIRM_EVENT =
     'sp-fast-proc-armar-inclusao-interessado'
 
@@ -2110,12 +2114,17 @@
     )
   }
 
-  function armInterestedCreationConfirmation() {
+  function armInterestedCreationConfirmation(name) {
     try {
       sessionStorage.setItem(
         INTERESTED_CONFIRM_KEY,
         String(Date.now())
       )
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_NAME_KEY,
+        cleanValue(name)
+      )
+      sessionStorage.removeItem(INTERESTED_CONFIRM_RESULT_KEY)
 
       document.dispatchEvent(
         new CustomEvent(
@@ -2137,6 +2146,30 @@
     )
     interestedField.focus()
     return false
+  }
+
+  function showExistingInterestedNotice(interestedField, name) {
+    const noticeId = 'sp-fast-proc-interessado-existente'
+    let notice = document.getElementById(noticeId)
+
+    if (!notice) {
+      notice = document.createElement('div')
+      notice.id = noticeId
+      notice.setAttribute('role', 'status')
+      notice.setAttribute('aria-live', 'polite')
+      notice.style.margin = '6px 0'
+      notice.style.padding = '8px 10px'
+      notice.style.border = '1px solid #d6ad35'
+      notice.style.borderRadius = '6px'
+      notice.style.background = '#fff4c2'
+      notice.style.color = '#332600'
+      notice.style.fontWeight = '700'
+      interestedField?.insertAdjacentElement('afterend', notice)
+    }
+
+    notice.textContent =
+      `FAST PROC: cadastro existente localizado para “${cleanValue(name)}”. ` +
+      'O registro existente do SEI será reutilizado.'
   }
 
   async function selectInterestedSuggestion(name, email, interestedField) {
@@ -2188,7 +2221,7 @@
         )
       }
 
-      armInterestedCreationConfirmation()
+      armInterestedCreationConfirmation(name)
       interestedField.focus()
       interestedField.value = name
       dispatchFieldEvents(interestedField)
@@ -2228,6 +2261,25 @@
 
       await wait(300)
 
+      let creationResult = ''
+      try {
+        creationResult = sessionStorage.getItem(
+          INTERESTED_CONFIRM_RESULT_KEY
+        ) || ''
+        sessionStorage.removeItem(INTERESTED_CONFIRM_RESULT_KEY)
+      } catch (error) {
+        // Sem confirmação explícita, a inclusão não deve ser automatizada.
+      }
+
+      if (creationResult !== 'accepted') {
+        return continueWithManualInterested(
+          creationResult === 'cancelled'
+            ? 'A inclusão de um novo cadastro foi cancelada.'
+            : 'O SEI não confirmou a inclusão de um novo cadastro. Confira o nome e selecione ou inclua o interessado manualmente.',
+          interestedField
+        )
+      }
+
       return true
     }
 
@@ -2237,6 +2289,11 @@
         interestedField
       )
     }
+
+    showExistingInterestedNotice(
+      interestedField,
+      interestedSuggestionName(result.suggestion) || name
+    )
 
     result.suggestion.dispatchEvent(
       new MouseEvent('mousedown', {
@@ -2644,3 +2701,4 @@
     })
   }
 })()
+
