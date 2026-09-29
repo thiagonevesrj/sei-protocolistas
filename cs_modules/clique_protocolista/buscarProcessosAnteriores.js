@@ -80,10 +80,6 @@
       '#chkSinProcessos',
       '[name="chkSinProcessos"]'
     ]) || findLabelField('Processos', 'input[type="checkbox"], input[type="radio"]')
-    const agency = findFirst([
-      '#selOrgaoPesquisa',
-      '[name="selOrgaoPesquisa"], [name="selOrgaoPesquisa[]"]'
-    ]) || findLabelField('Órgão Gerador', 'select')
     const unitHistory = findFirst([
       '#chkSinTramitacaoUnidade',
       '#chkSinTramitacaoNaUnidade',
@@ -91,7 +87,7 @@
       '[name="chkSinTramitacaoNaUnidade"]'
     ]) || findLabelField('Com Tramitação na Unidade', 'input[type="checkbox"]')
 
-    return { form, specification, processCheckbox, agency, unitHistory }
+    return { form, specification, processCheckbox, unitHistory }
   }
 
   function dispatchFieldEvents (field) {
@@ -109,31 +105,6 @@
   function setSpecification (field, value) {
     field.value = value
     dispatchFieldEvents(field)
-  }
-
-  function selectDetran (select) {
-    const option = Array.from(select.options || []).find((item) => {
-      const text = normalize(item.textContent)
-      return text === 'detran' || text.startsWith('detran ')
-    })
-    if (!option) return false
-
-    if (select.multiple) {
-      const jquery = window.jQuery || window.$
-      const enhancedSelect = typeof jquery === 'function' ? jquery(select) : null
-      if (typeof enhancedSelect?.multipleSelect === 'function') {
-        enhancedSelect.multipleSelect('uncheckAll')
-        enhancedSelect.multipleSelect('check', option.value)
-      } else {
-        Array.from(select.options).forEach((item) => {
-          item.selected = item === option
-        })
-      }
-    } else {
-      select.value = option.value
-    }
-    dispatchFieldEvents(select)
-    return true
   }
 
   function getSearchButton (form) {
@@ -341,7 +312,7 @@
 
     if (lookup.state === 'searching') {
       showLookupNotice(
-        `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} no DETRAN, com tramitação na unidade...`,
+        `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} com tramitação na unidade...`,
         'busy'
       )
       fields.form.hidden = true
@@ -359,18 +330,11 @@
     const missingFields = [
       !fields.processCheckbox && 'a opção Processos',
       !fields.specification && 'o campo Especificação / Descrição',
-      !fields.agency && 'o campo Órgão Gerador',
       !fields.unitHistory && 'a opção Com Tramitação na Unidade'
     ].filter(Boolean)
     if (missingFields.length) {
       await browserApi.storage.local.remove(LOOKUP_KEY)
       showLookupNotice(`FAST PROC não reconheceu ${missingFields.join(', ')}. Confira os filtros destacados e pesquise manualmente.`, 'error')
-      return
-    }
-
-    if (!selectDetran(fields.agency)) {
-      await browserApi.storage.local.remove(LOOKUP_KEY)
-      showLookupNotice('FAST PROC não encontrou o órgão DETRAN na lista. Confira os filtros e pesquise manualmente.', 'error')
       return
     }
 
@@ -392,7 +356,7 @@
     })
     highlightSearchButton(fields.form)
     showLookupNotice(
-      `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} no DETRAN, com tramitação na unidade...`,
+      `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} com tramitação na unidade...`,
       'busy'
     )
     searchButton.click()

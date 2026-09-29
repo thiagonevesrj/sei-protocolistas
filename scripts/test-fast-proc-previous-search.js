@@ -56,7 +56,9 @@ async function runScenario (options) {
   const form = {
     hidden: false,
     querySelector (selector) {
-      return selector === '#sbmPesquisar' ? searchButton : null
+      return options.searchButtonOutsideForm
+        ? null
+        : selector === '#sbmPesquisar' ? searchButton : null
     },
     querySelectorAll () { return [] }
   }
@@ -66,12 +68,16 @@ async function runScenario (options) {
   const externalDocuments = { checked: true, dispatchEvent () {} }
   const unitHistory = { checked: false, dispatchEvent () {} }
   const agency = {
-    value: '',
-    multiple: false,
-    options: [{ value: '4', textContent: options.agencyText, selected: false }],
+    value: 'Todos selecionados',
+    multiple: true,
+    options: [
+      { value: '4', textContent: 'DETRAN', selected: true },
+      { value: '2', textContent: 'OUTRO ÓRGÃO', selected: true }
+    ],
     dispatchEvent () {}
   }
   const searchButton = {
+    id: 'sbmPesquisar',
     value: 'Pesquisar',
     classList: { add (name) { state.searchButtonClass = name } },
     click () { state.submitted = true }
@@ -121,7 +127,8 @@ async function runScenario (options) {
       return selector === 'label' && !options.missingUnitHistory ? [historyLabel] : []
     },
     getElementById (id) {
-      return id === 'sp-fast-proc-process-lookup-notice' ? state.notice : null
+      if (id === 'sp-fast-proc-process-lookup-notice') return state.notice
+      return id === 'sbmPesquisar' ? searchButton : null
     },
     createElement: element
   }
@@ -168,25 +175,23 @@ async function run () {
   assert.strictEqual(matched.generatedDocuments.checked, false)
   assert.strictEqual(matched.externalDocuments.checked, false)
   assert.strictEqual(matched.unitHistory.checked, true)
-  assert.strictEqual(matched.agency.value, '4')
+  assert.strictEqual(matched.agency.value, 'Todos selecionados')
+  assert.deepStrictEqual(matched.agency.options.map(option => option.selected), [true, true])
   assert.strictEqual(matched.state.submitted, true)
   assert.strictEqual(matched.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
   assert.strictEqual(matched.form.hidden, true)
   assert.ok(matched.state.notice.children[1].textContent.includes('Pesquisa concluída'))
   assert.ok(matched.state.notice.children[1].textContent.includes('1 processo'))
 
-  const missingAgency = await runScenario({ agencyText: 'OUTRO ÓRGÃO' })
-  assert.strictEqual(missingAgency.specification.value, '')
-  assert.strictEqual(missingAgency.state.submitted, false)
-  assert.strictEqual(missingAgency.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
-  assert.ok(missingAgency.state.notice.children[1].textContent.includes('não encontrou o órgão DETRAN'))
-
-  const missingUnitHistory = await runScenario({ agencyText: 'DETRAN', missingUnitHistory: true })
+  const missingUnitHistory = await runScenario({ missingUnitHistory: true })
   assert.strictEqual(missingUnitHistory.state.submitted, false)
   assert.strictEqual(missingUnitHistory.state.searchButtonClass, 'sp-fast-proc-search-button-highlight')
   assert.ok(missingUnitHistory.state.notice.children[1].textContent.includes('Com Tramitação na Unidade'))
 
-  console.log('FAST PROC: consulta anterior por CPF, seleção, aviso de falha e destaque da pesquisa validados.')
+  const outsideButton = await runScenario({ searchButtonOutsideForm: true })
+  assert.strictEqual(outsideButton.state.submitted, true, 'O botão Pesquisar fora do formulário também deve ser acionado')
+
+  console.log('FAST PROC: consulta por CPF, tramitação na unidade e botão de pesquisa validados.')
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1 })
