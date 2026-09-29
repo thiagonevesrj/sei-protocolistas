@@ -92,7 +92,7 @@
       .trim()
   }
 
-  function processLookupUrl() {
+  function processLookupUrl () {
     const searchLink = Array.from(
       document.querySelectorAll('a[href]')
     ).find((link) => {
@@ -1438,22 +1438,12 @@
       message.textContent = ''
 
       const cpf = cleanValue(form.elements.cpf.value).replace(/\D/g, '')
-      const selectedType = form.elements.tipoProcesso.selectedOptions[0]
-      const processType = cleanValue(
-        selectedType?.dataset.processLabel || selectedType?.textContent
-      )
+      const applicantName = cleanValue(form.elements.nome.value)
 
       if (cpf.length !== 11) {
         message.className = 'sp-clique-message sp-clique-message--error'
         message.textContent = 'Informe um CPF válido com 11 números para pesquisar.'
         form.elements.cpf.focus()
-        return
-      }
-
-      if (!form.elements.tipoProcesso.value || !processType) {
-        message.className = 'sp-clique-message sp-clique-message--error'
-        message.textContent = 'Escolha o tipo do processo antes de pesquisar.'
-        typeSearch.focus()
         return
       }
 
@@ -1471,13 +1461,13 @@
         await storageSet({
           [PROCESS_LOOKUP_KEY]: {
             cpf,
-            processType,
+            applicantName,
             createdAt: Date.now()
           }
         })
 
         searchTab.location.href = processLookupUrl()
-        message.textContent = 'Pesquisa aberta em outra aba: processos do tipo selecionado com este CPF na Especificação.'
+        message.textContent = 'Pesquisa aberta em outra aba: processos com este CPF na Especificação, no DETRAN e com tramitação na unidade.'
       } catch (error) {
         searchTab.close()
         message.className = 'sp-clique-message sp-clique-message--error'

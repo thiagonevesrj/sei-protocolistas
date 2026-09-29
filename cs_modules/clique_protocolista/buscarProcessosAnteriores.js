@@ -2,7 +2,8 @@
   'use strict'
 
   const LOOKUP_KEY = 'spFastProcConsultaProcessosAnteriores'
-  const MAX_AGE = 60 * 1000
+  const MAX_AGE = 2 * 60 * 1000
+  const RESULT_TIMEOUT = 45 * 1000
   const browserApi =
     window.currentBrowser ||
     (typeof chrome !== 'undefined' ? chrome : browser)
@@ -19,7 +20,7 @@
 
   function isProcessSearchPage () {
     const action = new URL(window.location.href).searchParams.get('acao') || ''
-    return /^(protocolo|procedimento)_pesquisar$/i.test(action)
+    return /^(protocolo|procedimento)_pesquisar(?:_resultado)?$/i.test(action)
   }
 
   function findFirst (selectors) {
@@ -30,99 +31,261 @@
     return null
   }
 
-  function setTextField (field, value) {
-    field.value = value
+  function findLabelField (labelText, selector) {
+    const label = Array.from(document.querySelectorAll('label')).find((item) =>
+      normalize(item.textContent).includes(normalize(labelText))
+    )
+    if (!label) return null
+
+    const id = label.htmlFor || label.getAttribute('for')
+    if (id) {
+      const field = document.getElementById(id)
+      if (field) return field
+    }
+
+    return label.querySelector(selector) ||
+      label.parentElement?.querySelector(selector) ||
+      label.parentElement?.parentElement?.querySelector(selector) ||
+      null
+  }
+
+  function findSearchFields () {
+    const form = findFirst(['#seiSearch', 'form'])
+    if (!form) return null
+
+    const specification = findFirst([
+      '#txtDescricaoPesquisa',
+      '[name="txtDescricaoPesquisa"]',
+      '#txtEspecificacaoPesquisa',
+      '[name="txtEspecificacaoPesquisa"]'
+    ])
+    const processCheckbox = findFirst([
+      '#chkSinProcessos',
+      '[name="chkSinProcessos"]'
+    ])
+    const agency = findFirst([
+      '#selOrgaoPesquisa',
+      '[name="selOrgaoPesquisa"], [name="selOrgaoPesquisa[]"]'
+    ]) || findLabelField('Órgão Gerador', 'select')
+    const unitHistory = findFirst([
+      '#chkSinTramitacaoUnidade',
+      '#chkSinTramitacaoNaUnidade',
+      '[name="chkSinTramitacaoUnidade"]',
+      '[name="chkSinTramitacaoNaUnidade"]'
+    ]) || findLabelField('Com Tramitação na Unidade', 'input[type="checkbox"]')
+
+    if (!specification || !processCheckbox || !agency || !unitHistory) {
+      return null
+    }
+
+    return { form, specification, processCheckbox, agency, unitHistory }
+  }
+
+  function dispatchFieldEvents (field) {
     field.dispatchEvent(new Event('input', { bubbles: true }))
     field.dispatchEvent(new Event('change', { bubbles: true }))
   }
 
-  function selectCheckbox (selectors, checked) {
-    const checkbox = findFirst(selectors)
+  function selectCheckbox (checkbox, checked) {
     if (!checkbox) return false
     checkbox.checked = checked
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }))
+    dispatchFieldEvents(checkbox)
     return true
   }
 
-  function selectProcessType (select, expectedType) {
-    const expected = normalize(expectedType)
-    if (!expected) return false
+  function setSpecification (field, value) {
+    field.value = value
+    dispatchFieldEvents(field)
+  }
 
-    const options = Array.from(select.options || []).filter((item) => {
+  function selectDetran (select) {
+    const option = Array.from(select.options || []).find((item) => {
       const text = normalize(item.textContent)
-      return text
+      return text === 'detran' || text.startsWith('detran ')
     })
-    const exact = options.find((item) => normalize(item.textContent) === expected)
-    const partial = options.filter((item) => {
-      const text = normalize(item.textContent)
-      return text.includes(expected) || expected.includes(text)
-    })
-    const option = exact || (partial.length === 1 ? partial[0] : null)
-
     if (!option) return false
-    select.value = option.value
-    select.dispatchEvent(new Event('change', { bubbles: true }))
+
+    if (select.multiple) {
+      Array.from(select.options).forEach((item) => {
+        item.selected = item === option
+      })
+    } else {
+      select.value = option.value
+    }
+    dispatchFieldEvents(select)
     return true
   }
 
-  function showLookupNotice (message, isError = false) {
+  function getSearchButton (form) {
+    return findFirstWithin(form, [
+      '#sbmPesquisar',
+      'input[type="submit"][value*="Pesquisar"]',
+      'button[type="submit"]'
+    ])
+  }
+
+  function findFirstWithin (root, selectors) {
+    for (const selector of selectors) {
+      const element = root.querySelector(selector)
+      if (element) return element
+    }
+
+    const buttons = Array.from(root.querySelectorAll('input[type="submit"], button'))
+    return buttons.find((button) => normalize(button.value || button.textContent) === 'pesquisar') || null
+  }
+
+  function showLookupNotice (message, state = 'busy') {
     const noticeId = 'sp-fast-proc-process-lookup-notice'
     let notice = document.getElementById(noticeId)
     if (!notice) {
       notice = document.createElement('div')
       notice.id = noticeId
-      notice.setAttribute('role', isError ? 'alert' : 'status')
+      notice.setAttribute('role', 'status')
+      notice.setAttribute('aria-live', 'polite')
       notice.style.cssText = [
-        'margin:10px 0',
-        'padding:10px 12px',
-        'border:1px solid ' + (isError ? '#bd3b3b' : '#d6ad35'),
-        'border-radius:6px',
-        'background:' + (isError ? '#fde8e8' : '#fff4c2'),
-        'color:' + (isError ? '#751313' : '#332600'),
-        'font-weight:700'
+        'position:fixed',
+        'right:20px',
+        'bottom:20px',
+        'z-index:2147483647',
+        'display:flex',
+        'align-items:center',
+        'gap:12px',
+        'max-width:min(520px, calc(100vw - 32px))',
+        'padding:12px 16px',
+        'border:2px solid #d6ad35',
+        'border-radius:10px',
+        'background:#071a33',
+        'color:#fff',
+        'box-shadow:0 8px 24px rgb(0 0 0 / 35%)',
+        'font:700 14px/1.4 Arial, sans-serif'
       ].join(';')
-      const target = document.querySelector('form') || document.body
-      target.insertAdjacentElement('afterbegin', notice)
+
+      const spinner = document.createElement('span')
+      spinner.setAttribute('aria-hidden', 'true')
+      spinner.style.cssText = [
+        'display:none',
+        'flex:0 0 18px',
+        'width:18px',
+        'height:18px',
+        'border:3px solid #6d7f91',
+        'border-top-color:#f0c54b',
+        'border-radius:50%',
+        'animation:sp-fast-proc-spin .8s linear infinite'
+      ].join(';')
+
+      const spinnerStyle = document.createElement('style')
+      spinnerStyle.textContent = '@keyframes sp-fast-proc-spin { to { transform: rotate(360deg) } }'
+      document.head?.append(spinnerStyle)
+
+      const text = document.createElement('span')
+      text.className = 'sp-fast-proc-process-lookup-text'
+
+      const filtersButton = document.createElement('button')
+      filtersButton.type = 'button'
+      filtersButton.textContent = 'Mostrar filtros'
+      filtersButton.style.cssText = [
+        'display:none',
+        'flex:0 0 auto',
+        'padding:6px 10px',
+        'border:1px solid #d6ad35',
+        'border-radius:6px',
+        'background:#fff4c2',
+        'color:#332600',
+        'font-weight:700',
+        'cursor:pointer'
+      ].join(';')
+      filtersButton.addEventListener('click', () => {
+        const form = document.querySelector('#seiSearch')
+        if (!form) return
+        form.hidden = !form.hidden
+        filtersButton.textContent = form.hidden ? 'Mostrar filtros' : 'Ocultar filtros'
+      })
+
+      notice.append(spinner, text, filtersButton)
+      document.body.append(notice)
     }
-    notice.textContent = message
+
+    const spinner = notice.querySelector('[aria-hidden="true"]')
+    const text = notice.querySelector('.sp-fast-proc-process-lookup-text')
+    const filtersButton = notice.querySelector('button')
+    spinner.style.display = state === 'busy' ? 'block' : 'none'
+    text.textContent = message
+    filtersButton.style.display = state === 'busy' ? 'none' : 'inline-block'
+    const form = document.querySelector('#seiSearch')
+    filtersButton.textContent = form?.hidden ? 'Mostrar filtros' : 'Ocultar filtros'
+    notice.style.borderColor = state === 'error' ? '#d14949' : '#d6ad35'
+    notice.style.background = state === 'error' ? '#541b25' : '#071a33'
+    return notice
   }
 
-  function findSearchButton (form) {
-    const buttons = Array.from(
-      form.querySelectorAll('button, input[type="submit"], input[type="button"]')
-    )
-    return buttons.find((button) =>
-      normalize(button.textContent || button.value || button.title) === 'pesquisar'
-    ) || null
+  function countResults () {
+    const summary = document.querySelector('.total-registros-infinite')?.textContent || ''
+    const total = summary.match(/\bde\s+(\d+)\b/i)?.[1]
+    if (total) return Number(total)
+
+    return document.querySelectorAll(
+      '.retorno-ajax .pesquisaTituloRegistro, .retorno-ajax table tbody tr'
+    ).length
   }
 
-  async function waitForSearchFields (timeoutMs = 8000) {
-    const start = Date.now()
-    while (Date.now() - start < timeoutMs) {
-      const specification = findFirst([
-        '#txtDescricaoPesquisa',
-        '[name="txtDescricaoPesquisa"]',
-        '#txtEspecificacaoPesquisa',
-        '[name="txtEspecificacaoPesquisa"]'
-      ])
-      const processType = findFirst([
-        '#selTipoProcedimentoPesquisa',
-        '[name="selTipoProcedimentoPesquisa"]'
-      ])
-      const processCheckbox = findFirst([
-        '#chkSinProcessos',
-        '[name="chkSinProcessos"]'
-      ])
-      if (specification && processType && processCheckbox) {
-        return { specification, processType, processCheckbox }
+  function resultsAreReady () {
+    const results = document.querySelector('.retorno-ajax')
+    if (!results) return false
+
+    const loading = results.querySelector('.ajax-loading')
+    if (loading && window.getComputedStyle(loading).display !== 'none') return false
+
+    const text = normalize(results.textContent)
+    const hasNoResults = text.includes('sua pesquisa nao encontrou') ||
+      text.includes('nenhum protocolo correspondente')
+    const hasRows = results.querySelectorAll('table tbody tr').length > 0
+    const hasSummary = Boolean(document.querySelector('.total-registros-infinite')?.textContent.trim())
+    return hasNoResults || hasRows || hasSummary
+  }
+
+  async function waitForResults (applicantName) {
+    const started = Date.now()
+    while (Date.now() - started < RESULT_TIMEOUT) {
+      if (resultsAreReady()) {
+        const count = countResults()
+        const suffix = count ? ` ${count} processo(s) listado(s).` : ' Nenhum processo localizado.'
+        showLookupNotice(
+          `Pesquisa concluída${applicantName ? ` para ${applicantName}` : ''}.${suffix}`,
+          'complete'
+        )
+        const form = document.querySelector('#seiSearch')
+        if (form) form.hidden = true
+        await browserApi.storage.local.remove(LOOKUP_KEY)
+        return true
       }
-      await new Promise((resolve) => window.setTimeout(resolve, 100))
+      await new Promise((resolve) => window.setTimeout(resolve, 250))
+    }
+
+    const form = document.querySelector('#seiSearch')
+    if (form) form.hidden = false
+    showLookupNotice(
+      'O SEI ainda não confirmou os resultados. Os filtros foram preenchidos; confira e clique em Pesquisar.',
+      'error'
+    )
+    await browserApi.storage.local.remove(LOOKUP_KEY)
+    return false
+  }
+
+  async function waitForSearchFields (timeoutMs = 12000) {
+    const started = Date.now()
+    while (Date.now() - started < timeoutMs) {
+      const fields = findSearchFields()
+      if (fields) return fields
+      await new Promise((resolve) => window.setTimeout(resolve, 150))
     }
     return null
   }
 
   async function run () {
     if (!isProcessSearchPage()) return
+
+    const fields = await waitForSearchFields()
+    if (!fields) return
 
     const stored = await browserApi.storage.local.get(LOOKUP_KEY)
     const lookup = stored[LOOKUP_KEY]
@@ -133,81 +296,57 @@
       return
     }
 
-    const fields = await waitForSearchFields()
-    if (!fields) {
-      await browserApi.storage.local.remove(LOOKUP_KEY)
+    if (lookup.state === 'searching') {
       showLookupNotice(
-        'FAST PROC não identificou os campos da Pesquisa do SEI. Preencha Processos, Especificação e Tipo do Processo manualmente.',
-        true
+        `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} no DETRAN, com tramitação na unidade...`,
+        'busy'
       )
-      return
-    }
-
-    const form = fields.specification.form || document.querySelector('form')
-    if (!form) {
-      await browserApi.storage.local.remove(LOOKUP_KEY)
-      showLookupNotice('FAST PROC não encontrou o formulário da Pesquisa do SEI.', true)
+      fields.form.hidden = true
+      await waitForResults(lookup.applicantName)
       return
     }
 
     const cpf = String(lookup.cpf || '').replace(/\D/g, '')
-    const typeSelected = selectProcessType(fields.processType, lookup.processType)
-    if (cpf.length !== 11 || !typeSelected) {
+    if (cpf.length !== 11) {
       await browserApi.storage.local.remove(LOOKUP_KEY)
-      showLookupNotice(
-        typeSelected
-          ? 'FAST PROC não encontrou um CPF válido para a pesquisa.'
-          : 'FAST PROC não localizou o tipo de processo na pesquisa. Confira o filtro e pesquise manualmente.',
-        true
-      )
+      showLookupNotice('FAST PROC não encontrou um CPF válido para a pesquisa.', 'error')
       return
     }
 
-    const processSelected = selectCheckbox(
-      ['#chkSinProcessos', '[name="chkSinProcessos"]'],
-      true
-    )
-    if (!processSelected) {
+    if (!selectDetran(fields.agency)) {
       await browserApi.storage.local.remove(LOOKUP_KEY)
-      showLookupNotice('FAST PROC não conseguiu selecionar a pesquisa de Processos.', true)
+      showLookupNotice('FAST PROC não encontrou o órgão DETRAN na lista. Confira os filtros e pesquise manualmente.', 'error')
       return
     }
 
-    selectCheckbox(
-      ['#chkSinDocumentosGerados', '[name="chkSinDocumentosGerados"]'],
-      false
-    )
-    selectCheckbox(
-      ['#chkSinDocumentosRecebidos', '[name="chkSinDocumentosRecebidos"]'],
-      false
-    )
-    setTextField(fields.specification, cpf)
-    await browserApi.storage.local.remove(LOOKUP_KEY)
+    selectCheckbox(fields.processCheckbox, true)
+    selectCheckbox(fields.unitHistory, true)
+    selectCheckbox(findFirst(['#chkSinDocumentosGerados', '[name="chkSinDocumentosGerados"]']), false)
+    selectCheckbox(findFirst(['#chkSinDocumentosRecebidos', '[name="chkSinDocumentosRecebidos"]']), false)
+    setSpecification(fields.specification, cpf)
 
+    const searchButton = getSearchButton(fields.form)
+    if (!searchButton) {
+      await browserApi.storage.local.remove(LOOKUP_KEY)
+      showLookupNotice('FAST PROC preencheu os filtros, mas não encontrou o botão Pesquisar. Confira e pesquise manualmente.', 'error')
+      return
+    }
+
+    await browserApi.storage.local.set({
+      [LOOKUP_KEY]: { ...lookup, state: 'searching' }
+    })
     showLookupNotice(
-      'FAST PROC pesquisando Processos por CPF na Especificação e pelo tipo selecionado. Confira a lista retornada pelo SEI.'
+      `Aguarde: pesquisando processos${lookup.applicantName ? ` de ${lookup.applicantName}` : ''} no DETRAN, com tramitação na unidade...`,
+      'busy'
     )
-
-    const searchButton = findSearchButton(form)
-    if (searchButton) {
-      searchButton.click()
-      return
-    }
-
-    if (typeof form.requestSubmit === 'function') {
-      form.requestSubmit()
-      return
-    }
-
-    showLookupNotice(
-      'Os filtros foram preenchidos, mas o FAST PROC não localizou o botão Pesquisar. Confira os campos e clique em Pesquisar.',
-      true
-    )
+    searchButton.click()
+    fields.form.hidden = true
+    await waitForResults(lookup.applicantName)
   }
 
   run().catch((error) => {
     console.error('[SEI Protocolistas] Falha ao pesquisar processo anterior:', error)
-    showLookupNotice('FAST PROC não conseguiu preparar a pesquisa. Confira os filtros manualmente.', true)
+    showLookupNotice('FAST PROC não conseguiu preparar a pesquisa. Confira os filtros manualmente.', 'error')
   })
 })()
 

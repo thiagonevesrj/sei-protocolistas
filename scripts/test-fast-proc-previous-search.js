@@ -11,66 +11,126 @@ const source = fs.readFileSync(
   'utf8'
 )
 
-async function runScenario (processTypeOptions) {
+async function runScenario (options) {
   const lookupKey = 'spFastProcConsultaProcessosAnteriores'
   const state = {
-    removed: false,
-    notice: '',
-    submitted: false
+    lookup: {
+      cpf: '123.456.789-00',
+      applicantName: 'Maria da Silva',
+      createdAt: Date.now()
+    },
+    notice: null,
+    submitted: false,
+    removed: false
   }
+
+  function element (tagName) {
+    const attributes = {}
+    const children = []
+    return {
+      tagName,
+      id: '',
+      className: '',
+      textContent: '',
+      value: '',
+      style: {},
+      hidden: false,
+      children,
+      setAttribute (name, value) { attributes[name] = value },
+      getAttribute (name) { return attributes[name] || '' },
+      append (...items) { children.push(...items) },
+      addEventListener () {},
+      insertAdjacentElement () {},
+      querySelector (selector) {
+        return children.find((child) => {
+          if (selector.startsWith('.')) return child.className === selector.slice(1)
+          if (selector.startsWith('[')) return child.getAttribute('aria-hidden') === 'true'
+          if (selector === 'button') return child.tagName === 'button'
+          return false
+        }) || null
+      },
+      querySelectorAll () { return [] }
+    }
+  }
+
   const form = {
-    querySelectorAll: () => [searchButton],
-    insertAdjacentElement: (position, notice) => { state.notice = notice },
-    requestSubmit: () => { state.submitted = true }
+    hidden: false,
+    querySelector (selector) {
+      return selector === '#sbmPesquisar' ? searchButton : null
+    },
+    querySelectorAll () { return [] }
   }
-  const specification = {
-    value: '',
-    form,
-    dispatchEvent () {}
-  }
-  const processType = {
-    value: '',
-    options: processTypeOptions.map(({ value, textContent }) => ({ value, textContent })),
-    dispatchEvent () {}
-  }
+  const specification = { value: '', dispatchEvent () {} }
   const processCheckbox = { checked: false, dispatchEvent () {} }
   const generatedDocuments = { checked: true, dispatchEvent () {} }
   const externalDocuments = { checked: true, dispatchEvent () {} }
-  const searchButton = { textContent: 'Pesquisar', click: () => { state.submitted = true } }
-  const noticeTarget = { insertAdjacentElement: (position, notice) => { state.notice = notice } }
+  const unitHistory = { checked: false, dispatchEvent () {} }
+  const agency = {
+    value: '',
+    multiple: false,
+    options: [{ value: '4', textContent: options.agencyText, selected: false }],
+    dispatchEvent () {}
+  }
+  const searchButton = {
+    value: 'Pesquisar',
+    click () { state.submitted = true }
+  }
+  const resultRow = {}
+  const results = {
+    textContent: 'Processo encontrado',
+    querySelector (selector) {
+      if (selector === '.ajax-loading') return { style: { display: 'none' } }
+      return null
+    },
+    querySelectorAll (selector) {
+      return selector === 'table tbody tr' && state.submitted ? [resultRow] : []
+    }
+  }
+  const summary = { textContent: 'Exibindo 1 - 1 de 1' }
+  const historyLabel = {
+    htmlFor: '',
+    textContent: 'Com Tramitação na Unidade',
+    querySelector: () => unitHistory,
+    parentElement: null,
+    getAttribute: () => ''
+  }
   const document = {
+    body: { append (item) { state.notice = item } },
+    head: { append () {} },
     querySelector (selector) {
       const fields = {
+        '#seiSearch': form,
+        form,
         '#txtDescricaoPesquisa': specification,
         '[name="txtDescricaoPesquisa"]': specification,
-        '#selTipoProcedimentoPesquisa': processType,
-        '[name="selTipoProcedimentoPesquisa"]': processType,
         '#chkSinProcessos': processCheckbox,
         '[name="chkSinProcessos"]': processCheckbox,
+        '#selOrgaoPesquisa': agency,
+        '[name="selOrgaoPesquisa"], [name="selOrgaoPesquisa[]"]': agency,
         '#chkSinDocumentosGerados': generatedDocuments,
         '[name="chkSinDocumentosGerados"]': generatedDocuments,
         '#chkSinDocumentosRecebidos': externalDocuments,
         '[name="chkSinDocumentosRecebidos"]': externalDocuments,
-        form
+        '.retorno-ajax': results,
+        '.total-registros-infinite': summary
       }
       return fields[selector] || null
     },
-    querySelectorAll: () => [],
-    getElementById: () => null,
-    createElement: () => ({
-      style: {},
-      setAttribute () {},
-      textContent: ''
-    }),
-    body: noticeTarget
+    querySelectorAll (selector) {
+      return selector === 'label' ? [historyLabel] : []
+    },
+    getElementById (id) {
+      return id === 'sp-fast-proc-process-lookup-notice' ? state.notice : null
+    },
+    createElement: element
   }
   const context = {
     Date,
     URL,
     Event: class {
-      constructor (type, options) {
+      constructor (type, eventOptions) {
         this.type = type
-        this.options = options
+        this.options = eventOptions
       }
     },
     document,
@@ -81,59 +141,44 @@ async function runScenario (processTypeOptions) {
       currentBrowser: {
         storage: {
           local: {
-            get: async () => ({
-              [lookupKey]: {
-                cpf: '123.456.789-00',
-                processType: 'Detran: Devolução de Taxas',
-                createdAt: Date.now()
-              }
-            }),
-            remove: async () => { state.removed = true }
+            get: async (key) => ({ [key]: state.lookup }),
+            set: async (items) => { state.lookup = items[lookupKey] },
+            remove: async () => { state.lookup = null; state.removed = true }
           }
         }
       },
+      getComputedStyle: item => item.style,
       setTimeout
     },
     console
   }
 
   vm.runInNewContext(source, context)
-  for (let attempt = 0; attempt < 20 && !state.removed; attempt++) {
+  for (let attempt = 0; attempt < 30 && !state.removed; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 5))
   }
-  return { state, specification, processType, processCheckbox, generatedDocuments, externalDocuments }
+  return { state, specification, processCheckbox, generatedDocuments, externalDocuments, unitHistory, agency, form }
 }
 
 async function run () {
-  const matched = await runScenario([
-    { value: '', textContent: 'Selecione' },
-    { value: '17', textContent: 'Detran: Devolução de Taxas' }
-  ])
+  const matched = await runScenario({ agencyText: 'DETRAN' })
   assert.strictEqual(matched.specification.value, '12345678900')
-  assert.strictEqual(matched.processType.value, '17')
   assert.strictEqual(matched.processCheckbox.checked, true)
   assert.strictEqual(matched.generatedDocuments.checked, false)
   assert.strictEqual(matched.externalDocuments.checked, false)
+  assert.strictEqual(matched.unitHistory.checked, true)
+  assert.strictEqual(matched.agency.value, '4')
   assert.strictEqual(matched.state.submitted, true)
+  assert.strictEqual(matched.form.hidden, true)
+  assert.ok(matched.state.notice.children[1].textContent.includes('Pesquisa concluída'))
+  assert.ok(matched.state.notice.children[1].textContent.includes('1 processo'))
 
-  const missingType = await runScenario([
-    { value: '', textContent: 'Selecione' },
-    { value: '22', textContent: 'Detran: Solicitação de Perícia Médica' }
-  ])
-  assert.strictEqual(missingType.specification.value, '')
-  assert.strictEqual(missingType.state.submitted, false)
-  assert.ok(missingType.state.notice.textContent.includes('não localizou o tipo'))
+  const missingAgency = await runScenario({ agencyText: 'OUTRO ÓRGÃO' })
+  assert.strictEqual(missingAgency.specification.value, '')
+  assert.strictEqual(missingAgency.state.submitted, false)
+  assert.ok(missingAgency.state.notice.children[1].textContent.includes('não encontrou o órgão DETRAN'))
 
-  const ambiguousType = await runScenario([
-    { value: '', textContent: 'Selecione' },
-    { value: '17', textContent: 'Devolução de Taxas' },
-    { value: '18', textContent: 'Detran: Devolução de Taxas Especial' }
-  ])
-  assert.strictEqual(ambiguousType.processType.value, '')
-  assert.strictEqual(ambiguousType.state.submitted, false)
-  assert.ok(ambiguousType.state.notice.textContent.includes('não localizou o tipo'))
-
-  console.log('FAST PROC: pesquisa de processos anteriores por CPF e tipo validada.')
+  console.log('FAST PROC: consulta anterior por CPF, órgão, tramitação e pesquisa automática validada.')
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1 })

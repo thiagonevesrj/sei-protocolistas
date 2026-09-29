@@ -77,9 +77,9 @@
       "js": ["cs_modules/clique_protocolista/external-access.js"]
     },
     {
-      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
+      "matches": ["*://sei.rj.gov.br/*"],
       "run_at": "document_idle",
-      "all_frames": false,
+      "all_frames": true,
       "js": ["cs_modules/clique_protocolista/buscarProcessosAnteriores.js"]
     },
     {
