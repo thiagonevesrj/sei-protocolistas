@@ -524,3 +524,19 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+.sp-clique-action--lookup {
+  background: #fff4c2;
+  border-color: #d6ad35;
+  color: #332600;
+}
+
+.sp-clique-action--lookup:hover,
+.sp-clique-action--lookup:focus {
+  background: #ffe992;
+}
+
+.sp-clique-action--lookup:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}

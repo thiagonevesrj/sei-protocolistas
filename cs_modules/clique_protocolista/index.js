@@ -6,6 +6,7 @@
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
   const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
+  const PROCESS_LOOKUP_KEY = 'spFastProcConsultaProcessosAnteriores'
   const INTERESTED_CONFIRM_KEY =
     'spFastProcConfirmarInclusaoInteressado'
   const INTERESTED_CONFIRM_EVENT =
@@ -89,6 +90,33 @@
     return String(value || '')
       .replace(/\s+/g, ' ')
       .trim()
+  }
+
+  function processLookupUrl() {
+    const searchLink = Array.from(
+      document.querySelectorAll('a[href]')
+    ).find((link) => {
+      const label = normalize([
+        link.textContent,
+        link.getAttribute('aria-label'),
+        link.title
+      ].join(' '))
+      const href = link.href || ''
+
+      return label.includes('pesquisa') &&
+        /controlador\.php/i.test(href) &&
+        /acao=(protocolo|procedimento)_pesquisar/i.test(href)
+    })
+
+    if (searchLink) {
+      return searchLink.href
+    }
+
+    const url = new URL(window.location.href)
+    url.search = ''
+    url.hash = ''
+    url.searchParams.set('acao', 'protocolo_pesquisar')
+    return url.href
   }
 
   function processName(value) {
@@ -1396,6 +1424,70 @@
       'Cancelar'
     )
 
+    const previousProcessesButton = createElement(
+      'button',
+      {
+        className: 'sp-clique-action sp-clique-action--lookup',
+        type: 'button'
+      },
+      'Consultar processos anteriores'
+    )
+
+    previousProcessesButton.addEventListener('click', async () => {
+      message.className = 'sp-clique-message'
+      message.textContent = ''
+
+      const cpf = cleanValue(form.elements.cpf.value).replace(/\D/g, '')
+      const selectedType = form.elements.tipoProcesso.selectedOptions[0]
+      const processType = cleanValue(
+        selectedType?.dataset.processLabel || selectedType?.textContent
+      )
+
+      if (cpf.length !== 11) {
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = 'Informe um CPF válido com 11 números para pesquisar.'
+        form.elements.cpf.focus()
+        return
+      }
+
+      if (!form.elements.tipoProcesso.value || !processType) {
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = 'Escolha o tipo do processo antes de pesquisar.'
+        typeSearch.focus()
+        return
+      }
+
+      const searchTab = window.open('about:blank', '_blank')
+      if (!searchTab) {
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = 'O navegador bloqueou a nova aba de pesquisa. Permita pop-ups do SEI e tente novamente.'
+        return
+      }
+
+      previousProcessesButton.disabled = true
+      previousProcessesButton.textContent = 'Abrindo pesquisa…'
+
+      try {
+        await storageSet({
+          [PROCESS_LOOKUP_KEY]: {
+            cpf,
+            processType,
+            createdAt: Date.now()
+          }
+        })
+
+        searchTab.location.href = processLookupUrl()
+        message.textContent = 'Pesquisa aberta em outra aba: processos do tipo selecionado com este CPF na Especificação.'
+      } catch (error) {
+        searchTab.close()
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = `Não foi possível preparar a pesquisa: ${error.message || error}`
+      } finally {
+        previousProcessesButton.disabled = false
+        previousProcessesButton.textContent = 'Consultar processos anteriores'
+      }
+    })
+
     const continueButton = createElement(
       'button',
       {
@@ -1406,7 +1498,7 @@
       'Prosseguir e criar processo'
     )
 
-    actions.append(cancelButton, continueButton)
+    actions.append(cancelButton, previousProcessesButton, continueButton)
 
     form.append(
       modeSection,

@@ -78,6 +78,12 @@
     },
     {
       "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "js": ["cs_modules/clique_protocolista/buscarProcessosAnteriores.js"]
+    },
+    {
+      "matches": ["*://sei.rj.gov.br/*controlador.php?acao=*"],
       "run_at": "document_start",
       "all_frames": true,
       "world": "MAIN",
