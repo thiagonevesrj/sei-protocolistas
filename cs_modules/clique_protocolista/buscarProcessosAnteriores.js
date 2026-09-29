@@ -119,9 +119,16 @@
     if (!option) return false
 
     if (select.multiple) {
-      Array.from(select.options).forEach((item) => {
-        item.selected = item === option
-      })
+      const jquery = window.jQuery || window.$
+      const enhancedSelect = typeof jquery === 'function' ? jquery(select) : null
+      if (typeof enhancedSelect?.multipleSelect === 'function') {
+        enhancedSelect.multipleSelect('uncheckAll')
+        enhancedSelect.multipleSelect('check', option.value)
+      } else {
+        Array.from(select.options).forEach((item) => {
+          item.selected = item === option
+        })
+      }
     } else {
       select.value = option.value
     }
@@ -130,11 +137,18 @@
   }
 
   function getSearchButton (form) {
-    return findFirstWithin(form, [
+    const withinForm = findFirstWithin(form, [
       '#sbmPesquisar',
       'input[type="submit"][value*="Pesquisar"]',
       'button[type="submit"]'
     ])
+    if (withinForm) return withinForm
+
+    const byId = document.getElementById('sbmPesquisar')
+    if (byId) return byId
+
+    return Array.from(document.querySelectorAll('input[type="submit"], button'))
+      .find((button) => normalize(button.value || button.textContent) === 'pesquisar') || null
   }
 
   function highlightSearchButton (form) {
