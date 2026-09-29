@@ -92,6 +92,33 @@
       .trim()
   }
 
+
+
+  function bindCpfInput (field) {
+    if (!field) return
+
+    field.inputMode = 'numeric'
+    field.maxLength = 20
+    field.pattern = '[0-9]{11}'
+    field.title = 'Digite apenas os 11 números do CPF.'
+
+    const keepDigitsOnly = () => {
+      const value = String(field.value || '')
+      const cursor = Number.isInteger(field.selectionStart)
+        ? field.selectionStart
+        : value.length
+      const digitCursor = value.slice(0, cursor).replace(/\D/g, '').length
+      const digits = value.replace(/\D/g, '').slice(0, 11)
+
+      if (digits === value) return
+      field.value = digits
+      field.setSelectionRange?.(digitCursor, digitCursor)
+    }
+
+    field.addEventListener('input', keepDigitsOnly)
+    keepDigitsOnly()
+  }
+
   function processLookupUrl () {
     const searchLink = Array.from(
       document.querySelectorAll('a[href]')
@@ -739,7 +766,7 @@
       nome:
         cleanValue(form.elements.nome.value),
       cpf:
-        cleanValue(form.elements.cpf.value),
+        cleanValue(form.elements.cpf.value).replace(/\D/g, '').slice(0, 11),
       telefone:
         cleanValue(form.elements.telefone.value),
       email:
@@ -1269,7 +1296,7 @@
         label: 'CPF',
         required: true,
         maxLength: 20,
-        placeholder: 'CPF do interessado'
+        placeholder: 'Somente números (11 dígitos)'
       },
       {
         name: 'email',
@@ -1291,6 +1318,8 @@
         placeholder: 'Telefone com DDD'
       }
     ].forEach((field) => addField(grid, field))
+
+    bindCpfInput(grid.querySelector('#sp-cpf'))
 
     const accessBox = createElement('div', { className: 'sp-clique-field sp-clique-field--wide' })
     const accessLabel = createElement('label', { htmlFor: 'sp-acesso-externo' })
@@ -1544,6 +1573,12 @@
         if (!draft.cpf) {
           throw new Error(
             'Informe o CPF do interessado.'
+          )
+        }
+
+        if (draft.cpf.length !== 11) {
+          throw new Error(
+            'O CPF deve conter exatamente 11 números.'
           )
         }
 
