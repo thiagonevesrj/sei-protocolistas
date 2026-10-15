@@ -151,7 +151,7 @@
       "run_at": "document_idle",
       "all_frames": true,
       "css": ["cs_modules/protocolo_cliente/styles.css"],
-      "js": ["cs_modules/protocolo_cliente/index.js"]
+      "js": ["cs_modules/protocolo_cliente/index.js", "cs_modules/protocolo_cliente/acompanhamento.js"]
     },
     {
       "matches": ["https://venus2.detran.rj.gov.br/owa/*"],
