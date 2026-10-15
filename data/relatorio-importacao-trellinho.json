@@ -1,0 +1,886 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-19T16:16:02.234Z",
+  "sourceFile": "trellinho0708.html",
+  "safeToApply": false,
+  "blockers": [
+    "2 duplicidade(s) com conteúdo conflitante"
+  ],
+  "summary": {
+    "sourceCards": 196,
+    "uniqueSourceKeys": 192,
+    "catalogBefore": 176,
+    "catalogProposed": 193,
+    "matched": 173,
+    "added": 17,
+    "changed": 43,
+    "missingFromSource": 3,
+    "collapsedDuplicates": 2,
+    "conflictingDuplicates": 2,
+    "protectedCurations": 2,
+    "destinationConflicts": 2,
+    "withDestination": 42,
+    "withSeiProcessType": 40,
+    "presencialOnly": 13,
+    "noProcess": 5
+  },
+  "unknownPhases": [],
+  "collapsedDuplicates": [
+    {
+      "key": "identificacao|infracoes de transito|defesa previa e recursos de infracoes de transito",
+      "count": 2,
+      "phase": "identificacao",
+      "group": "Infrações de Trânsito",
+      "title": "Defesa Prévia e Recursos de Infrações de Trânsito",
+      "bodyHash": "e09053da34e8"
+    },
+    {
+      "key": "identificacao|infracoes de transito|revisao de ato agem02",
+      "count": 2,
+      "phase": "identificacao",
+      "group": "Infrações de Trânsito",
+      "title": "REVISÃO DE ATO - AGEM02",
+      "bodyHash": "d98bce8be39a"
+    }
+  ],
+  "conflictingDuplicates": [
+    {
+      "key": "identificacao|orientacao sobre aplicativo|np atualizacao de aplicativo licenciamento anual veicular",
+      "phase": "identificacao",
+      "group": "ORIENTAÇÃO SOBRE APLICATIVO",
+      "title": "NP - ATUALIZAÇÃO DE APLICATIVO - LICENCIAMENTO ANUAL VEICULAR",
+      "candidates": [
+        {
+          "key": "identificacao|orientacao sobre aplicativo|np atualizacao de aplicativo licenciamento anual veicular",
+          "phase": "identificacao",
+          "group": "ORIENTAÇÃO SOBRE APLICATIVO",
+          "title": "NP - ATUALIZAÇÃO DE APLICATIVO - LICENCIAMENTO ANUAL VEICULAR",
+          "bodyHash": "ecfd1b2344e2",
+          "destinationUnit": null,
+          "seiProcessType": null,
+          "presencialOnly": false,
+          "noProcess": false
+        },
+        {
+          "key": "identificacao|orientacao sobre aplicativo|np atualizacao de aplicativo licenciamento anual veicular",
+          "phase": "identificacao",
+          "group": "ORIENTAÇÃO SOBRE APLICATIVO",
+          "title": "NP - ATUALIZAÇÃO DE APLICATIVO - LICENCIAMENTO ANUAL VEICULAR",
+          "bodyHash": "d42a486bd93b",
+          "destinationUnit": null,
+          "seiProcessType": null,
+          "presencialOnly": false,
+          "noProcess": false
+        }
+      ]
+    },
+    {
+      "key": "identificacao|tri multa suspensao cassacao revisao de ato|multas orientacao generica",
+      "phase": "identificacao",
+      "group": "TRI/MULTA/SUSPENSÃO/CASSAÇÃO/REVISÃO DE ATO",
+      "title": "MULTAS / ORIENTAÇÃO GENERICA",
+      "candidates": [
+        {
+          "key": "identificacao|tri multa suspensao cassacao revisao de ato|multas orientacao generica",
+          "phase": "identificacao",
+          "group": "TRI/MULTA/SUSPENSÃO/CASSAÇÃO/REVISÃO DE ATO",
+          "title": "MULTAS / ORIENTAÇÃO GENERICA",
+          "bodyHash": "a69a93295593",
+          "destinationUnit": null,
+          "seiProcessType": null,
+          "presencialOnly": false,
+          "noProcess": false
+        },
+        {
+          "key": "identificacao|tri multa suspensao cassacao revisao de ato|multas orientacao generica",
+          "phase": "identificacao",
+          "group": "TRI/MULTA/SUSPENSÃO/CASSAÇÃO/REVISÃO DE ATO",
+          "title": "MULTAS / ORIENTAÇÃO GENERICA",
+          "bodyHash": "a415eb5cd5c7",
+          "destinationUnit": null,
+          "seiProcessType": null,
+          "presencialOnly": false,
+          "noProcess": false
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "key": "identificacao|infracoes de transito|padrao",
+      "phase": "identificacao",
+      "group": "Infrações de Trânsito",
+      "title": "PADRÃO",
+      "bodyHash": "3a5bcb5dfdc9",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "identificacao|infracoes de transito|fase 1 1 multa de orgao dentro do municipio da parte",
+      "phase": "identificacao",
+      "group": "Infrações de Trânsito",
+      "title": "FASE 1:1 - MULTA DE ÓRGÃO DENTRO DO MUNICÍPIO DA PARTE",
+      "bodyHash": "99a5414d3c86",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "identificacao|infracoes de transito|fase 1 1 multa de orgao fora do municipio da parte",
+      "phase": "identificacao",
+      "group": "Infrações de Trânsito",
+      "title": "FASE 1:1 - MULTA DE ÓRGÃO FORA DO MUNICÍPIO DA PARTE",
+      "bodyHash": "fa2fef64e736",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "identificacao|infracoes de transito|multas do detran",
+      "phase": "identificacao",
+      "group": "Infrações de Trânsito",
+      "title": "MULTAS DO DETRAN",
+      "bodyHash": "dd412882a826",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "identificacao|ressarcimento de multa devolucao de multa|devolucao ressarcimento de multa",
+      "phase": "identificacao",
+      "group": "RESSARCIMENTO DE MULTA - DEVOLUÇÃO DE MULTA",
+      "title": "Devolução / Ressarcimento de multa",
+      "bodyHash": "10e587a274c2",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "identificacao|orientacao sobre aplicativo|atualizacao",
+      "phase": "identificacao",
+      "group": "ORIENTAÇÃO SOBRE APLICATIVO",
+      "title": "ATUALIZAÇÃO",
+      "bodyHash": "8040018b83a6",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "identificacao|ipva sefaz|ipva",
+      "phase": "identificacao",
+      "group": "IPVA - SEFAZ",
+      "title": "IPVA",
+      "bodyHash": "4913ed2b28cb",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "orientacao|divaprend|credenciamento de empresa especializada na realizacao dos servicos de monitoramento online",
+      "phase": "orientacao",
+      "group": "DIVAPREND",
+      "title": "CREDENCIAMENTO DE EMPRESA ESPECIALIZADA NA REALIZAÇÃO DOS SERVIÇOS DE MONITORAMENTO ONLINE",
+      "bodyHash": "aa6407c5b4ac",
+      "destinationUnit": "COMISPL",
+      "seiProcessType": "DETRAN: Credenciamento de EAD - Aprendizagem",
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "orientacao|daf02 triagem pessoa fisica|devolucao de taxas",
+      "phase": "orientacao",
+      "group": "DAF02 - TRIAGEM - PESSOA FÍSICA",
+      "title": "Devolução de taxas",
+      "bodyHash": "2db32814f8d6",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|daf|triagem daf ag txt",
+      "phase": "atendimento",
+      "group": "DAF",
+      "title": "TRIAGEM-DAF-AG.txt",
+      "bodyHash": "76b79662295c",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|daf|triagem daf ex txt",
+      "phase": "atendimento",
+      "group": "DAF",
+      "title": "TRIAGEM-DAF-EX.txt",
+      "bodyHash": "8fc27f838add",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|critica mensagem|critica multas nao e aqui v1",
+      "phase": "atendimento",
+      "group": "CRITICA  MENSAGEM",
+      "title": "CRITICA - MULTAS - Não é aqui V1",
+      "bodyHash": "85b32efc7556",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|critica mensagem|critica apagou o historico v1",
+      "phase": "atendimento",
+      "group": "CRITICA  MENSAGEM",
+      "title": "CRITICA - Apagou o histórico - V1",
+      "bodyHash": "50d67a2a54bf",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|critica mensagem|critica ja existe processo aberto",
+      "phase": "atendimento",
+      "group": "CRITICA  MENSAGEM",
+      "title": "CRITICA - JA EXISTE PROCESSO ABERTO",
+      "bodyHash": "494197718d97",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|critica diversos|cancelamento do pedido de suspensao de uma categoria nos processos de 1 hab quando o numero do protocolo for informado",
+      "phase": "atendimento",
+      "group": "CRÍTICA - DIVERSOS",
+      "title": "Cancelamento do pedido de Suspensão de uma categoria nos processos de 1ª hab,quando o número do protocolo for informado",
+      "bodyHash": "118fd828ed82",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|critica diversos|usuario requereu acesso externo apos a fase 3",
+      "phase": "atendimento",
+      "group": "CRÍTICA - DIVERSOS",
+      "title": "USUÁRIO REQUEREU ACESSO EXTERNO APÓS A FASE 3?",
+      "bodyHash": "1d44e33a0c90",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    },
+    {
+      "key": "atendimento|critica processo ja aberto|critica permed saber sobre andamento prazo questionamento prazo v1",
+      "phase": "atendimento",
+      "group": "CRITICA - PROCESSO JA ABERTO",
+      "title": "CRITICA - PERMED - Saber sobre andamento - prazo - questionamento prazo - V1",
+      "bodyHash": "ba4f2a68f87d",
+      "destinationUnit": null,
+      "seiProcessType": null,
+      "presencialOnly": false,
+      "noProcess": false
+    }
+  ],
+  "changed": [
+    {
+      "id": "trello-682f3f6bf10b13e39320840e",
+      "phase": "orientacao",
+      "group": "PROTOCOLO",
+      "title": "Modelo de texto para agendamento",
+      "bodyChanged": true,
+      "previousBodyHash": "3c0f0ac271bb",
+      "incomingBodyHash": "1913d4813ad7",
+      "previousDestination": null,
+      "incomingDestination": null
+    },
+    {
+      "id": "trello-663cc82584cc25ecb03205aa",
+      "phase": "orientacao",
+      "group": "DAF02 - PESSOA JURÍDICA",
+      "title": "Devolução de taxas - Pessoa jurídica",
+      "bodyChanged": false,
+      "previousBodyHash": "3d3eeccae17d",
+      "incomingBodyHash": "3d3eeccae17d",
+      "previousDestination": null,
+      "incomingDestination": "DIVAF"
+    },
+    {
+      "id": "trello-64e2a0fc88d682bd3ad5edb5",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "HAB - Genérico",
+      "bodyChanged": false,
+      "previousBodyHash": "186638659a1b",
+      "incomingBodyHash": "186638659a1b",
+      "previousDestination": null,
+      "incomingDestination": "DIRHAB"
+    },
+    {
+      "id": "trello-699cf107462c3b59c7abfccf",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Renovação automática da Carteira Nacional de Habilitação (CNH)",
+      "bodyChanged": false,
+      "previousBodyHash": "64f0b0d6fec4",
+      "incomingBodyHash": "64f0b0d6fec4",
+      "previousDestination": null,
+      "incomingDestination": "COORENAC"
+    },
+    {
+      "id": "trello-64fe3239f05aa2b4bb34bddd",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Averbação CNH estrangeira (Brasileiros habilitados no exterior e estrangeiros)",
+      "bodyChanged": false,
+      "previousBodyHash": "ac88921d18a3",
+      "incomingBodyHash": "ac88921d18a3",
+      "previousDestination": null,
+      "incomingDestination": "NUCNAE"
+    },
+    {
+      "id": "trello-64fe396d04d8b1ba9665644b",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Reabilitação",
+      "bodyChanged": false,
+      "previousBodyHash": "7fc5d6a2872a",
+      "incomingBodyHash": "7fc5d6a2872a",
+      "previousDestination": null,
+      "incomingDestination": "NUCDA"
+    },
+    {
+      "id": "trello-64fe22aea70fb3dd141afdb4",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Acerto de dados - Troca de CPF",
+      "bodyChanged": false,
+      "previousBodyHash": "66def1f8c6e7",
+      "incomingBodyHash": "66def1f8c6e7",
+      "previousDestination": null,
+      "incomingDestination": "SERVECH"
+    },
+    {
+      "id": "trello-64fe30d15b87d15b351e15ef",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Acerto de dados",
+      "bodyChanged": false,
+      "previousBodyHash": "03c2a3790e65",
+      "incomingBodyHash": "03c2a3790e65",
+      "previousDestination": null,
+      "incomingDestination": "GABCTRL"
+    },
+    {
+      "id": "trello-662b9a752b4cb27efecc53ae",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Segunda via de CNH com isenção por roubo ou furto",
+      "bodyChanged": false,
+      "previousBodyHash": "9c12a489456f",
+      "incomingBodyHash": "9c12a489456f",
+      "previousDestination": null,
+      "incomingDestination": "SERVECH"
+    },
+    {
+      "id": "trello-64fe3bd5d6087d02fc82d184",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Troca de clínica",
+      "bodyChanged": false,
+      "previousBodyHash": "bb7b76151691",
+      "incomingBodyHash": "bb7b76151691",
+      "previousDestination": null,
+      "incomingDestination": "SERVMT"
+    },
+    {
+      "id": "trello-64fe3ad4bd5fbf5a609cb3a3",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Rebaixamento de Categoria",
+      "bodyChanged": false,
+      "previousBodyHash": "e9cbc136caef",
+      "incomingBodyHash": "e9cbc136caef",
+      "previousDestination": null,
+      "incomingDestination": "SERVECH"
+    },
+    {
+      "id": "trello-64fe3d0cc9919d85555a3dc9",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Retorno a categoria - Rebaixada por solicitação do próprio",
+      "bodyChanged": false,
+      "previousBodyHash": "60fa0c0faf0d",
+      "incomingBodyHash": "60fa0c0faf0d",
+      "previousDestination": null,
+      "incomingDestination": "SERVECH"
+    },
+    {
+      "id": "trello-64fe34ff62c585ee7f134be3",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Cancelamento de Permissão pra Dirigir",
+      "bodyChanged": false,
+      "previousBodyHash": "3e516433ea8c",
+      "incomingBodyHash": "3e516433ea8c",
+      "previousDestination": null,
+      "incomingDestination": "DIRHAB"
+    },
+    {
+      "id": "trello-658da26fde45251b640b0878",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Aproveitamento de curso de reciclagem",
+      "bodyChanged": false,
+      "previousBodyHash": "8d6b2f8e4887",
+      "incomingBodyHash": "8d6b2f8e4887",
+      "previousDestination": null,
+      "incomingDestination": "DIRHAB"
+    },
+    {
+      "id": "trello-64fe364fef4daf4185f38297",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Cancelamento de RENACH",
+      "bodyChanged": false,
+      "previousBodyHash": "e76686001ce6",
+      "incomingBodyHash": "e76686001ce6",
+      "previousDestination": null,
+      "incomingDestination": "COORENAC"
+    },
+    {
+      "id": "trello-684862c4f5eedfff81f34bf8",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Certidão de Prontuário",
+      "bodyChanged": false,
+      "previousBodyHash": "8275c9a958a9",
+      "incomingBodyHash": "8275c9a958a9",
+      "previousDestination": null,
+      "incomingDestination": "NUCRA"
+    },
+    {
+      "id": "trello-64fe37632bb4913e6c3c201d",
+      "phase": "orientacao",
+      "group": "HAB02 - TRIAGEM",
+      "title": "Desistência de CNH",
+      "bodyChanged": false,
+      "previousBodyHash": "e025ae801750",
+      "incomingBodyHash": "e025ae801750",
+      "previousDestination": null,
+      "incomingDestination": "COORENAC"
+    },
+    {
+      "id": "trello-6540fde403de990b0588c29b",
+      "phase": "orientacao",
+      "group": "DRV02 - TRIAGEM",
+      "title": "Transferência de propriedade com baixa de restrição de inventário (PARA TERCEIROS)",
+      "bodyChanged": false,
+      "previousBodyHash": "64e972ba6b25",
+      "incomingBodyHash": "64e972ba6b25",
+      "previousDestination": null,
+      "incomingDestination": "PROTDIRRV"
+    },
+    {
+      "id": "trello-6540fdf582f80285a553bc8f",
+      "phase": "orientacao",
+      "group": "DRV02 - TRIAGEM",
+      "title": "Baixa de restrição referente a inventário (PARA HERDEIROS)",
+      "bodyChanged": false,
+      "previousBodyHash": "7ebbe42fb478",
+      "incomingBodyHash": "7ebbe42fb478",
+      "previousDestination": null,
+      "incomingDestination": "PROTDIRRV"
+    },
+    {
+      "id": "trello-64fe18b33f45f2c31e818c1e",
+      "phase": "orientacao",
+      "group": "CVDIVDCI",
+      "title": "Acerto de Comunicação de Venda (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "7d1d063e2224",
+      "incomingBodyHash": "7d1d063e2224",
+      "previousDestination": null,
+      "incomingDestination": "CVDIVDCI"
+    },
+    {
+      "id": "trello-64fe1b1b82cbce3912ecf28c",
+      "phase": "orientacao",
+      "group": "CVDIVDCI",
+      "title": "Cancelamento de Comunicação de venda (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "88fc43fca06a",
+      "incomingBodyHash": "88fc43fca06a",
+      "previousDestination": null,
+      "incomingDestination": "CVDIVDCI"
+    },
+    {
+      "id": "trello-64fe1d4ad8b673f62a6157c5",
+      "phase": "orientacao",
+      "group": "CVDIVDCI",
+      "title": "Informação de Venda (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "029798e42d55",
+      "incomingBodyHash": "029798e42d55",
+      "previousDestination": null,
+      "incomingDestination": "CVDIVDCI"
+    },
+    {
+      "id": "trello-64fe408a06bbd9607eeecb0e",
+      "phase": "orientacao",
+      "group": "CVDIVDCI",
+      "title": "Comunicação especial de venda (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "300f85a57d5d",
+      "incomingBodyHash": "300f85a57d5d",
+      "previousDestination": null,
+      "incomingDestination": "CVDIVDCI"
+    },
+    {
+      "id": "trello-64fe1f0adc906e4ee29b4c09",
+      "phase": "orientacao",
+      "group": "CVDIVDCI",
+      "title": "Cancelamento de Intenção de Venda (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "8dce672ca049",
+      "incomingBodyHash": "8dce672ca049",
+      "previousDestination": null,
+      "incomingDestination": "CVDIVDCI"
+    },
+    {
+      "id": "trello-64fe0e22f7f7bdae92a13bcd",
+      "phase": "orientacao",
+      "group": "SETCHASS",
+      "title": "Regularização de Chassi (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "b3f68e70358e",
+      "incomingBodyHash": "b3f68e70358e",
+      "previousDestination": null,
+      "incomingDestination": "SETCHASS"
+    },
+    {
+      "id": "trello-64fe122cdff78f7f534db5dd",
+      "phase": "orientacao",
+      "group": "SETCHASS",
+      "title": "SEGUNDA VIA DE ETIQUETAS - PLAQUETAS DE IDENTIFICAÇÃO VEICULAR (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "54e5860cc421",
+      "incomingBodyHash": "54e5860cc421",
+      "previousDestination": null,
+      "incomingDestination": "SETCHASS"
+    },
+    {
+      "id": "trello-64e2a71210e1a7e149276334",
+      "phase": "orientacao",
+      "group": "DIRIC",
+      "title": "Certidão de Identificação Civil",
+      "bodyChanged": false,
+      "previousBodyHash": "2ed297ef3ac4",
+      "incomingBodyHash": "2ed297ef3ac4",
+      "previousDestination": null,
+      "incomingDestination": "DIRIC"
+    },
+    {
+      "id": "trello-64e29e008682149db2680d4a",
+      "phase": "orientacao",
+      "group": "DIVMED - Perícia Médica",
+      "title": "Perícia Médica - 1ª Habilitação ou inclusão de restrição médica na CNH (Exceto Visão Monocular e/ou deficiência auditiva)",
+      "bodyChanged": false,
+      "previousBodyHash": "1316da33906f",
+      "incomingBodyHash": "1316da33906f",
+      "previousDestination": null,
+      "incomingDestination": "DIVMED"
+    },
+    {
+      "id": "trello-663113e3d9dba6d93db00a8a",
+      "phase": "orientacao",
+      "group": "DIVMED - Perícia Médica",
+      "title": "Perícia Médica - 1ª Habilitação ou inclusão da restrição médica na CNH  (Somente para Visão Monocular e/ou Deficiência Auditiva)",
+      "bodyChanged": false,
+      "previousBodyHash": "5da2bbd56636",
+      "incomingBodyHash": "5da2bbd56636",
+      "previousDestination": null,
+      "incomingDestination": "DIVMED"
+    },
+    {
+      "id": "trello-64fe460dc414e7c2dac630c2",
+      "phase": "orientacao",
+      "group": "DIVMED - Perícia Médica",
+      "title": "Junta Médica (DIVMED)",
+      "bodyChanged": false,
+      "previousBodyHash": "274f12d782f6",
+      "incomingBodyHash": "274f12d782f6",
+      "previousDestination": null,
+      "incomingDestination": "DIVMED"
+    },
+    {
+      "id": "trello-66312a3bc7b161fb80290cd0",
+      "phase": "orientacao",
+      "group": "DIVMED - Perícia Médica",
+      "title": "Junta Psicológica (SERVPSIT)",
+      "bodyChanged": false,
+      "previousBodyHash": "0dec6a272ab9",
+      "incomingBodyHash": "0dec6a272ab9",
+      "previousDestination": null,
+      "incomingDestination": "SERVPSIT"
+    },
+    {
+      "id": "trello-64fe45fb06460aea654afbd0",
+      "phase": "orientacao",
+      "group": "DIVMED - Clínicas",
+      "title": "DIVMED - Renovação Bienal de Cadastro",
+      "bodyChanged": false,
+      "previousBodyHash": "27e188ddd9e9",
+      "incomingBodyHash": "27e188ddd9e9",
+      "previousDestination": null,
+      "incomingDestination": "DIVMED"
+    },
+    {
+      "id": "trello-64fa25488d4907872f146b4a",
+      "phase": "orientacao",
+      "group": "ASSGEM",
+      "title": "Credenciamento de usuário externo (Não confundir com solicitação de acesso externo)",
+      "bodyChanged": false,
+      "previousBodyHash": "42cbea54fab7",
+      "incomingBodyHash": "42cbea54fab7",
+      "previousDestination": null,
+      "incomingDestination": "ASSGEM"
+    },
+    {
+      "id": "trello-64fe053bf8693b5e5ae6ede5",
+      "phase": "orientacao",
+      "group": "CORREG",
+      "title": "CREDENCIAMENTO DE EMPRESAS DESMONTAGENS",
+      "bodyChanged": false,
+      "previousBodyHash": "ae7f7f228ba3",
+      "incomingBodyHash": "ae7f7f228ba3",
+      "previousDestination": null,
+      "incomingDestination": "SETDESMO"
+    },
+    {
+      "id": "trello-64fe09836b7eb02488ab1b73",
+      "phase": "orientacao",
+      "group": "CORREG",
+      "title": "ETIQUETAS DE SEGURANÇA",
+      "bodyChanged": false,
+      "previousBodyHash": "bdf3402fa37e",
+      "incomingBodyHash": "bdf3402fa37e",
+      "previousDestination": null,
+      "incomingDestination": "SETDESMO"
+    },
+    {
+      "id": "trello-65076b639df1005c84a80c92",
+      "phase": "orientacao",
+      "group": "DIVRI",
+      "title": "Transferência de Responsabilidade - Multas",
+      "bodyChanged": false,
+      "previousBodyHash": "0b34557594c9",
+      "incomingBodyHash": "0b34557594c9",
+      "previousDestination": null,
+      "incomingDestination": "DIVRI"
+    },
+    {
+      "id": "trello-6604200516e31f24b0efc800",
+      "phase": "orientacao",
+      "group": "COMISPL",
+      "title": "CREDENCIAMENTO DE EMPRESA PARA PAGAMENTO EM CARTÃO DE CREDITO",
+      "bodyChanged": false,
+      "previousBodyHash": "26fc70ca53e9",
+      "incomingBodyHash": "26fc70ca53e9",
+      "previousDestination": null,
+      "incomingDestination": "COMISPL"
+    },
+    {
+      "id": "trello-650068cdc6bf3c535864ddaf",
+      "phase": "orientacao",
+      "group": "COMISPL",
+      "title": "APLICAÇÃO DO EXAME TEÓRICO TÉCNICO PELOS CENTROS DE FORMAÇÃO DE CONDUTORES",
+      "bodyChanged": false,
+      "previousBodyHash": "5b5e5db390c1",
+      "incomingBodyHash": "5b5e5db390c1",
+      "previousDestination": null,
+      "incomingDestination": "COMISPL"
+    },
+    {
+      "id": "trello-65006fd3bb7699fe945161f2",
+      "phase": "orientacao",
+      "group": "COMISPL",
+      "title": "CREDENCIAMENTO DE EMPRESA ESPECIALIZADA NA REALIZAÇÃO DOS SERVIÇOS DE MONITORAMENTO ONLINE",
+      "bodyChanged": false,
+      "previousBodyHash": "bcc4b7dd0285",
+      "incomingBodyHash": "bcc4b7dd0285",
+      "previousDestination": null,
+      "incomingDestination": "COMISPL"
+    },
+    {
+      "id": "trello-65eb759819164e893843b511",
+      "phase": "orientacao",
+      "group": "SERVNPDA - Funcionários CFC",
+      "title": "Admissão de Profissional de Ensino (SOMENTE PRESENCIAL)",
+      "bodyChanged": false,
+      "previousBodyHash": "5da5d4a17908",
+      "incomingBodyHash": "5da5d4a17908",
+      "previousDestination": null,
+      "incomingDestination": "SERVNPDA"
+    },
+    {
+      "id": "trello-64fe3eccde0ba8809da44bbb",
+      "phase": "orientacao",
+      "group": "DIRAPOIO",
+      "title": "Obtenção de Gravação de Ligação para o 3460",
+      "bodyChanged": false,
+      "previousBodyHash": "00baefb1e2b3",
+      "incomingBodyHash": "00baefb1e2b3",
+      "previousDestination": null,
+      "incomingDestination": "DIRAPOIO"
+    },
+    {
+      "id": "trello-65f46ef5033efcda96e556ae",
+      "phase": "orientacao",
+      "group": "DAF02 - TRIAGEM - PESSOA FÍSICA",
+      "title": "Devolução de taxas - Pessoa física",
+      "bodyChanged": false,
+      "previousBodyHash": "ac9d650327d3",
+      "incomingBodyHash": "ac9d650327d3",
+      "previousDestination": null,
+      "incomingDestination": "DIVAF"
+    },
+    {
+      "id": "trello-699e42fb57c04ce629e5eba1",
+      "phase": "protocolos",
+      "group": "FASE 3 (TEMPORÁRIO - PESQUISA PÚBLICA)",
+      "title": "Protocolo - DAF",
+      "bodyChanged": true,
+      "previousBodyHash": "3b345608eb6a",
+      "incomingBodyHash": "180130fd3a5e",
+      "previousDestination": null,
+      "incomingDestination": null
+    }
+  ],
+  "missingFromSource": [
+    {
+      "id": "trello-68818a39e42649a24c026522",
+      "phase": "identificacao",
+      "group": "ORIENTAÇÃO SOBRE APLICATIVO",
+      "title": "NP - ATUALIZAÇÃO DE APLICATIVO - LICENCIAMENTO ANUAL VEICULAR"
+    },
+    {
+      "id": "trello-66561260cd74096db34776d6",
+      "phase": "identificacao",
+      "group": "TRI/MULTA/SUSPENSÃO/CASSAÇÃO/REVISÃO DE ATO",
+      "title": "MULTAS / ORIENTAÇÃO GENERICA"
+    },
+    {
+      "id": "trello-6553ba8c428472970aa60e79",
+      "phase": "atendimento",
+      "group": "CRITICA - DIFICULDADES COM E-MAIL",
+      "title": "TES"
+    }
+  ],
+  "protectedCurations": [
+    {
+      "id": "trello-64fe3bd5d6087d02fc82d184",
+      "title": "Troca de clínica",
+      "incomingBodyHash": "bb7b76151691",
+      "curatedBodyHash": "ecfcde1d3868",
+      "validation": "operator-confirmed-2026-08-19"
+    },
+    {
+      "id": "trello-64fe40b5e760a8f1950c3679",
+      "title": "DRV - Comunicação de Venda (NÃO ABRE PROCESSO)",
+      "incomingBodyHash": "c404edcef504",
+      "curatedBodyHash": "556a32d2ca35",
+      "validation": "official-links-confirmed"
+    }
+  ],
+  "destinationConflicts": [
+    {
+      "processId": "rebaixamento-categoria-cnh",
+      "processName": "Rebaixamento de Categoria de CNH",
+      "confirmedDestination": "DIRHAB",
+      "trellinhoDestination": "SERVECH",
+      "script": {
+        "key": "orientacao|hab02 triagem|rebaixamento de categoria",
+        "phase": "orientacao",
+        "group": "HAB02 - TRIAGEM",
+        "title": "Rebaixamento de Categoria",
+        "bodyHash": "e9cbc136caef",
+        "destinationUnit": "SERVECH",
+        "seiProcessType": "Detran: Rebaixamento de Categoria de CNH",
+        "presencialOnly": false,
+        "noProcess": false
+      }
+    },
+    {
+      "processId": "retorno-categoria-cnh-rebaixada",
+      "processName": "Retorno a Categoria de CNH Rebaixada",
+      "confirmedDestination": "DIRHAB",
+      "trellinhoDestination": "SERVECH",
+      "script": {
+        "key": "orientacao|hab02 triagem|retorno a categoria rebaixada por solicitacao do proprio",
+        "phase": "orientacao",
+        "group": "HAB02 - TRIAGEM",
+        "title": "Retorno a categoria - Rebaixada por solicitação do próprio",
+        "bodyHash": "60fa0c0faf0d",
+        "destinationUnit": "SERVECH",
+        "seiProcessType": "Detran: Retorno a Categoria de CNH Rebaixada",
+        "presencialOnly": false,
+        "noProcess": false
+      }
+    }
+  ],
+  "bodyMatchSuggestions": [
+    {
+      "incoming": {
+        "key": "identificacao|ressarcimento de multa devolucao de multa|devolucao ressarcimento de multa",
+        "phase": "identificacao",
+        "group": "RESSARCIMENTO DE MULTA - DEVOLUÇÃO DE MULTA",
+        "title": "Devolução / Ressarcimento de multa",
+        "bodyHash": "10e587a274c2",
+        "destinationUnit": null,
+        "seiProcessType": null,
+        "presencialOnly": false,
+        "noProcess": false
+      },
+      "possibleExisting": {
+        "id": "trello-69fb4efa3dec966bbbcc52ac",
+        "phase": "orientacao",
+        "group": "DAF02 - TRIAGEM - PESSOA FÍSICA",
+        "title": "Devolução / Ressarcimento de multa"
+      }
+    },
+    {
+      "incoming": {
+        "key": "atendimento|daf|triagem daf ag txt",
+        "phase": "atendimento",
+        "group": "DAF",
+        "title": "TRIAGEM-DAF-AG.txt",
+        "bodyHash": "76b79662295c",
+        "destinationUnit": null,
+        "seiProcessType": null,
+        "presencialOnly": false,
+        "noProcess": false
+      },
+      "possibleExisting": {
+        "id": "trello-64dce04cadeecdab039f860a",
+        "phase": "atendimento",
+        "group": "AGENDAMENTO",
+        "title": "AGENDAMENTO - E-MAIL INTERNO - A equipe de agendamento - NOVO V3"
+      }
+    }
+  ],
+  "missingRequiredScripts": [],
+  "missingCuratedScripts": []
+}

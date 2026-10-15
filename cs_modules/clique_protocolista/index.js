@@ -5,6 +5,12 @@
   const CONTEXT_KEY = 'cliqueProtocolistaContexto'
   const FALLBACK_KEY = 'seiProtocolistasRascunho'
   const FAST_MAIL_HANDOFF_KEY = 'fastMailFastProcHandoff'
+  const PROCESS_CATALOG_PATH = 'data/catalogo-processos.json'
+  const PROCESS_LOOKUP_KEY = 'spFastProcConsultaProcessosAnteriores'
+  const INTERESTED_CONFIRM_KEY =
+    'spFastProcConfirmarInclusaoInteressado'
+  const INTERESTED_CONFIRM_EVENT =
+    'sp-fast-proc-armar-inclusao-interessado'
 
   const MAX_DRAFT_AGE = 15 * 60 * 1000
   const STORAGE_TIMEOUT = 5000
@@ -51,6 +57,23 @@
     ]
   ]
 
+  const QUICK_PROCESS_TYPES = [
+    ['DEV. TAXAS', 'Detran: Devolução de Taxas'],
+    [
+      'DESIST. 1ª HAB.',
+      'DETRAN: Desistência de categoria na 1ª habilitação'
+    ],
+    ['PERÍCIA MÉDICA', 'Detran: Solicitação de Perícia Médica'],
+    [
+      'GERAL VEÍCULOS',
+      'Detran: Solicitações Gerais - Veículos'
+    ],
+    [
+      'GERAL HABILITAÇÃO',
+      'Detran: Solicitação Geral - Habilitação'
+    ]
+  ]
+
   function normalize(value) {
     return String(value || '')
       .normalize('NFD')
@@ -69,10 +92,100 @@
       .trim()
   }
 
+
+
+  function bindCpfInput (field) {
+    if (!field) return
+
+    field.inputMode = 'numeric'
+    field.maxLength = 20
+    field.pattern = '[0-9]{11}'
+    field.title = 'Digite apenas os 11 números do CPF.'
+
+    const keepDigitsOnly = () => {
+      const value = String(field.value || '')
+      const cursor = Number.isInteger(field.selectionStart)
+        ? field.selectionStart
+        : value.length
+      const digitCursor = value.slice(0, cursor).replace(/\D/g, '').length
+      const digits = value.replace(/\D/g, '').slice(0, 11)
+
+      if (digits === value) return
+      field.value = digits
+      field.setSelectionRange?.(digitCursor, digitCursor)
+    }
+
+    field.addEventListener('input', keepDigitsOnly)
+    keepDigitsOnly()
+  }
+
+  function processLookupUrl () {
+    const searchLink = Array.from(
+      document.querySelectorAll('a[href]')
+    ).find((link) => {
+      const label = normalize([
+        link.textContent,
+        link.getAttribute('aria-label'),
+        link.title
+      ].join(' '))
+      const href = link.href || ''
+
+      return label.includes('pesquisa') &&
+        /controlador\.php/i.test(href) &&
+        /acao=(protocolo|procedimento)_pesquisar/i.test(href)
+    })
+
+    if (searchLink) {
+      return searchLink.href
+    }
+
+    const url = new URL(window.location.href)
+    url.search = ''
+    url.hash = ''
+    url.searchParams.set('acao', 'protocolo_pesquisar')
+    return url.href
+  }
+
   function processName(value) {
     return normalize(value)
       .replace(/^(detran|administrativo)\s+/, '')
       .trim()
+  }
+
+  let catalogProcessTypes = []
+  let processCatalogReady = null
+
+  function loadProcessCatalog () {
+    if (processCatalogReady) return processCatalogReady
+    if (typeof fetch !== 'function') return Promise.resolve()
+
+    processCatalogReady = fetch(
+      browserApi.runtime.getURL(PROCESS_CATALOG_PATH)
+    )
+      .then((response) => {
+        if (!response.ok) throw new Error(`Catálogo indisponível (${response.status})`)
+        return response.json()
+      })
+      .then((catalog) => {
+        catalogProcessTypes = Array.isArray(catalog?.processTypes)
+          ? catalog.processTypes
+          : []
+      })
+      .catch((error) => {
+        console.warn('[SEI Protocolistas] Não foi possível carregar destinos do catálogo:', error)
+      })
+
+    return processCatalogReady
+  }
+
+  function catalogDestinationForProcess (label) {
+    const expected = processName(label)
+    const processType = catalogProcessTypes.find((item) =>
+      [item.name, ...(item.seiNames || [])]
+        .some((name) => processName(name) === expected)
+    )
+
+    return cleanValue(processType?.destinationUnit)
   }
 
   function matchesProcessTypeQuery (optionText, queryText) {
@@ -612,6 +725,28 @@
     grid.appendChild(wrapper)
   }
 
+  function addSelectField(grid, field) {
+    const wrapper = createElement('div', {
+      className:
+        'sp-clique-field' +
+        (field.wide ? ' sp-clique-field--wide' : '')
+    })
+    const label = createElement('label', {
+      htmlFor: `sp-${field.name}`
+    }, field.label)
+    const select = createElement('select', {
+      id: `sp-${field.name}`,
+      name: field.name
+    })
+
+    field.options.forEach(([value, text]) => {
+      select.appendChild(createElement('option', { value }, text))
+    })
+
+    wrapper.append(label, select)
+    grid.appendChild(wrapper)
+  }
+
   function readDraftFromForm(form, initialData = {}) {
     const selectedOption =
       form.elements.tipoProcesso.selectedOptions[0]
@@ -626,14 +761,17 @@
         selectedOption?.dataset.processLabel || '',
       tipoProcessoUrl:
         selectedOption?.dataset.processUrl || '',
+      prioridade:
+        cleanValue(form.elements.prioridade?.value),
       nome:
         cleanValue(form.elements.nome.value),
       cpf:
-        cleanValue(form.elements.cpf.value),
+        cleanValue(form.elements.cpf.value).replace(/\D/g, '').slice(0, 11),
       telefone:
         cleanValue(form.elements.telefone.value),
       email:
         cleanValue(form.elements.email.value),
+      acessoExterno: Boolean(form.elements.acessoExterno?.checked),
       destino:
         cleanValue(form.elements.destino.value),
       attendanceId: cleanValue(initialData.attendanceId),
@@ -826,6 +964,59 @@
     ).filter(
       (option) => option.value
     )
+    let lastSuggestedDestination = ''
+
+    const typeShortcuts = createElement('div', {
+      className: 'sp-clique-type-shortcuts',
+      'aria-label': 'Tipos de processo mais usados'
+    })
+
+    const quickTypeButtons = QUICK_PROCESS_TYPES.map(
+      ([label, seiName]) => {
+        const option = typeOptions.find((candidate) =>
+          processName(
+            candidate.dataset.processLabel ||
+            candidate.textContent
+          ) === processName(seiName)
+        )
+        const button = createElement(
+          'button',
+          {
+            className: 'sp-clique-type-shortcut',
+            type: 'button',
+            'aria-pressed': 'false'
+          },
+          label
+        )
+
+        button.dataset.processType = seiName
+        button.addEventListener('click', () => {
+          selectTypeOption(option)
+          hideTypeSuggestions()
+          typeSearch.focus()
+        })
+        typeShortcuts.appendChild(button)
+
+        return button
+      }
+    )
+
+    const updateQuickTypeButtons = (selectedOption) => {
+      const selectedName = processName(
+        selectedOption?.dataset.processLabel ||
+        selectedOption?.textContent
+      )
+
+      quickTypeButtons.forEach((button) => {
+        const active = Boolean(selectedName) &&
+          processName(button.dataset.processType) === selectedName
+        button.classList.toggle(
+          'sp-clique-type-shortcut--active',
+          active
+        )
+        button.setAttribute('aria-pressed', String(active))
+      })
+    }
 
     const matchingTypeOptions = () => {
       const query = typeSearch.value
@@ -842,6 +1033,7 @@
     const selectTypeOption = (option) => {
       if (!option) {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
         return false
       }
 
@@ -852,6 +1044,7 @@
           bubbles: true
         })
       )
+      updateQuickTypeButtons(option)
 
       return true
     }
@@ -945,6 +1138,7 @@
         selectTypeOption(exactOption)
       } else {
         typeSelect.value = ''
+        updateQuickTypeButtons(null)
       }
     }
 
@@ -970,7 +1164,7 @@
       hideTypeSuggestions()
     })
 
-    typeSelect.addEventListener('change', () => {
+    typeSelect.addEventListener('change', async () => {
       const selectedOption =
         typeSelect.selectedOptions[0]
 
@@ -980,6 +1174,25 @@
       ) {
         typeSearch.value =
           selectedOption.textContent
+        updateQuickTypeButtons(selectedOption)
+
+        await loadProcessCatalog()
+        const suggestion = catalogDestinationForProcess(
+          selectedOption.dataset.processLabel || selectedOption.textContent
+        )
+        const destinationInput = grid.querySelector('input[name="destino"]')
+        const currentDestination = cleanValue(destinationInput?.value)
+
+        if (
+          destinationInput &&
+          suggestion &&
+          (!currentDestination || currentDestination === lastSuggestedDestination)
+        ) {
+          destinationInput.value = suggestion
+          dispatchFieldEvents(destinationInput)
+        }
+
+        lastSuggestedDestination = suggestion
       }
     })
 
@@ -1049,11 +1262,25 @@
 
     typeWrapper.append(
       typeLabel,
+      typeShortcuts,
       typeSearchBox,
       typeSelect
     )
 
     grid.appendChild(typeWrapper)
+
+    addSelectField(grid, {
+      name: 'prioridade',
+      label: 'Prioridade (opcional)',
+      wide: true,
+      options: [
+        ['', 'Sem prioridade'],
+        ['Idoso', 'Idoso'],
+        ['Idoso 80+', 'Idoso 80+'],
+        ['PcD', 'PcD'],
+        ['Empreendimento Estratégico', 'Empreendimento Estratégico']
+      ]
+    })
 
     ;[
       {
@@ -1069,7 +1296,7 @@
         label: 'CPF',
         required: true,
         maxLength: 20,
-        placeholder: 'CPF do interessado'
+        placeholder: 'Somente números (11 dígitos)'
       },
       {
         name: 'email',
@@ -1081,7 +1308,7 @@
       {
         name: 'destino',
         label: 'Unidade de destino',
-        placeholder: 'Unidade indicada no FAST MAIL'
+        placeholder: 'Sugerida pela tabela; pode ser alterada'
       },
       {
         name: 'telefone',
@@ -1091,6 +1318,27 @@
         placeholder: 'Telefone com DDD'
       }
     ].forEach((field) => addField(grid, field))
+
+    bindCpfInput(grid.querySelector('#sp-cpf'))
+
+    const accessBox = createElement('div', { className: 'sp-clique-field sp-clique-field--wide' })
+    const accessLabel = createElement('label', { htmlFor: 'sp-acesso-externo' })
+    const accessCheck = createElement('input', {
+      id: 'sp-acesso-externo', name: 'acessoExterno', type: 'checkbox'
+    })
+    accessLabel.append(accessCheck, document.createTextNode(' Conceder acesso externo'))
+    const accessHelp = createElement('p', { className: 'sp-clique-access-help' },
+      'Será preparado acompanhamento integral por 365 dias, com motivo “Vistas ao processo”, usando a senha do SEI salva na Central. Confira e clique em Disponibilizar.')
+    accessHelp.hidden = true
+    accessCheck.addEventListener('change', () => {
+      const emailInput = grid.querySelector('#sp-email')
+      if (emailInput) emailInput.required = accessCheck.checked
+      const emailLabel = grid.querySelector('label[for="sp-email"]')
+      if (emailLabel) emailLabel.textContent = accessCheck.checked ? 'E-mail * (acesso externo)' : 'E-mail'
+      accessHelp.hidden = !accessCheck.checked
+    })
+    accessBox.append(accessLabel, accessHelp)
+    grid.appendChild(accessBox)
 
     const optionalDetails = createElement('details', {
       className: 'sp-clique-optional'
@@ -1205,6 +1453,60 @@
       'Cancelar'
     )
 
+    const previousProcessesButton = createElement(
+      'button',
+      {
+        className: 'sp-clique-action sp-clique-action--lookup',
+        type: 'button'
+      },
+      'Consultar processos anteriores'
+    )
+
+    previousProcessesButton.addEventListener('click', async () => {
+      message.className = 'sp-clique-message'
+      message.textContent = ''
+
+      const cpf = cleanValue(form.elements.cpf.value).replace(/\D/g, '')
+      const applicantName = cleanValue(form.elements.nome.value)
+
+      if (cpf.length !== 11) {
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = 'Informe um CPF válido com 11 números para pesquisar.'
+        form.elements.cpf.focus()
+        return
+      }
+
+      const searchTab = window.open('about:blank', '_blank')
+      if (!searchTab) {
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = 'O navegador bloqueou a nova aba de pesquisa. Permita pop-ups do SEI e tente novamente.'
+        return
+      }
+
+      previousProcessesButton.disabled = true
+      previousProcessesButton.textContent = 'Abrindo pesquisa…'
+
+      try {
+        await storageSet({
+          [PROCESS_LOOKUP_KEY]: {
+            cpf,
+            applicantName,
+            createdAt: Date.now()
+          }
+        })
+
+        searchTab.location.href = processLookupUrl()
+        message.textContent = 'Pesquisa aberta em outra aba: processos com este CPF na Especificação, no DETRAN e com tramitação na unidade.'
+      } catch (error) {
+        searchTab.close()
+        message.className = 'sp-clique-message sp-clique-message--error'
+        message.textContent = `Não foi possível preparar a pesquisa: ${error.message || error}`
+      } finally {
+        previousProcessesButton.disabled = false
+        previousProcessesButton.textContent = 'Consultar processos anteriores'
+      }
+    })
+
     const continueButton = createElement(
       'button',
       {
@@ -1215,7 +1517,7 @@
       'Prosseguir e criar processo'
     )
 
-    actions.append(cancelButton, continueButton)
+    actions.append(cancelButton, previousProcessesButton, continueButton)
 
     form.append(
       modeSection,
@@ -1252,6 +1554,10 @@
       try {
         const draft = readDraftFromForm(form, initialData)
 
+        if (draft.acessoExterno && (!draft.email || !form.elements.email.checkValidity())) {
+          throw new Error('Informe um e-mail válido para preparar o acesso externo.')
+        }
+
         if (!draft.tipoProcesso) {
           throw new Error(
             'Escolha o tipo de processo.'
@@ -1267,6 +1573,12 @@
         if (!draft.cpf) {
           throw new Error(
             'Informe o CPF do interessado.'
+          )
+        }
+
+        if (draft.cpf.length !== 11) {
+          throw new Error(
+            'O CPF deve conter exatamente 11 números.'
           )
         }
 
@@ -1743,15 +2055,8 @@
       }
     }
 
-    const priority =
-      findFirst([
-        '#selGrauPrioridade',
-        '#selPrioridade',
-        'select[id*="Prioridade"]',
-        'select[name*="Prioridade"]'
-      ]) || findFieldByLabel('Prioridade')
-
-    hideSmallestFieldContainer(priority)
+    // A prioridade depende da situação concreta do requerente.
+    // O FAST PROC mantém o campo nativo visível para escolha manual.
   }
 
   function fillField(element, value) {
@@ -1763,6 +2068,30 @@
     element.value = value
     dispatchFieldEvents(element)
 
+    return true
+  }
+
+  function choosePriority(value) {
+    if (!value) return false
+
+    const select = findFirst([
+      '#selGrauPrioridade',
+      '#selPrioridade',
+      'select[id*="Prioridade"]',
+      'select[name*="Prioridade"]'
+    ]) || findFieldByLabel('Prioridade')
+
+    if (!select || select.tagName !== 'SELECT') return false
+
+    const expected = normalize(value)
+    const option = Array.from(select.options).find(
+      (item) => normalize(item.textContent) === expected
+    )
+
+    if (!option) return false
+
+    select.value = option.value
+    dispatchFieldEvents(select)
     return true
   }
 
@@ -1860,49 +2189,154 @@
     })
   }
 
-  async function selectInterestedSuggestion(name, interestedField) {
+  function visibleInterestedSuggestions() {
+    return Array.from(
+      document.querySelectorAll(
+        '.ui-autocomplete li, ' +
+        '.ui-menu-item, ' +
+        '[role="option"], ' +
+        'ul[id*="Interessado"] li, ' +
+        'div[id*="Interessado"] li'
+      )
+    ).filter(
+      (element) => element.offsetParent !== null
+    )
+  }
+
+  function interestedSuggestionName(element) {
+    const raw = cleanValue(
+      element?.textContent ||
+      element?.innerText ||
+      ''
+    )
+
+    const withoutMarker = raw.replace(
+      /^[\s"'“”$]+/,
+      ''
+    )
+
+    const metadataStart = withoutMarker.search(
+      /\s*[<(]/
+    )
+
+    return cleanValue(
+      (metadataStart > 0
+        ? withoutMarker.slice(0, metadataStart)
+        : withoutMarker
+      ).replace(/[\s"'“”;]+$/, '')
+    )
+  }
+
+  function armInterestedCreationConfirmation() {
+    try {
+      sessionStorage.setItem(
+        INTERESTED_CONFIRM_KEY,
+        String(Date.now())
+      )
+
+      document.dispatchEvent(
+        new CustomEvent(
+          INTERESTED_CONFIRM_EVENT
+        )
+      )
+    } catch (error) {
+      console.warn(
+        '[SEI Protocolistas] Inclusão automática do interessado indisponível:',
+        error
+      )
+    }
+  }
+
+  function continueWithManualInterested(message, interestedField) {
+    window.alert(
+      `CLICK PROTOCOLISTA: ${message}\n\n` +
+      'Selecione o interessado correto. O FAST PROC continuará preenchendo os demais dados e liberará o botão SALVAR.'
+    )
+    interestedField.focus()
+    return false
+  }
+
+  function showExistingInterestedNotice(interestedField, name) {
+    const noticeId = 'sp-fast-proc-interessado-existente'
+    let notice = document.getElementById(noticeId)
+
+    if (!notice) {
+      notice = document.createElement('div')
+      notice.id = noticeId
+      notice.setAttribute('role', 'status')
+      notice.setAttribute('aria-live', 'polite')
+      notice.style.margin = '6px 0'
+      notice.style.padding = '8px 10px'
+      notice.style.border = '1px solid #d6ad35'
+      notice.style.borderRadius = '6px'
+      notice.style.background = '#fff4c2'
+      notice.style.color = '#332600'
+      notice.style.fontWeight = '700'
+      interestedField?.insertAdjacentElement('afterend', notice)
+    }
+
+    notice.textContent =
+      `FAST PROC: cadastro existente localizado para “${cleanValue(name)}”. ` +
+      'O registro existente do SEI será reutilizado.'
+  }
+
+  async function selectInterestedSuggestion(name, email, interestedField) {
     const expectedName = normalize(name)
+    const expectedEmail = cleanValue(email).toLowerCase()
+    let result = null
 
     try {
-      const suggestion = await waitUntil(
+      result = await waitUntil(
         () => {
-          const candidates = Array.from(
-            document.querySelectorAll(
-              '.ui-autocomplete li, ' +
-              '.ui-menu-item, ' +
-              '[role="option"], ' +
-              'ul[id*="Interessado"] li, ' +
-              'div[id*="Interessado"] li'
-            )
-          ).filter(
-            (element) =>
-              element.offsetParent !== null
+          const candidates =
+            visibleInterestedSuggestions()
+
+          const matches = candidates.filter(
+            (element) => normalize(
+              interestedSuggestionName(element)
+            ) === expectedName
           )
 
-          return candidates.find(
-            (element) =>
-              normalize(
+          if (matches.length === 1) {
+            return { suggestion: matches[0] }
+          }
+
+          if (matches.length > 1 && expectedEmail) {
+            const emailMatches = matches.filter(
+              (element) => cleanValue(
                 element.textContent ||
                 element.innerText ||
                 ''
-              ) === expectedName
-          ) || null
+              ).toLowerCase().includes(expectedEmail)
+            )
+
+            if (emailMatches.length === 1) {
+              return { suggestion: emailMatches[0] }
+            }
+          }
+
+          return matches.length > 1
+            ? { ambiguous: true }
+            : null
         },
-        2500
+        4000
       )
-
-      suggestion.dispatchEvent(
-        new MouseEvent('mousedown', {
-          bubbles: true,
-          cancelable: true,
-          view: window
-        })
-      )
-
-      suggestion.click()
-
-      return true
     } catch (error) {
+      const exactMatches = visibleInterestedSuggestions().filter(
+        (element) => normalize(interestedSuggestionName(element)) === expectedName
+      )
+
+      if (exactMatches.length) {
+        return continueWithManualInterested(
+          exactMatches.length > 1
+            ? 'Há mais de um cadastro do SEI com este nome.'
+            : 'O SEI já possui um cadastro com este nome. Confira e selecione o registro correto.',
+          interestedField
+        )
+      }
+
+      closeInterestedSuggestions(interestedField)
+      armInterestedCreationConfirmation()
       interestedField.focus()
       interestedField.value = name
       dispatchFieldEvents(interestedField)
@@ -1944,6 +2378,30 @@
 
       return true
     }
+
+    if (result.ambiguous) {
+      return continueWithManualInterested(
+        'Há mais de um cadastro do SEI com este nome.',
+        interestedField
+      )
+    }
+
+    showExistingInterestedNotice(
+      interestedField,
+      interestedSuggestionName(result.suggestion) || name
+    )
+
+    result.suggestion.dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+    )
+
+    result.suggestion.click()
+
+    return true
   }
 
   function clickAddInterested(interestedField) {
@@ -2166,6 +2624,13 @@
       )
     }
 
+    if (draft.prioridade && !choosePriority(draft.prioridade)) {
+      console.warn(
+        '[SEI Protocolistas] Prioridade não localizada:',
+        draft.prioridade
+      )
+    }
+
     if (!fillField(interested, draft.nome)) {
       throw new Error(
         'O campo Interessados não foi encontrado.'
@@ -2177,6 +2642,7 @@
     const interestedSelected =
       await selectInterestedSuggestion(
         draft.nome,
+        draft.email,
         interested
       )
 
@@ -2213,6 +2679,27 @@
       }
     })
     await storageRemove(STORAGE_KEY)
+
+    // Armar somente quando o operador salvar este processo, nunca no preenchimento.
+    const armExternalAccess = () => {
+      const key = 'spFastProcExternalAccess'
+      if (!draft.acessoExterno) {
+        sessionStorage.removeItem(key)
+        return
+      }
+      sessionStorage.setItem(key, JSON.stringify({
+        name: draft.nome, email: draft.email,
+        createdAt: Date.now(), processId: '', opened: false, filled: false
+      }))
+    }
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest?.('button,input,a')
+      const label = normalize(button?.textContent || button?.value || '').replace(/[^a-z]/g, '')
+      if (label === 'salvar') armExternalAccess()
+    }, true)
+    document.addEventListener('submit', (event) => {
+      if (event.target.contains?.(specification)) armExternalAccess()
+    }, true)
 
     closeInterestedSuggestions(interested)
 
@@ -2310,3 +2797,4 @@
     })
   }
 })()
+

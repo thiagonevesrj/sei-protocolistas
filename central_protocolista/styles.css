@@ -9,3 +9,22 @@
 .access-panel form>label+label{margin-top:14px}
 .operator-status--configured .status-dot{background:var(--gold);box-shadow:0 0 14px rgba(241,196,79,.65)}
 @media(max-width:980px){.credentials-grid{grid-template-columns:1fr}.start-panel{align-items:stretch;flex-direction:column}.start-button{width:100%}}
+
+.workday-actions{display:flex;align-items:center;gap:12px}
+.reopen-button{color:#071224;background:var(--success);border-color:var(--success)}
+.danger-button{color:#fff;background:#9f2d37;border-color:#c94b56}
+.workday-report{margin-bottom:22px;border-color:rgba(66,201,133,.32)}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.metric-grid article{padding:18px;background:rgba(3,13,27,.62);border:1px solid rgba(174,189,208,.14);border-radius:12px}
+.metric-grid span{display:block;margin-bottom:8px;color:var(--muted);font-size:.72rem;font-weight:800;text-transform:uppercase}
+.metric-grid strong{color:var(--gold);font-size:1.45rem}
+.report-period{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:.82rem}
+.feedback-panel{margin-top:22px;border-color:rgba(224,174,40,.25)}
+.feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.feedback-grid .full{grid-column:1/-1}
+.feedback-grid label small{color:var(--muted);font-weight:500}
+select,textarea{width:100%;padding:12px 13px;color:var(--white);background:rgba(3,13,27,.82);border:1px solid rgba(174,189,208,.28);border-radius:10px;outline:none;font:inherit}
+textarea{resize:vertical;line-height:1.45}
+select:focus,textarea:focus{border-color:#e0ae28;box-shadow:0 0 0 3px rgba(224,174,40,.12)}
+@media(max-width:980px){.metric-grid{grid-template-columns:1fr 1fr}.workday-actions{align-items:stretch;flex-direction:column}}
+@media(max-width:680px){.metric-grid,.feedback-grid{grid-template-columns:1fr}.feedback-grid .full{grid-column:auto}.report-period{gap:8px;flex-direction:column}}
