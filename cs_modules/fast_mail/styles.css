@@ -419,6 +419,28 @@
   line-height: 1.35;
 }
 
+#sei-protocolistas-fast-mail-status .spfm-script-attachments {
+  display: grid;
+  gap: 5px;
+  padding: 7px 8px;
+  color: #e8eef7;
+  background: rgba(241, 196, 79, 0.07);
+  border: 1px solid rgba(241, 196, 79, 0.3);
+  border-radius: 6px;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-script-attachments[hidden] {
+  display: none !important;
+}
+
+#sei-protocolistas-fast-mail-status .spfm-script-attachments a {
+  color: #f1c44f;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 #sei-protocolistas-fast-mail-status .spfm-missing-list {
   display: grid;
   gap: 6px;

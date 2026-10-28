@@ -1373,6 +1373,7 @@
   function renderSelectedResponseScript () {
     const script = selectedResponseScript()
     const preview = document.querySelector('#spfm-script-preview')
+    const attachments = document.querySelector('#spfm-script-attachments')
     const insertButton = document.querySelector('#spfm-insert-script')
     if (!preview || !insertButton) return
 
@@ -1380,6 +1381,26 @@
       ? `${script.phaseLabel} › ${script.group}\n${script.title}`
       : 'Selecione um resultado para conferir.'
     insertButton.disabled = !script
+
+    if (attachments) {
+      attachments.replaceChildren()
+      const files = Array.isArray(script?.attachments) ? script.attachments : []
+      attachments.hidden = files.length === 0
+      if (files.length) {
+        const heading = document.createElement('strong')
+        heading.textContent = 'Formulários para baixar e anexar ao e-mail:'
+        attachments.appendChild(heading)
+        files.forEach((file) => {
+          const link = document.createElement('a')
+          link.href = api.runtime.getURL(file.path)
+          link.download = file.path.split('/').pop()
+          link.target = '_blank'
+          link.rel = 'noopener noreferrer'
+          link.textContent = file.label
+          attachments.appendChild(link)
+        })
+      }
+    }
   }
 
   function renderResponseScriptResults () {
@@ -2778,6 +2799,7 @@
             </select>
           </label>
           <div id="spfm-script-preview" class="spfm-script-preview">Selecione um resultado para conferir.</div>
+          <div id="spfm-script-attachments" class="spfm-script-attachments" hidden></div>
           <button id="spfm-insert-script" type="button" disabled>INSERIR RESPOSTA</button>
           <div id="spfm-script-status" class="spfm-mini-status"></div>
         </div>
@@ -2979,4 +3001,3 @@
 
   initialize()
 })()
-

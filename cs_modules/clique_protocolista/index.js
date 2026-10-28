@@ -21,6 +21,14 @@
     (typeof chrome !== 'undefined' ? chrome : browser)
 
   const PROCESS_TYPES = [
+    [
+      'Solicitação de pagamento — Meritocracia',
+      'Recursos Humanos: Benefícios'
+    ],
+    [
+      'Conversão de férias/licenças-prêmio não gozadas',
+      'Recursos Humanos: Benefícios'
+    ],
     ['Devolução de Taxas', 'Detran: Devolução de Taxas'],
     [
       'Desistência de Categoria na 1ª Habilitação',
@@ -74,6 +82,9 @@
     ]
   ]
 
+  const PROCESS_TYPE_DESTINATIONS = {
+    'recursos humanos beneficios': 'COOGP'
+  }
   function normalize(value) {
     return String(value || '')
       .normalize('NFD')
@@ -185,7 +196,9 @@
         .some((name) => processName(name) === expected)
     )
 
-    return cleanValue(processType?.destinationUnit)
+    return cleanValue(
+      processType?.destinationUnit || PROCESS_TYPE_DESTINATIONS[expected]
+    )
   }
 
   function matchesProcessTypeQuery (optionText, queryText) {
@@ -2797,4 +2810,3 @@
     })
   }
 })()
-

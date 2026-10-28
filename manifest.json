@@ -188,7 +188,7 @@
       "matches": ["*://sei.rj.gov.br/*"]
     },
     {
-      "resources": ["data/catalogo-processos.json", "data/catalogo-scripts.json", "data/respostas-curadas.json", "data/trellinho-operacional-2808.json", "data/trello-fase02-estado-atual.json", "icons/webmail-protocolistas-fast-mail.png"],
+      "resources": ["data/catalogo-processos.json", "data/catalogo-scripts.json", "data/respostas-curadas.json", "data/trellinho-operacional-2808.json", "data/trello-fase02-estado-atual.json", "icons/webmail-protocolistas-fast-mail.png", "data/anexos/requerimento-meritocracia-anexo-I.pdf", "data/anexos/requerimento-conversao-ferias-licenca.pdf", "data/anexos/declaracao-nao-ajuizamento.pdf"],
       "matches": ["https://venus2.detran.rj.gov.br/*"]
     }
   ]

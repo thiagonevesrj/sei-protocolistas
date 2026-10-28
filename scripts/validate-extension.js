@@ -550,9 +550,9 @@ if (responseModels) {
 
 if (scriptCatalog) {
   expect(scriptCatalog.schemaVersion === 1, 'Catálogo de scripts: schemaVersion deve ser 1')
-  expect(scriptCatalog.originalActiveCards === 181, 'Catálogo de scripts: origem deve conter 181 cartões ativos')
-  expect(scriptCatalog.activeScripts === 176, 'Catálogo de scripts: deve conter 176 scripts vigentes')
-  expect(scriptCatalog.actionableScripts === 175, 'Catálogo de scripts: deve conter 175 respostas com conteúdo')
+  expect(scriptCatalog.originalActiveCards === 183, 'Catálogo de scripts: origem deve conter 183 cartões ativos')
+  expect(scriptCatalog.activeScripts === 178, 'Catálogo de scripts: deve conter 178 scripts vigentes')
+  expect(scriptCatalog.actionableScripts === 177, 'Catálogo de scripts: deve conter 177 respostas com conteúdo')
   expect(
     Array.isArray(scriptCatalog.emptyCards) && scriptCatalog.emptyCards.length === 1,
     'Catálogo de scripts: deve registrar o cartão ativo sem conteúdo'
@@ -564,7 +564,7 @@ if (scriptCatalog) {
   expect(Array.isArray(scriptCatalog.scripts), 'Catálogo de scripts: scripts deve ser uma lista')
 
   const scripts = Array.isArray(scriptCatalog.scripts) ? scriptCatalog.scripts : []
-  expect(scripts.length === 176, 'Catálogo de scripts: quantidade operacional incorreta')
+  expect(scripts.length === 178, 'Catálogo de scripts: quantidade operacional incorreta')
   expectUniqueValues(scripts.map((script) => script.id), 'Catálogo de scripts')
   scripts.forEach((script, index) => {
     const prefix = `Catálogo de scripts: scripts[${index}]`

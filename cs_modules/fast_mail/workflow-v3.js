@@ -153,6 +153,12 @@
       return false
     }
 
+    const phaseButton = Array.from(document.querySelectorAll('.spfm-phase-button'))
+      .find((button) => button.dataset.phaseId === script.phase)
+    if (phaseButton && phaseButton.getAttribute('aria-pressed') !== 'true') {
+      phaseButton.click()
+    }
+
     if (catalog?.hidden && toggle) toggle.click()
 
     if (Array.from(phase.options).some((option) => option.value === script.phase)) {
