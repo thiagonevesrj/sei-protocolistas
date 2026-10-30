@@ -1099,9 +1099,57 @@ async function autopreencherDocumentoExterno (BaseName) {
     }
 
     fitHeaderToVisibleArea()
+
+    const pinSaveToVisibleArea = () => {
+      const rowRectangle =
+        row.getBoundingClientRect()
+
+      const visibleTop = Math.max(
+        8,
+        Math.floor(rowRectangle.top)
+      )
+
+      commandBar.style.setProperty(
+        'position',
+        'fixed',
+        'important'
+      )
+      commandBar.style.setProperty(
+        'right',
+        '24px',
+        'important'
+      )
+      commandBar.style.setProperty(
+        'top',
+        `${visibleTop}px`,
+        'important'
+      )
+      commandBar.style.setProperty(
+        'width',
+        'auto',
+        'important'
+      )
+      commandBar.style.setProperty(
+        'z-index',
+        '1000',
+        'important'
+      )
+    }
+
+    const updateVisibleHeader = () => {
+      fitHeaderToVisibleArea()
+      pinSaveToVisibleArea()
+    }
+
+    pinSaveToVisibleArea()
     window.addEventListener(
       'resize',
-      fitHeaderToVisibleArea
+      updateVisibleHeader
+    )
+    window.addEventListener(
+      'scroll',
+      pinSaveToVisibleArea,
+      { passive: true }
     )
 
     heading.style.setProperty(

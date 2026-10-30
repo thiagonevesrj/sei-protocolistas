@@ -1,0 +1,24 @@
+.brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.brand img {
+  display: block;
+  width: min(520px, 58vw);
+  height: auto;
+  max-height: 54px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+@media (max-width: 680px) {
+  .brand {
+    flex-wrap: nowrap;
+  }
+
+  .brand img {
+    width: min(100%, 460px);
+  }
+}

@@ -288,6 +288,37 @@
   color: #313b48;
 }
 
+.sp-clique-action--lookup {
+  animation: sp-clique-lookup-pulse 1.25s ease-in-out infinite;
+  background: #f0c54b !important;
+  border-color: #fff1a8 !important;
+  box-shadow: 0 0 0 2px rgb(240 197 75 / 32%), 0 0 16px rgb(240 197 75 / 75%);
+  color: #071a33 !important;
+}
+
+.sp-clique-action--lookup:hover,
+.sp-clique-action--lookup:focus {
+  background: #ffe992 !important;
+}
+
+@keyframes sp-clique-lookup-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgb(240 197 75 / 38%), 0 0 23px rgb(240 197 75 / 95%);
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-clique-action--lookup {
+    animation: none;
+  }
+}
+
+.sp-clique-action--lookup:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .sp-clique-action--continue {
   background: var(--sp-navy);
   border-color: var(--sp-gold);
@@ -394,6 +425,44 @@
   color: #ff5c5c !important;
 }
 /* FAST PROC — pesquisa parcial do tipo de processo */
+.sp-clique-type-shortcuts {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.sp-clique-type-shortcut {
+  align-items: center;
+  background: var(--sp-navy) !important;
+  border: 2px solid var(--sp-gold) !important;
+  border-radius: 5px !important;
+  color: #ffffff !important;
+  cursor: pointer;
+  display: flex;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  justify-content: center;
+  line-height: 1.15 !important;
+  min-height: 44px;
+  padding: 7px 5px !important;
+  text-align: center;
+}
+
+.sp-clique-type-shortcut:hover,
+.sp-clique-type-shortcut:focus,
+.sp-clique-type-shortcut--active {
+  background: var(--sp-gold) !important;
+  color: var(--sp-navy) !important;
+  outline: 2px solid #ffffff;
+  outline-offset: -4px;
+}
+
+@media (max-width: 760px) {
+  .sp-clique-type-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .sp-clique-type-search-box {
   position: relative;
 }
@@ -474,3 +543,16 @@
   font-weight: 800 !important;
   padding-left: 16px !important;
 }
+.sp-clique-field input#sp-acesso-externo {
+  width: auto;
+  min-height: auto;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.sp-clique-access-help {
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+

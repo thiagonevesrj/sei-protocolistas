@@ -543,29 +543,61 @@
       return
     }
 
-    const target = await waitFor(
-      () => {
-        const includeLink =
-          findIncludeDocumentLink()
+    const currentProcessId =
+      extractProcessId()
 
-        if (!includeLink) {
-          return null
-        }
+    let context = null
+    let registry = null
 
-        return {
-          includeLink,
-          parent:
-            includeLink.parentElement
-        }
-      },
-      15000,
-      250
-    )
+    if (currentProcessId) {
+      const fastProcData =
+        await getFastProcContext(
+          currentProcessId
+        )
+
+      context = fastProcData.context
+      registry = fastProcData.registry
+
+      if (!context) {
+        console.log(
+          '[FAST PROC RQ] Processo não identificado como FAST PROC.'
+        )
+        return
+      }
+    }
+
+    let target
+    try {
+      target = await waitFor(
+        () => {
+          const includeLink =
+            findIncludeDocumentLink()
+
+          if (!includeLink) {
+            return null
+          }
+
+          return {
+            includeLink,
+            parent:
+              includeLink.parentElement
+          }
+        },
+        15000,
+        250
+      )
+    } catch (error) {
+      console.info(
+        '[FAST PROC RQ] Barra para incluir documento indisponível nesta tela.'
+      )
+      return
+    }
 
     const includeLink =
       target.includeLink
 
     const processId =
+      currentProcessId ||
       extractProcessIdFromElement(
         includeLink
       )
@@ -577,12 +609,15 @@
       return
     }
 
-    const {
-      context,
-      registry
-    } = await getFastProcContext(
-      processId
-    )
+    if (!context || !registry) {
+      const fastProcData =
+        await getFastProcContext(
+          processId
+        )
+
+      context = fastProcData.context
+      registry = fastProcData.registry
+    }
 
     if (!context) {
       console.log(
@@ -590,6 +625,10 @@
       )
       return
     }
+
+    // O resgate pode ter inserido o botão enquanto aguardávamos o SEI/storage.
+    // Revalidar depois de todos os awaits, antes de registrar e inserir outro.
+    if (document.querySelector('#sp-fast-proc-rq')) return
 
     const button =
       createRqButton()
