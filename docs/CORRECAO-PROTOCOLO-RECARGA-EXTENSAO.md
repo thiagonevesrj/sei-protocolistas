@@ -40,4 +40,12 @@ O ZIP foi interrompido por solicitação do usuário. Esta correção é destina
 - ESLint do teste alterado: passou. A fonte do cartão não integra a lista preexistente de arquivos de `npm run lint`; sua sintaxe foi conferida separadamente.
 - Lint geral: 42 erros de estilo/análise preexistentes, em 18 arquivos que não foram alterados nesta correção. Todos esses arquivos foram comparados com `HEAD` e permanecem idênticos à base. Não foram introduzidos erros novos nos arquivos cobertos pelo lint. Essa pendência anterior deve ser tratada separadamente; não se declara aprovação integral do lint.
 
-A versão permanece 6.0.8. O diagnóstico e a correção ficam registrados junto ao teste, sem gerar ZIP.
+A versão permanece 6.0.8. O diagnóstico e a correção ficam registrados junto ao teste. A entrega do ZIP permanece suspensa.
+
+## Sincronização e empacotamento manual
+
+A correção foi publicada no commit `b8399cb823316dd2fe6b990d0d03b70259ca3505` e a pasta local foi sincronizada com o mesmo conteúdo. As validações do GitHub por push e por pull request passaram.
+
+Foi identificado um gatilho preexistente que empacotava automaticamente todo push à branch. Ele gerou um artefato técnico no GitHub durante a sincronização; esse artefato não foi liberado como pacote aprovado para publicação. Para respeitar a suspensão solicitada pelo usuário, o workflow de empacotamento passa a aceitar somente `workflow_dispatch` (comando manual). A validação automática do código continua ativa.
+
+Verificação da automação: YAML válido, único gatilho de empacotamento manual, etapas de montagem preservadas e validação por push da branch ainda habilitada.

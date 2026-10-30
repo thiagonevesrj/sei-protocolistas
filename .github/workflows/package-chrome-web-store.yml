@@ -1,9 +1,6 @@
 name: Empacotar Chrome Web Store
 
 on:
-  push:
-    branches:
-      - agent/catalogo-fast-mail-amanha
   workflow_dispatch:
 
 jobs:
