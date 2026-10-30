@@ -179,8 +179,17 @@ async function bindAttendance(){
         tabWrite(FLOW_KEY,{startedAt,createdAt:updated.createdAt,attendanceId:updated.attendanceId||'',processId:''});
       }
     };
-    browserApi.storage.onChanged?.addListener(updateFlow);
-    window.addEventListener('pagehide',()=>browserApi.storage.onChanged?.removeListener(updateFlow),{once:true});
+    browserApi.storage?.onChanged?.addListener(updateFlow);
+    window.addEventListener('pagehide',()=>{
+      // A aba antiga pode sair depois de a extensão ser recarregada e perder a API.
+      try{
+        browserApi.storage?.onChanged?.removeListener(updateFlow);
+      }catch(error){
+        if(!/extension context invalidated/i.test(String(error?.message||error))){
+          console.warn('[SEI Protocolistas] Não foi possível remover o observador do atendimento:',error);
+        }
+      }
+    },{once:true});
     const context=await readContext();
     if(!changed&&context?.createdAt>=startedAt&&(!context.expiresAt||context.expiresAt>Date.now())){
       tabWrite(FLOW_KEY,{startedAt,createdAt:context.createdAt,attendanceId:context.attendanceId||'',processId:''});

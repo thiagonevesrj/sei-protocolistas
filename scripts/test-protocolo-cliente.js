@@ -80,3 +80,95 @@ selectedContext.action = () => 'procedimento_trabalhar'
 selectedContext.performance.getEntriesByType = () => [{ type: 'back_forward' }]
 assert.strictEqual(selectedContext.confirmedSend(sendPending, '123', 'Processo aberto somente na unidade DETRAN/DIVCA.', 200), false)
 console.log('PROTOCOLO CLIENTE: quadro único, impressão por e-mail e múltiplos destinos verificados.')
+
+// Executa o módulo completo, inclusive o callback de saída que só roda depois.
+// A recarga da extensão pode retirar storage ou invalidar métodos já existentes.
+async function testAttendanceLifecycle () {
+  async function load (action, options = {}) {
+    const tabValues = new Map()
+    const listeners = new Set()
+    const handlers = new Map()
+    const warnings = []
+    const sessionStorage = {
+      getItem: key => tabValues.get(key) || null,
+      setItem: (key, value) => tabValues.set(key, value),
+      removeItem: key => tabValues.delete(key)
+    }
+    const api = {
+      runtime: {},
+      storage: {
+        local: { get: (keys, onResult) => onResult({}) },
+        onChanged: {
+          addListener: callback => listeners.add(callback),
+          removeListener: callback => {
+            if (options.removeError) throw new Error(options.removeError)
+            listeners.delete(callback)
+          }
+        }
+      }
+    }
+    if (options.withoutStorage) delete api.storage
+    const location = { search: '?acao=' + action }
+    const window = {
+      name: '',
+      frameElement: null,
+      sessionStorage,
+      location,
+      addEventListener: (name, callback) => handlers.set(name, callback)
+    }
+    window.top = window
+    const sandbox = {
+      chrome: api,
+      window,
+      location,
+      URLSearchParams,
+      document: { querySelector: () => null, querySelectorAll: () => [] },
+      console: { warn: (...args) => warnings.push(args) }
+    }
+    vm.runInNewContext(source, sandbox, { filename: 'protocolo_cliente/index.js' })
+    await new Promise(resolve => setImmediate(resolve))
+    return {
+      api,
+      listeners,
+      warnings,
+      leave: () => handlers.get('pagehide')?.(),
+      flow: () => JSON.parse(tabValues.get('sp-protocolo-atendimento-v1') || 'null')
+    }
+  }
+
+  for (const action of ['procedimento_escolher_tipo', 'procedimento_gerar']) {
+    const normal = await load(action)
+    assert.strictEqual(normal.listeners.size, 1, action + ': registra o observador')
+    const attendance = { createdAt: Date.now() + 1, expiresAt: Date.now() + 60000, attendanceId: 'atendimento-teste' }
+    normal.listeners.forEach(listener => listener({ cliqueProtocolistaContexto: { newValue: attendance } }, 'local'))
+    assert.strictEqual(normal.flow().attendanceId, attendance.attendanceId, action + ': vincula o atendimento novo')
+    normal.leave()
+    assert.strictEqual(normal.listeners.size, 0, action + ': remove o observador na saída normal')
+    assert.strictEqual(normal.warnings.length, 0)
+
+    const reloaded = await load(action)
+    delete reloaded.api.storage
+    assert.doesNotThrow(reloaded.leave, action + ': sair após perder storage não pode gerar TypeError')
+    assert.strictEqual(reloaded.warnings.length, 0)
+
+    const invalidated = await load(action, { removeError: 'Extension context invalidated.' })
+    assert.doesNotThrow(invalidated.leave, action + ': contexto invalidado na remoção não pode interromper a saída')
+    assert.strictEqual(invalidated.warnings.length, 0)
+
+    const unexpected = await load(action, { removeError: 'Falha inesperada de remoção' })
+    assert.doesNotThrow(unexpected.leave)
+    assert.strictEqual(unexpected.warnings.length, 1, 'falhas diferentes devem continuar diagnosticáveis')
+    assert.match(String(unexpected.warnings[0][1]), /Falha inesperada de remoção/)
+
+    const unavailable = await load(action, { withoutStorage: true })
+    assert.doesNotThrow(unavailable.leave)
+    assert.strictEqual(unavailable.listeners.size, 0)
+    assert.ok(unavailable.warnings.some(args => /Não foi possível ler o contexto/.test(args[0])), 'indisponibilidade inicial precisa ser registrada')
+  }
+  console.log('CICLO DO PROTOCOLO: vínculo normal, saída após recarga, contexto invalidado e diagnóstico de falhas verificados nas duas telas de abertura.')
+}
+
+testAttendanceLifecycle().catch(error => {
+  console.error(error)
+  process.exitCode = 1
+})
